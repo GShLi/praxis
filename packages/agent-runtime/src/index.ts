@@ -26,6 +26,10 @@ export interface RuntimeOptions {
   maxTools?: number;
   maxAttempts?: number;
   timeoutMs?: number;
+  acquireWorkspace?: (
+    root: string,
+    signal: AbortSignal,
+  ) => Promise<{ release(): Promise<void>; onLost(callback: () => void): void }>;
 }
 interface Active {
   id: string;
@@ -260,6 +264,9 @@ export class AgentRuntime extends EventEmitter {
     let partial = '';
     let attemptId = '';
     let terminal = 'completed';
+    let workspaceLease:
+      | Awaited<ReturnType<NonNullable<RuntimeOptions['acquireWorkspace']>>>
+      | undefined;
     const timer = setTimeout(
       () => turn.controller.abort(new PraxisError('TURN_TIMEOUT', '任务时间预算已用完。')),
       Math.max(1, turn.deadline - Date.now()),
@@ -271,6 +278,8 @@ export class AgentRuntime extends EventEmitter {
         workspace = await realpath(session.workspace!);
         assert(!this.workspaceOwners.has(workspace), 'WORKSPACE_BUSY', '此工作区已有活动执行。');
         this.workspaceOwners.set(workspace, id);
+        workspaceLease = await this.options.acquireWorkspace?.(workspace, signal);
+        workspaceLease?.onLost(() => turn.controller.abort());
         const files = await WorkspaceFiles.open(workspace, (kind, text) =>
           this.store.artifact(id, kind, text),
         );
@@ -464,6 +473,7 @@ export class AgentRuntime extends EventEmitter {
       }
       if (workspace && this.workspaceOwners.get(workspace) === id)
         this.workspaceOwners.delete(workspace);
+      await workspaceLease?.release();
       this.store.transaction(() => {
         this.store.update(id, {
           status: terminal as 'completed' | 'cancelled' | 'failed' | 'interrupted',

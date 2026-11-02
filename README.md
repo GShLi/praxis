@@ -21,11 +21,22 @@
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm native:build
 pnpm check
 pnpm cli doctor
 ```
 
 `doctor` 启动独立 Host，检查协议和环境后关闭 Host。`pnpm host` 是内部 JSON 行协议入口，不是交互聊天命令。当前只验证了本机 macOS ARM64；CI 已配置三平台检查，但尚未运行远端 CI。
+
+服务端使用 PostgreSQL，先复制 `.env.example` 为私有 `.env`，设置数据库连接和独立主密钥（可用 `pnpm server:keygen` 在自己的终端生成），再运行：
+
+```sh
+pnpm db:migrate
+pnpm server:create-user
+pnpm server
+```
+
+CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置中保存。配置 `PRAXIS_SERVER_URL` 和 `PRAXIS_API_KEY` 后运行 `pnpm cli run --workspace /path/to/project`，或追加 `--prompt "创建 HelloWorld 页面"` 执行单次任务。`--resume SESSION_ID` 继续历史会话；`pnpm cli sessions` 查看 ID。退出会停止本客户端任务。当前命令沙箱尚不可用，Agent 只能使用已实现的文件和会话工具。
 
 在本目录维护独立 Git 仓库。使用开发者本机已有 Git 身份，不在项目配置中覆写作者或提交者。完成一个可验证的功能、修复或文档阶段后及时提交；提交说明包含具体变更及必要验证，未完成的能力保持明确状态。
 

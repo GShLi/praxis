@@ -13,17 +13,36 @@
     "check": "pnpm typecheck && pnpm test",
     "cli": "node --import tsx apps/cli/src/main.ts",
     "host": "node --import tsx apps/agent-host/src/main.ts",
-    "format": "prettier --write apps packages tests scripts *.json *.yaml"
+    "format": "prettier --write apps packages tests scripts *.json *.yaml",
+    "server": "node --import tsx --env-file-if-exists=.env apps/server/src/main.ts",
+    "db:migrate": "node --import tsx --env-file-if-exists=.env apps/server/src/main.ts migrate",
+    "server:create-user": "node --import tsx --env-file-if-exists=.env apps/server/src/main.ts create-user",
+    "server:keygen": "node --import tsx apps/server/src/main.ts keygen",
+    "native:build": "node --import tsx scripts/build-native.ts"
   },
   "dependencies": {
     "ignore": "7.0.5",
     "minimatch": "10.2.4",
-    "zod": "4.3.6"
+    "zod": "4.3.6",
+    "hono": "4.13.14",
+    "@hono/node-server": "1.19.17",
+    "pg": "8.23.1",
+    "@noble/hashes": "2.2.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@types/node": "22.15.35",
     "prettier": "3.6.2",
     "tsx": "4.22.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@types/pg": "8.20.0",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.0.6",
+    "vite": "8.3.5",
+    "electron": "42.3.3",
+    "esbuild": "0.28.2"
   }
 }

@@ -75,6 +75,7 @@ export class ContextBuilder {
       'CONTEXT_FIXED_TOO_LARGE',
       '固定提示词和工具定义超过输入预算。',
     );
+    let count = 0;
     for (let shrink = 0; shrink < 2; shrink++) {
       const view = this.store.context(id);
       const all = this.store.messages(id);
@@ -122,7 +123,6 @@ export class ContextBuilder {
       }
       if (chunk.length) chunks.push(chunk);
       assert(chunks.length <= 6, 'COMPACTION_BUDGET', '历史需要过多摘要步骤，请缩小任务。');
-      let count = 0;
       const summarize = async (source: unknown) => {
         for (let correction = 0; correction < 2; correction++) {
           assert(++count <= 8, 'COMPACTION_BUDGET', '摘要尝试次数达到上限。');

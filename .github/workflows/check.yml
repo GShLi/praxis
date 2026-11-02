@@ -15,5 +15,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm native:build
       - run: pnpm check
