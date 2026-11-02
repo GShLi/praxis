@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { AppRail, Icon, SessionSearch, settingsFromHash } from './Navigation.tsx';
+import type { SettingsTab } from './Navigation.tsx';
+import type { FormEvent } from 'react';
+import { Copy, MarkdownView } from './MarkdownView.tsx';
 import type { Event, ToolResult } from '../../contracts/src/index.ts';
 import { Settings } from './Settings.tsx';
 import { LocalClient, WebClient } from './client.ts';
-import type { PraxisClient, Provider, Snapshot, ViewSession } from './client.ts';
+import type { PraxisClient, Profile, Provider, Snapshot, ViewSession } from './client.ts';
 import type { ApprovalRequest } from '../../permissions/src/index.ts';
 import './styles.css';
 
@@ -76,91 +77,6 @@ function ApprovalCard({
   );
 }
 
-function Icon({
-  name,
-}: {
-  name: 'plus' | 'send' | 'stop' | 'menu' | 'settings' | 'close' | 'folder' | 'panel' | 'check';
-}) {
-  const paths = {
-    plus: 'M12 5v14M5 12h14',
-    send: 'M12 19V5m-6 6 6-6 6 6',
-    stop: 'M7 7h10v10H7z',
-    menu: 'M5 6h14M5 12h14M5 18h14',
-    settings:
-      'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4',
-    close: 'm6 6 12 12M6 18 18 6',
-    folder: 'M3 7h7l2-3h9v15H3z',
-    panel: 'M3 4h18v16H3zM15 4v16',
-    check: 'm5 12 4 4 10-10',
-  };
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={paths[name]} />
-    </svg>
-  );
-}
-function Copy({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      className="text-button"
-      onClick={() => {
-        void navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          })
-          .catch(() => setCopied(false));
-      }}
-    >
-      {copied ? '已复制' : '复制'}
-    </button>
-  );
-}
-function MarkdownView({ content }: { content: string }) {
-  return (
-    <Markdown
-      remarkPlugins={[remarkGfm]}
-      skipHtml
-      components={{
-        a: ({ children, href }) => (
-          <a href={href} target="_blank" rel="noopener noreferrer">
-            {children}
-          </a>
-        ),
-        pre: ({ children }) => (
-          <div className="code-block">
-            <div className="code-header">
-              <span>代码</span>
-              <Copy text={extractText(children)} />
-            </div>
-            <pre>{children}</pre>
-          </div>
-        ),
-      }}
-    >
-      {content}
-    </Markdown>
-  );
-}
-function extractText(node: ReactNode): string {
-  if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(extractText).join('');
-  if (node && typeof node === 'object' && 'props' in node)
-    return extractText((node.props as { children?: ReactNode }).children);
-  return '';
-}
 const statusText: Record<string, string> = {
   idle: '就绪',
   running: '正在执行',
@@ -234,7 +150,10 @@ export function App({ client: injected }: { client?: PraxisClient }) {
     [partial, setPartial] = useState(''),
     [sending, setSending] = useState(false),
     [error, setError] = useState('');
-  const [settings, setSettings] = useState(false),
+  const [settings, setSettings] = useState<SettingsTab | null>(settingsFromHash),
+    [profile, setProfile] = useState<Profile | null>(null),
+    [searching, setSearching] = useState(false),
+    [loadAttempt, setLoadAttempt] = useState(0),
     [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
     [panel, setPanel] = useState(false),
     [workspace, setWorkspace] = useState('');
@@ -250,6 +169,51 @@ export function App({ client: injected }: { client?: PraxisClient }) {
     input = useRef<HTMLTextAreaElement>(null);
   const request = useRef(0);
   const fail = (e: unknown) => setError(e instanceof Error ? e.message : '操作失败，请重试。');
+  const openSettings = (tab: SettingsTab) => {
+    location.hash = `settings/${tab}`;
+    setSettings(tab);
+  };
+  const closeSettings = () => {
+    location.hash = '';
+    setSettings(null);
+  };
+  useEffect(() => {
+    const changed = () => setSettings(settingsFromHash());
+    window.addEventListener('hashchange', changed);
+    return () => window.removeEventListener('hashchange', changed);
+  }, []);
+  useEffect(() => {
+    if (!authenticated) return;
+    let cancelled = false;
+    void client
+      .profile?.()
+      .then((value) => {
+        if (!cancelled) setProfile(value);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, client]);
+  useEffect(() => {
+    const field = input.current;
+    if (field) {
+      field.style.height = 'auto';
+      field.style.height = `${Math.min(field.scrollHeight, 200)}px`;
+    }
+  }, [draft, settings, selected]);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (!authenticated || settings) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearching(true);
+      }
+      if (event.key === 'Escape' && !searching && window.innerWidth <= 760) setSidebar(false);
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [authenticated, settings, searching]);
   const reloadLists = async () => {
     const [all, models] = await Promise.all([client.list(), client.providers()]);
     setSessions(all);
@@ -290,8 +254,10 @@ export function App({ client: injected }: { client?: PraxisClient }) {
         setSnapshot(value);
     };
     setPartial('');
+    setSnapshot(null);
     setQuestion(null);
     setChange(null);
+    setFollow(true);
     void client
       .read(selected)
       .then((value) => {
@@ -339,7 +305,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
       stopped = true;
       off?.();
     };
-  }, [selected, authenticated, client]);
+  }, [selected, authenticated, client, loadAttempt]);
   useEffect(() => {
     if (follow) scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'auto' });
   }, [snapshot?.messages.length, partial, follow, question]);
@@ -351,6 +317,9 @@ export function App({ client: injected }: { client?: PraxisClient }) {
   );
   const newSession = () => {
     setSelected(null);
+    setSnapshot(null);
+    setFollow(true);
+    if (window.innerWidth <= 760) setSidebar(false);
     const preferred = localStorage.getItem('praxis-default-provider');
     if (providers.some((p) => p.id === preferred && p.enabled)) setProviderId(preferred!);
     setDraft('');
@@ -363,7 +332,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
     event?.preventDefault();
     if (!draft.trim() || sending) return;
     if (!providerId) {
-      setSettings(true);
+      openSettings('models');
       setError('请先配置模型提供商。');
       return;
     }
@@ -427,196 +396,469 @@ export function App({ client: injected }: { client?: PraxisClient }) {
         }}
       />
     );
+  const logout = async () => {
+    await client.logout();
+    setAuthenticated(false);
+    setSelected(null);
+    setSessions([]);
+    setProviders([]);
+    setProfile(null);
+    setDraft('');
+    closeSettings();
+  };
+  const rail = (
+    <AppRail
+      profile={profile}
+      active={settings ? 'settings' : 'chat'}
+      home={() => {
+        if (settings) closeSettings();
+        else newSession();
+      }}
+      settings={openSettings}
+      logout={logout}
+    />
+  );
   if (settings)
     return (
-      <Settings
-        providers={providers}
-        client={client}
-        snapshot={snapshot}
-        close={() => {
-          setSettings(false);
-          const preferred = localStorage.getItem('praxis-default-provider');
-          if (!selected && providers.some((p) => p.id === preferred && p.enabled))
-            setProviderId(preferred!);
-        }}
-        saved={reloadLists}
-        logout={async () => {
-          await client.logout();
-          setAuthenticated(false);
-          setSelected(null);
-          setSessions([]);
-          setProviders([]);
-          setDraft('');
-          setSettings(false);
-        }}
-      />
+      <div className="product-shell">
+        {rail}
+        <Settings
+          tab={settings}
+          navigate={openSettings}
+          providers={providers}
+          client={client}
+          snapshot={snapshot}
+          close={() => {
+            closeSettings();
+            const preferred = localStorage.getItem('praxis-default-provider');
+            if (!selected && providers.some((p) => p.id === preferred && p.enabled))
+              setProviderId(preferred!);
+          }}
+          saved={reloadLists}
+          logout={logout}
+        />
+      </div>
     );
-
+  const loadingSession = Boolean(selected && (!snapshot || snapshot.session.id !== selected));
+  const empty =
+    (!selected && !partial) ||
+    Boolean(snapshot?.session.id === selected && !snapshot?.messages.length && !partial);
+  const chooseSession = (session: ViewSession) => {
+    setSelected(session.id);
+    setKind(session.kind);
+    setError('');
+    setSearching(false);
+    if (window.innerWidth <= 760) setSidebar(false);
+  };
   return (
-    <div
-      className={`app ${sidebar ? 'with-sidebar' : ''} ${panel && kind === 'agent' ? 'with-panel' : ''}`}
-    >
-      {sidebar && (
-        <aside className="sidebar" aria-label="会话侧栏">
-          <div className="brand">
-            <span className="brand-mark">知</span>
-            <span>
-              Praxis<small>知行</small>
-            </span>
+    <div className="product-shell">
+      {rail}
+      <div
+        className={`app ${sidebar ? 'with-sidebar' : ''} ${panel && kind === 'agent' ? 'with-panel' : ''}`}
+      >
+        {sidebar && (
+          <>
             <button
-              className="icon-button mobile-close"
-              aria-label="关闭侧栏"
+              className="sidebar-backdrop"
+              aria-label="收起会话侧栏"
               onClick={() => setSidebar(false)}
-            >
-              <Icon name="close" />
-            </button>
-          </div>
-          <button className="new-button" onClick={newSession}>
-            <Icon name="plus" />新{kind === 'agent' ? '任务' : '对话'}
-          </button>
-          {client.desktop && (
-            <div className="mode-switch" aria-label="模式">
-              <button
-                className={kind === 'chat' ? 'selected' : ''}
-                onClick={() => {
-                  setKind('chat');
-                  newSession();
-                }}
-              >
-                ChatBot
-              </button>
-              <button
-                className={kind === 'agent' ? 'selected' : ''}
-                onClick={() => {
-                  setKind('agent');
-                  newSession();
-                }}
-              >
-                Agent
-              </button>
-            </div>
-          )}
-          <div className="sidebar-label">最近{kind === 'agent' ? '任务' : '对话'}</div>
-          <nav className="session-list">
-            {sessions
-              .filter((s) => s.kind === kind)
-              .map((s) => (
+            />
+            <aside className="sidebar" aria-label="会话侧栏">
+              <div className="sidebar-heading">
+                <span className="sidebar-product" title="知行 Praxis">
+                  Praxis
+                </span>
                 <button
-                  key={s.id}
-                  className={selected === s.id ? 'selected' : ''}
+                  className="icon-button"
+                  aria-label="搜索会话"
+                  title="搜索会话（⌘ / Ctrl K）"
+                  onClick={() => setSearching(true)}
+                >
+                  <Icon name="search" />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="关闭侧栏"
+                  title="关闭侧栏"
+                  onClick={() => setSidebar(false)}
+                >
+                  <Icon name="menu" />
+                </button>
+              </div>
+              <button className="new-button" onClick={newSession}>
+                <Icon name="write" />新{kind === 'agent' ? '任务' : '聊天'}
+              </button>
+              <div className="sidebar-label">最近{kind === 'agent' ? '任务' : ''}</div>
+              <nav className="session-list" aria-label="最近会话">
+                {sessions
+                  .filter((s) => s.kind === kind)
+                  .map((s) => (
+                    <button
+                      key={s.id}
+                      className={selected === s.id ? 'selected' : ''}
+                      aria-current={selected === s.id ? 'page' : undefined}
+                      title={s.title}
+                      onClick={() => chooseSession(s)}
+                    >
+                      {s.status === 'running' && <span className="live-dot" />}
+                      <span>{s.title}</span>
+                    </button>
+                  ))}
+                {!sessions.some((s) => s.kind === kind) && (
+                  <p className="empty-history">开始对话后，历史记录会显示在这里。</p>
+                )}
+              </nav>
+            </aside>
+          </>
+        )}
+        <main className={`workspace ${empty ? 'empty-workspace' : ''}`}>
+          <header className="topbar">
+            {!sidebar && (
+              <div className="collapsed-navigation">
+                <button
+                  className="icon-button"
+                  aria-label="打开侧栏"
+                  onClick={() => setSidebar(true)}
+                >
+                  <Icon name="menu" />
+                </button>
+                <button className="icon-button" aria-label="新聊天" onClick={newSession}>
+                  <Icon name="write" />
+                </button>
+              </div>
+            )}
+            {client.desktop ? (
+              <div className="mode-switch" aria-label="工作模式">
+                <button
+                  className={kind === 'chat' ? 'selected' : ''}
+                  aria-pressed={kind === 'chat'}
                   onClick={() => {
-                    setSelected(s.id);
-                    setError('');
+                    setKind('chat');
+                    newSession();
                   }}
                 >
-                  {s.status === 'running' && <span className="live-dot" />}
-                  <span>{s.title}</span>
+                  <Icon name="chat" />
+                  聊天
                 </button>
-              ))}
-            {!sessions.some((s) => s.kind === kind) && (
-              <p className="empty-history">你的会话会显示在这里</p>
+                <button
+                  className={kind === 'agent' ? 'selected' : ''}
+                  aria-pressed={kind === 'agent'}
+                  onClick={() => {
+                    setKind('agent');
+                    newSession();
+                  }}
+                >
+                  <Icon name="code" />
+                  Agent
+                </button>
+              </div>
+            ) : (
+              empty && (
+                <span className="chat-heading">
+                  <Icon name="chat" />
+                  聊天
+                </span>
+              )
             )}
-          </nav>
-          <button className="account" onClick={() => setSettings(true)}>
-            <span className="avatar">知</span>
-            <span>
-              个人空间<small>模型与设置</small>
-            </span>
-            <Icon name="settings" />
-          </button>
-        </aside>
-      )}
-      <main className="workspace">
-        <header className="topbar">
-          <button
-            className="icon-button"
-            aria-label="切换侧栏"
-            onClick={() => setSidebar(!sidebar)}
-          >
-            <Icon name="menu" />
-          </button>
-          <span className="top-title">
-            {kind === 'agent' ? 'Agent' : 'Praxis'}
-            <span className="muted">{kind === 'agent' ? '本地任务' : 'ChatBot'}</span>
-          </span>
-          <div className="top-actions">
-            {snapshot && (
-              <span className={`run-status ${running ? 'is-active' : ''}`} role="status">
-                {statusText[snapshot.session.status] ?? snapshot.session.status}
-              </span>
-            )}
-            <button className="text-button" onClick={() => setSettings(true)}>
-              设置
-            </button>
-            {kind === 'agent' && (
+            <div className="top-actions">
+              {snapshot && running && (
+                <span className="run-status is-active" role="status">
+                  {statusText[snapshot.session.status] ?? snapshot.session.status}
+                </span>
+              )}
+              {kind === 'agent' && (
+                <button
+                  className="icon-button"
+                  aria-label="切换变更面板"
+                  onClick={() => setPanel(!panel)}
+                >
+                  <Icon name="panel" />
+                </button>
+              )}
+            </div>
+          </header>
+          {kind === 'agent' && (
+            <div className="workspace-bar">
+              <Icon name="folder" />
               <button
-                className="icon-button"
-                aria-label="切换变更面板"
-                onClick={() => setPanel(!panel)}
-              >
-                <Icon name="panel" />
-              </button>
-            )}
-          </div>
-        </header>
-        {kind === 'agent' && (
-          <div className="workspace-bar">
-            <Icon name="folder" />
-            <button
-              className="text-button workspace-path"
-              disabled={Boolean(selected)}
-              onClick={() => {
-                void client
-                  .selectWorkspace?.()
-                  .then((value) => {
-                    if (value) setWorkspace(value);
-                  })
-                  .catch(fail);
-              }}
-            >
-              {snapshot?.session.workspace ?? (workspace || '选择工作区')}
-            </button>
-            {snapshot && client.setPermissions && (
-              <select
-                aria-label="Agent 文件权限"
-                value={snapshot.session.permissionMode ?? 'workspace-write'}
-                onChange={(e) => {
-                  void client.setPermissions!(
-                    snapshot.session.id,
-                    snapshot.session.permissionRevision ?? 0,
-                    e.target.value as 'read-only' | 'workspace-write',
-                  ).catch(fail);
+                className="text-button workspace-path"
+                disabled={Boolean(selected)}
+                onClick={() => {
+                  void client
+                    .selectWorkspace?.()
+                    .then((value) => {
+                      if (value) setWorkspace(value);
+                    })
+                    .catch(fail);
                 }}
               >
-                <option value="workspace-write">工作区可写</option>
-                <option value="read-only">只读</option>
-              </select>
+                {snapshot?.session.workspace ?? (workspace || '选择工作区')}
+              </button>
+              {snapshot && client.setPermissions && (
+                <select
+                  aria-label="Agent 文件权限"
+                  value={snapshot.session.permissionMode ?? 'workspace-write'}
+                  onChange={(e) => {
+                    void client.setPermissions!(
+                      snapshot.session.id,
+                      snapshot.session.permissionRevision ?? 0,
+                      e.target.value as 'read-only' | 'workspace-write',
+                    ).catch(fail);
+                  }}
+                >
+                  <option value="workspace-write">工作区可写</option>
+                  <option value="read-only">只读</option>
+                </select>
+              )}
+            </div>
+          )}
+          <div
+            className={`conversation ${!snapshot?.messages.length ? 'is-empty' : ''}`}
+            ref={scroll}
+            onScroll={() => {
+              const element = scroll.current;
+              if (element)
+                setFollow(element.scrollHeight - element.scrollTop - element.clientHeight < 80);
+            }}
+          >
+            {loadingSession ? (
+              <p className="session-loading" role="status">
+                {error ? (
+                  <>
+                    会话暂时无法加载。
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        setError('');
+                        setLoadAttempt((value) => value + 1);
+                      }}
+                    >
+                      重试
+                    </button>
+                  </>
+                ) : (
+                  '正在加载对话…'
+                )}
+              </p>
+            ) : empty ? (
+              <div className="welcome">
+                <h1>{kind === 'agent' ? '你想完成什么任务？' : '我能帮你做些什么？'}</h1>
+              </div>
+            ) : (
+              <div className="messages">
+                {snapshot?.messages.map((message) =>
+                  message.role === 'tool' ? (
+                    <ToolCard
+                      key={message.id}
+                      content={message.content}
+                      showChange={(id) => {
+                        void showChange(id);
+                      }}
+                    />
+                  ) : (
+                    <article className={`message ${message.role}`} key={message.id}>
+                      <div className="message-label">{message.role === 'user' ? '你' : '知行'}</div>
+                      <div className="message-content">
+                        {message.role === 'user' ? (
+                          <p>{message.content}</p>
+                        ) : (
+                          <MarkdownView content={message.content} />
+                        )}
+                        {message.status && ['failed', 'interrupted'].includes(message.status) && (
+                          <span className="incomplete">未完整结束</span>
+                        )}
+                      </div>
+                      {message.role === 'assistant' && message.content && (
+                        <div className="message-actions">
+                          <Copy text={message.content} iconOnly />
+                          {client.regenerate &&
+                            selected &&
+                            !running &&
+                            message.id ===
+                              snapshot?.messages.filter((m) => m.role === 'assistant').at(-1)
+                                ?.id && (
+                              <button
+                                className="text-button"
+                                onClick={() => {
+                                  void client.regenerate!(selected, providerId).catch(fail);
+                                }}
+                              >
+                                重新生成
+                              </button>
+                            )}
+                        </div>
+                      )}
+                    </article>
+                  ),
+                )}
+                {partial && (
+                  <article className="message assistant">
+                    <div className="message-label">知行</div>
+                    <div className="message-content">
+                      <MarkdownView content={partial} />
+                      <span className="stream-cursor" />
+                    </div>
+                  </article>
+                )}
+                {snapshot?.approval && client.respondApproval && (
+                  <ApprovalCard
+                    key={snapshot.approval.approvalId}
+                    approval={snapshot.approval}
+                    submit={async (decision) => {
+                      const approval = snapshot.approval!;
+                      await client.respondApproval!({
+                        sessionId: approval.sessionId,
+                        turnId: approval.turnId,
+                        approvalId: approval.approvalId,
+                        requestHash: approval.requestHash,
+                        decision,
+                      });
+                    }}
+                  />
+                )}
+                {question && selected && (
+                  <QuestionCard
+                    key={question.questionId}
+                    question={question}
+                    submit={async (answers) => {
+                      try {
+                        await client.answer?.({
+                          sessionId: selected,
+                          questionId: question.questionId,
+                          turnId: question.turnId,
+                          answers,
+                        });
+                        setQuestion(null);
+                      } catch (e) {
+                        fail(e);
+                      }
+                    }}
+                  />
+                )}
+              </div>
             )}
           </div>
-        )}
-        <div
-          className={`conversation ${!snapshot?.messages.length ? 'is-empty' : ''}`}
-          ref={scroll}
-          onScroll={() => {
-            const element = scroll.current;
-            if (element)
-              setFollow(element.scrollHeight - element.scrollTop - element.clientHeight < 80);
-          }}
-        >
-          {!snapshot?.messages.length && !partial ? (
-            <div className="welcome">
-              <span className="welcome-mark">知</span>
-              <h1>{kind === 'agent' ? '从想法，到完成。' : '今天，想聊些什么？'}</h1>
-              <p>
-                {kind === 'agent'
-                  ? '选择一个工作区，让知行协助你完成任务。'
-                  : '一起梳理思路、理解问题，写下你的下一个想法。'}
+          {!follow && (
+            <button
+              className="latest"
+              onClick={() => {
+                setFollow(true);
+                scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' });
+              }}
+            >
+              ↓ 回到最新
+            </button>
+          )}
+          <div
+            className={`composer-region ${draft.includes('\n') || draft.length > 65 || kind === 'agent' ? 'expanded' : ''}`}
+          >
+            {error && (
+              <div className="error-banner" role="alert">
+                <span>{error}</span>
+                <button
+                  className="icon-button"
+                  aria-label="关闭错误提示"
+                  onClick={() => setError('')}
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+            )}
+            {snapshot?.session.status === 'interrupted' && (
+              <p className="recovery-note">
+                任务已中断。历史已保留，发送新的要求后继续；未确认的工具效果需要核查。
               </p>
+            )}
+            <form
+              className="composer"
+              onSubmit={(e) => {
+                void send(e);
+              }}
+            >
+              <textarea
+                ref={input}
+                aria-label={kind === 'agent' ? '描述任务' : '输入消息'}
+                placeholder={kind === 'agent' ? '描述你希望完成的任务' : '询问知行 Praxis'}
+                value={draft}
+                disabled={loadingSession}
+                rows={1}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing &&
+                    (localStorage.getItem('praxis-send-mode') !== 'modifier' ||
+                      e.ctrlKey ||
+                      e.metaKey)
+                  ) {
+                    e.preventDefault();
+                    if (!running || kind === 'agent') void send();
+                  }
+                }}
+              />
+              <div className="composer-bottom">
+                <select
+                  title="选择模型"
+                  aria-label="选择模型"
+                  value={providerId}
+                  onChange={(e) => setProviderId(e.target.value)}
+                >
+                  <option value="" disabled>
+                    选择模型
+                  </option>
+                  {providers
+                    .filter((p) => p.enabled)
+                    .map((p) => (
+                      <option value={p.id} key={p.id}>
+                        {p.name || p.model}
+                      </option>
+                    ))}
+                </select>
+                {kind === 'agent' && running && (
+                  <select
+                    aria-label="输入方式"
+                    value={inputMode}
+                    onChange={(e) => setInputMode(e.target.value as 'queue' | 'steer')}
+                  >
+                    <option value="queue">排队任务</option>
+                    <option value="steer">追加指导</option>
+                  </select>
+                )}
+                <div className="composer-actions">
+                  {running && selected && (
+                    <button
+                      type="button"
+                      className="stop-button"
+                      aria-label="停止任务"
+                      onClick={() => {
+                        void client.cancel(selected).catch(fail);
+                      }}
+                    >
+                      <Icon name="stop" />
+                    </button>
+                  )}
+                  {(!running || kind === 'agent') && (
+                    <button
+                      className="send-button"
+                      type="submit"
+                      aria-label="发送消息"
+                      disabled={
+                        !draft.trim() || sending || loadingSession || (running && kind === 'chat')
+                      }
+                    >
+                      <Icon name="send" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
+            {empty && (
               <div className="suggestions">
                 {(kind === 'agent'
                   ? ['创建一个 HelloWorld 页面', '帮我理解这个项目', '检查项目中的待办事项']
                   : ['解释一个复杂概念', '帮我完善一个想法', '写一个 HelloWorld 页面']
-                ).map((text) => (
+                ).map((text, index) => (
                   <button
                     key={text}
                     onClick={() => {
@@ -624,258 +866,68 @@ export function App({ client: injected }: { client?: PraxisClient }) {
                       input.current?.focus();
                     }}
                   >
-                    {text}
-                    <span>↗</span>
+                    <Icon name={index === 0 ? 'spark' : index === 1 ? 'write' : 'code'} />
+                    <span>{text}</span>
                   </button>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="messages">
-              {snapshot?.messages.map((message) =>
-                message.role === 'tool' ? (
-                  <ToolCard
-                    key={message.id}
-                    content={message.content}
-                    showChange={(id) => {
-                      void showChange(id);
-                    }}
-                  />
-                ) : (
-                  <article className={`message ${message.role}`} key={message.id}>
-                    <div className="message-label">{message.role === 'user' ? '你' : '知行'}</div>
-                    <div className="message-content">
-                      {message.role === 'user' ? (
-                        <p>{message.content}</p>
-                      ) : (
-                        <MarkdownView content={message.content} />
-                      )}
-                      {message.status && ['failed', 'interrupted'].includes(message.status) && (
-                        <span className="incomplete">未完整结束</span>
-                      )}
-                    </div>
-                    {message.role === 'assistant' && message.content && (
-                      <Copy text={message.content} />
-                    )}
-                  </article>
-                ),
-              )}
-              {partial && (
-                <article className="message assistant">
-                  <div className="message-label">知行</div>
-                  <div className="message-content">
-                    <MarkdownView content={partial} />
-                    <span className="stream-cursor" />
-                  </div>
-                </article>
-              )}
-              {snapshot?.approval && client.respondApproval && (
-                <ApprovalCard
-                  key={snapshot.approval.approvalId}
-                  approval={snapshot.approval}
-                  submit={async (decision) => {
-                    const approval = snapshot.approval!;
-                    await client.respondApproval!({
-                      sessionId: approval.sessionId,
-                      turnId: approval.turnId,
-                      approvalId: approval.approvalId,
-                      requestHash: approval.requestHash,
-                      decision,
-                    });
-                  }}
-                />
-              )}
-              {question && selected && (
-                <QuestionCard
-                  key={question.questionId}
-                  question={question}
-                  submit={async (answers) => {
-                    try {
-                      await client.answer?.({
-                        sessionId: selected,
-                        questionId: question.questionId,
-                        turnId: question.turnId,
-                        answers,
-                      });
-                      setQuestion(null);
-                    } catch (e) {
-                      fail(e);
-                    }
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </div>
-        {!follow && (
-          <button
-            className="latest"
-            onClick={() => {
-              setFollow(true);
-              scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' });
-            }}
-          >
-            ↓ 回到最新
-          </button>
-        )}
-        <div className="composer-region">
-          {error && (
-            <div className="error-banner" role="alert">
-              <span>{error}</span>
+            )}
+            <p className="composer-hint">
+              {kind === 'agent'
+                ? '文件与执行结果以工具记录为准。关闭应用会停止任务。'
+                : '知行可能会出错。请核查重要信息。'}
+            </p>
+          </div>
+        </main>
+        {panel && kind === 'agent' && (
+          <aside className="detail-panel">
+            <header>
+              <h2>文件变更</h2>
               <button
                 className="icon-button"
-                aria-label="关闭错误提示"
-                onClick={() => setError('')}
+                aria-label="关闭变更面板"
+                onClick={() => setPanel(false)}
               >
                 <Icon name="close" />
               </button>
-            </div>
-          )}
-          {snapshot?.session.status === 'interrupted' && (
-            <p className="recovery-note">
-              任务已中断。历史已保留，发送新的要求后继续；未确认的工具效果需要核查。
-            </p>
-          )}
-          <form
-            className="composer"
-            onSubmit={(e) => {
-              void send(e);
-            }}
-          >
-            <textarea
-              ref={input}
-              aria-label={kind === 'agent' ? '描述任务' : '输入消息'}
-              placeholder={kind === 'agent' ? '描述你希望完成的任务…' : '向知行提问…'}
-              value={draft}
-              rows={2}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (
-                  e.key === 'Enter' &&
-                  !e.shiftKey &&
-                  !e.nativeEvent.isComposing &&
-                  (localStorage.getItem('praxis-send-mode') !== 'modifier' ||
-                    e.ctrlKey ||
-                    e.metaKey)
-                ) {
-                  e.preventDefault();
-                  if (!running || kind === 'agent') void send();
-                }
-              }}
-            />
-            <div className="composer-bottom">
-              <select
-                aria-label="选择模型"
-                value={providerId}
-                onChange={(e) => setProviderId(e.target.value)}
-              >
-                <option value="" disabled>
-                  选择模型
-                </option>
-                {providers
-                  .filter((p) => p.enabled)
-                  .map((p) => (
-                    <option value={p.id} key={p.id}>
-                      {p.name || p.model}
-                    </option>
-                  ))}
-              </select>
-              {kind === 'agent' && running && (
-                <select
-                  aria-label="输入方式"
-                  value={inputMode}
-                  onChange={(e) => setInputMode(e.target.value as 'queue' | 'steer')}
-                >
-                  <option value="queue">排队任务</option>
-                  <option value="steer">追加指导</option>
-                </select>
-              )}
-              <div className="composer-actions">
-                {client.regenerate &&
-                  selected &&
-                  !running &&
-                  snapshot?.messages.some((m) => m.role === 'assistant') && (
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() => {
-                        void client.regenerate!(selected, providerId).catch(fail);
-                      }}
-                    >
-                      重新生成
-                    </button>
-                  )}
-                {running && selected && (
-                  <button
-                    type="button"
-                    className="stop-button"
-                    aria-label="停止任务"
-                    onClick={() => {
-                      void client.cancel(selected).catch(fail);
-                    }}
-                  >
-                    <Icon name="stop" />
-                  </button>
+            </header>
+            {change ? (
+              <>
+                <div className="change-title">
+                  {change.path}
+                  <Copy text={change.path} />
+                </div>
+                <p className="panel-note">本次工具记录的历史快照</p>
+                {change.before !== null && (
+                  <section>
+                    <h3>修改前</h3>
+                    <pre className="diff-before">{change.before}</pre>
+                  </section>
                 )}
-                <button
-                  className="send-button"
-                  type="submit"
-                  aria-label="发送消息"
-                  disabled={!draft.trim() || sending || (running && kind === 'chat')}
-                >
-                  <Icon name="send" />
-                </button>
-              </div>
-            </div>
-          </form>
-          <p className="composer-hint">
-            {kind === 'agent'
-              ? '文件与执行结果以工具记录为准。关闭应用会停止任务。'
-              : '知行可能会出错。请核查重要信息。'}
-          </p>
-        </div>
-      </main>
-      {panel && kind === 'agent' && (
-        <aside className="detail-panel">
-          <header>
-            <h2>文件变更</h2>
-            <button
-              className="icon-button"
-              aria-label="关闭变更面板"
-              onClick={() => setPanel(false)}
-            >
-              <Icon name="close" />
-            </button>
-          </header>
-          {change ? (
-            <>
-              <div className="change-title">
-                {change.path}
-                <Copy text={change.path} />
-              </div>
-              <p className="panel-note">本次工具记录的历史快照</p>
-              {change.before !== null && (
                 <section>
-                  <h3>修改前</h3>
-                  <pre className="diff-before">{change.before}</pre>
+                  <h3>{change.before === null ? '创建内容' : '修改后'}</h3>
+                  <pre className="diff-after">{change.after}</pre>
                 </section>
-              )}
-              <section>
-                <h3>{change.before === null ? '创建内容' : '修改后'}</h3>
-                <pre className="diff-after">{change.after}</pre>
-              </section>
-            </>
-          ) : (
-            <div className="panel-empty">
-              <Icon name="folder" />
-              <p>
-                选择一条文件修改记录
-                <br />
-                在这里查看变更
-              </p>
-            </div>
-          )}
-        </aside>
+              </>
+            ) : (
+              <div className="panel-empty">
+                <Icon name="folder" />
+                <p>
+                  选择一条文件修改记录
+                  <br />
+                  在这里查看变更
+                </p>
+              </div>
+            )}
+          </aside>
+        )}
+      </div>
+      {searching && (
+        <SessionSearch
+          sessions={sessions.filter((s) => client.desktop || s.kind === 'chat')}
+          select={chooseSession}
+          close={() => setSearching(false)}
+        />
       )}
     </div>
   );

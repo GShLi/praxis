@@ -10,7 +10,7 @@ const approvalListeners = new Set<(event: Event) => void>();
 const provider: Provider = {
   id: 'fixture',
   revision: 1,
-  name: 'DeepSeek · 界面样例',
+  name: 'DeepSeek',
   model: 'fixture',
   baseUrl: 'https://api.deepseek.com',
   contextWindow: 128000,
@@ -19,7 +19,7 @@ const provider: Provider = {
   keyConfigured: true,
 };
 const client: PraxisClient = {
-  desktop: true,
+  desktop: new URLSearchParams(location.search).get('client') === 'desktop',
   async profile() {
     return { id: 'development-fixture', username: '开发样例', scopes: [] };
   },
@@ -192,4 +192,9 @@ const client: PraxisClient = {
     };
   },
 };
+document.documentElement.dataset.theme = localStorage.getItem('praxis-theme') ?? 'system';
+document.documentElement.style.setProperty(
+  '--message-font',
+  `${localStorage.getItem('praxis-font') ?? '16'}px`,
+);
 createRoot(document.getElementById('root')!).render(<App client={client} />);

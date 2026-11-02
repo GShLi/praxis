@@ -10,21 +10,29 @@ import type {
   Provider,
   Snapshot,
 } from './client.ts';
+import type { SettingsTab } from './Navigation.tsx';
 import './settings.css';
 
 const categories = [
   {
     id: 'general',
-    title: '通用',
-    description: '调整知行的外观与使用习惯。',
-    group: '偏好设置',
+    title: '常规',
+    description: '调整语言、默认模型与对话习惯。',
+    group: '个人',
     icon: 'sliders',
+  },
+  {
+    id: 'appearance',
+    title: '外观',
+    description: '调整主题与回答的文字大小。',
+    group: '个人',
+    icon: 'sun',
   },
   {
     id: 'models',
     title: '模型提供商',
     description: '管理模型与密钥，供 ChatBot 和 Agent 共同使用。',
-    group: '偏好设置',
+    group: '个人',
     icon: 'model',
   },
   {
@@ -52,25 +60,24 @@ const categories = [
     id: 'data',
     title: '数据与隐私',
     description: '了解数据的保存位置，导出当前会话。',
-    group: '账户与数据',
+    group: '个人',
     icon: 'data',
   },
   {
     id: 'account',
     title: '账户与安全',
     description: '查看登录身份，管理客户端访问。',
-    group: '账户与数据',
+    group: '个人',
     icon: 'person',
   },
   {
     id: 'about',
     title: '关于知行',
     description: '版本信息与当前客户端状态。',
-    group: '账户与数据',
+    group: '个人',
     icon: 'info',
   },
 ] as const;
-type Category = (typeof categories)[number]['id'];
 function SettingsIcon({ name }: { name: string }) {
   const paths: Record<string, string> = {
     sliders: 'M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4 4v6',
@@ -172,6 +179,8 @@ function CopyValue({ value }: { value: string }) {
   );
 }
 export function Settings({
+  tab: requestedTab,
+  navigate,
   client,
   providers,
   saved,
@@ -179,6 +188,8 @@ export function Settings({
   logout,
   snapshot,
 }: {
+  tab: SettingsTab;
+  navigate: (tab: SettingsTab) => void;
   client: PraxisClient;
   providers: Provider[];
   saved: () => Promise<void>;
@@ -186,8 +197,11 @@ export function Settings({
   logout: () => Promise<void>;
   snapshot: Snapshot | null;
 }) {
-  const [tab, setTab] = useState<Category>(providers.length ? 'general' : 'models'),
-    [search, setSearch] = useState('');
+  const tab =
+    !client.desktop && ['agent', 'mcp', 'plugins'].includes(requestedTab)
+      ? 'general'
+      : requestedTab;
+  const [search, setSearch] = useState('');
   const [profile, setProfile] = useState<Profile | null>(null),
     [profileError, setProfileError] = useState('');
   const main = useRef<HTMLElement>(null);
@@ -208,30 +222,25 @@ export function Settings({
   const current = categories.find((item) => item.id === tab)!;
   return (
     <div className="settings-page">
-      <header className="settings-topbar">
-        <button className="settings-back" onClick={close}>
-          <SettingsIcon name="back" />
-          <span>返回{snapshot?.session.kind === 'agent' ? '任务' : '对话'}</span>
-        </button>
-        <span className="settings-product">
-          Praxis<span>知行</span>
-        </span>
-        <span className="settings-client">{client.desktop ? '桌面端' : 'Web'}</span>
-      </header>
       <div className="settings-layout">
         <aside className="settings-nav">
-          <h1>设置</h1>
+          <div className="settings-nav-heading">
+            <h1>设置</h1>
+            <button className="icon-button" aria-label="返回对话" title="返回对话" onClick={close}>
+              <SettingsIcon name="back" />
+            </button>
+          </div>
           <div className="settings-search">
             <SettingsIcon name="search" />
             <input
               aria-label="搜索设置分类"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索设置"
+              placeholder="搜索"
             />
           </div>
           <nav aria-label="设置分类">
-            {['偏好设置', '本地能力', '账户与数据'].map((group) => {
+            {['个人', '本地能力'].map((group) => {
               const items = visible.filter((item) => item.group === group);
               if (!items.length) return null;
               return (
@@ -242,11 +251,10 @@ export function Settings({
                       key={item.id}
                       className={tab === item.id ? 'selected' : ''}
                       aria-current={tab === item.id ? 'page' : undefined}
-                      onClick={() => setTab(item.id)}
+                      onClick={() => navigate(item.id)}
                     >
                       <SettingsIcon name={item.icon} />
                       <span>{item.title}</span>
-                      {tab === item.id && <span className="nav-marker" />}
                     </button>
                   ))}
                 </section>
@@ -254,24 +262,14 @@ export function Settings({
             })}
             {!visible.length && <p className="settings-no-results">没有匹配的设置分类</p>}
           </nav>
-          <div className="settings-nav-footer">
-            <span className="settings-user-avatar">
-              {profile?.username.slice(0, 1).toUpperCase() || '知'}
-            </span>
-            <div>
-              {profile?.username || '个人空间'}
-              <small>Praxis · 0.1.0</small>
-            </div>
-          </div>
         </aside>
         <main className="settings-main" ref={main}>
           <div className="settings-main-inner">
             <div className="settings-page-heading">
-              <span className="settings-eyebrow">设置 / {current.title}</span>
               <h2>{current.title}</h2>
-              <p>{current.description}</p>
             </div>
             {tab === 'general' && <General providers={providers} />}
+            {tab === 'appearance' && <Appearance />}
             {tab === 'models' && <Models client={client} providers={providers} saved={saved} />}
             {tab === 'agent' && <AgentSettings client={client} snapshot={snapshot} />}
             {tab === 'mcp' && <McpSettings client={client} />}
@@ -292,113 +290,114 @@ export function Settings({
     </div>
   );
 }
-function General({ providers }: { providers: Provider[] }) {
+function Appearance() {
   const [theme, setTheme] = useState(localStorage.getItem('praxis-theme') ?? 'system');
   const [font, setFont] = useState(localStorage.getItem('praxis-font') ?? '16');
+  return (
+    <>
+      <section className="settings-section">
+        <h2>视觉样式</h2>
+        <div className="settings-group">
+          <Row title="模式">
+            <div className="theme-segments" role="group" aria-label="主题模式">
+              {(['system', 'light', 'dark'] as const).map((value) => (
+                <button
+                  key={value}
+                  aria-pressed={theme === value}
+                  className={theme === value ? 'selected' : ''}
+                  onClick={() => {
+                    setTheme(value);
+                    document.documentElement.dataset.theme = value;
+                    localStorage.setItem('praxis-theme', value);
+                  }}
+                >
+                  {value === 'system' ? '系统' : value === 'light' ? '浅色' : '深色'}
+                </button>
+              ))}
+            </div>
+          </Row>
+        </div>
+      </section>
+      <section className="settings-section">
+        <h2>文字</h2>
+        <div className="settings-group">
+          <Row title="回答字号" description="调整对话内容的文字大小。">
+            <select
+              aria-label="回答字号"
+              value={font}
+              onChange={(e) => {
+                setFont(e.target.value);
+                localStorage.setItem('praxis-font', e.target.value);
+                document.documentElement.style.setProperty('--message-font', `${e.target.value}px`);
+              }}
+            >
+              <option value="14">紧凑 · 14</option>
+              <option value="16">标准 · 16</option>
+              <option value="18">舒适 · 18</option>
+            </select>
+          </Row>
+        </div>
+        <div className="appearance-preview" aria-label="回答样式预览">
+          <span>预览</span>
+          <p>我能帮你做些什么？</p>
+          <div>一起梳理思路，理解问题，完成你的下一个想法。</div>
+        </div>
+      </section>
+      <p className="settings-footnote">外观自动保存在当前客户端。</p>
+    </>
+  );
+}
+function General({ providers }: { providers: Provider[] }) {
   const [sendMode, setSendMode] = useState(localStorage.getItem('praxis-send-mode') ?? 'enter');
   const [model, setModel] = useState(localStorage.getItem('praxis-default-provider') ?? '');
   return (
     <>
       <section className="settings-section">
-        <h2>外观</h2>
-        <Row title="主题" description="选择你喜欢的界面外观。">
-          <select
-            aria-label="主题"
-            value={theme}
-            onChange={(e) => {
-              setTheme(e.target.value);
-              document.documentElement.dataset.theme = e.target.value;
-              localStorage.setItem('praxis-theme', e.target.value);
-            }}
-          >
-            <option value="system">跟随系统</option>
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-          </select>
-        </Row>
-        <div className="theme-previews" aria-label="主题预览">
-          {(['light', 'dark', 'system'] as const).map((value) => (
-            <button
-              key={value}
-              className={`theme-option ${theme === value ? 'selected' : ''}`}
-              aria-pressed={theme === value}
-              onClick={() => {
-                setTheme(value);
-                document.documentElement.dataset.theme = value;
-                localStorage.setItem('praxis-theme', value);
+        <h2>常规</h2>
+        <div className="settings-group">
+          <Row title="语言">
+            <span className="setting-value">简体中文</span>
+          </Row>
+          <Row title="默认模型" description="开始新对话时优先选择此配置。">
+            <select
+              aria-label="默认模型"
+              value={model}
+              onChange={(e) => {
+                setModel(e.target.value);
+                localStorage.setItem('praxis-default-provider', e.target.value);
               }}
             >
-              <span className={`theme-sample ${value}`}>
-                <i />
-                <span>
-                  <b />
-                  <b />
-                  <b />
-                </span>
-                <em />
-              </span>
-              <span>
-                {value === 'light' ? '浅色' : value === 'dark' ? '深色' : '跟随系统'}
-                {theme === value && <SettingsIcon name="check" />}
-              </span>
-            </button>
-          ))}
+              <option value="">首个可用模型</option>
+              {providers
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </Row>
         </div>
-        <Row title="回答字号" description="调整对话内容的文字大小。">
-          <select
-            aria-label="回答字号"
-            value={font}
-            onChange={(e) => {
-              setFont(e.target.value);
-              localStorage.setItem('praxis-font', e.target.value);
-              document.documentElement.style.setProperty('--message-font', `${e.target.value}px`);
-            }}
-          >
-            <option value="14">紧凑 · 14</option>
-            <option value="16">标准 · 16</option>
-            <option value="18">舒适 · 18</option>
-          </select>
-        </Row>
-        <Row title="界面语言">
-          <span className="setting-value">简体中文</span>
-        </Row>
       </section>
       <section className="settings-section">
-        <h2>对话习惯</h2>
-        <Row title="发送消息" description="使用 Shift + Enter 始终可以换行。">
-          <select
-            aria-label="发送消息快捷键"
-            value={sendMode}
-            onChange={(e) => {
-              setSendMode(e.target.value);
-              localStorage.setItem('praxis-send-mode', e.target.value);
-            }}
-          >
-            <option value="enter">Enter 发送</option>
-            <option value="modifier">⌘ / Ctrl + Enter 发送</option>
-          </select>
-        </Row>
-        <Row title="默认模型" description="开始新对话时优先选择此配置。">
-          <select
-            aria-label="默认模型"
-            value={model}
-            onChange={(e) => {
-              setModel(e.target.value);
-              localStorage.setItem('praxis-default-provider', e.target.value);
-            }}
-          >
-            <option value="">首个可用模型</option>
-            {providers
-              .filter((p) => p.enabled)
-              .map((p) => (
-                <option value={p.id} key={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </select>
-        </Row>
+        <h2>对话</h2>
+        <div className="settings-group">
+          <Row title="发送消息" description="使用 Shift + Enter 始终可以换行。">
+            <select
+              aria-label="发送消息快捷键"
+              value={sendMode}
+              onChange={(e) => {
+                setSendMode(e.target.value);
+                localStorage.setItem('praxis-send-mode', e.target.value);
+              }}
+            >
+              <option value="enter">Enter 发送</option>
+              <option value="modifier">⌘ / Ctrl + Enter 发送</option>
+            </select>
+          </Row>
+        </div>
       </section>
-      <p className="settings-footnote">外观与操作偏好自动保存在当前客户端。</p>
+      <p className="settings-footnote">操作偏好自动保存在当前客户端。</p>
     </>
   );
 }
@@ -669,52 +668,56 @@ function AgentSettings({ client, snapshot }: { client: PraxisClient; snapshot: S
     <>
       <section className="settings-section">
         <h2>文件权限</h2>
-        <Row title="新任务的默认权限" description="只影响此客户端之后创建的 Agent 会话。">
-          <select
-            aria-label="新任务默认权限"
-            value={mode}
-            onChange={(e) => {
-              setMode(e.target.value);
-              localStorage.setItem('praxis-default-permission', e.target.value);
-            }}
-          >
-            <option value="workspace-write">工作区可写</option>
-            <option value="read-only">只读</option>
-          </select>
-        </Row>
-        {snapshot?.session.kind === 'agent' && (
-          <Row title="当前任务权限" description={snapshot.session.workspace}>
+        <div className="settings-group">
+          <Row title="新任务的默认权限" description="只影响此客户端之后创建的 Agent 会话。">
             <select
-              aria-label="当前任务权限"
-              value={snapshot.session.permissionMode ?? 'workspace-write'}
+              aria-label="新任务默认权限"
+              value={mode}
               onChange={(e) => {
-                void client
-                  .setPermissions?.(
-                    snapshot.session.id,
-                    snapshot.session.permissionRevision ?? 0,
-                    e.target.value as 'read-only' | 'workspace-write',
-                  )
-                  .then(() => setMessage('当前任务权限已更新。'))
-                  .catch((error) => setMessage(errorText(error)));
+                setMode(e.target.value);
+                localStorage.setItem('praxis-default-permission', e.target.value);
               }}
             >
               <option value="workspace-write">工作区可写</option>
               <option value="read-only">只读</option>
             </select>
           </Row>
-        )}
-        <Row title="内部数据保护" description="应用凭据、会话存储和受保护目录不向文件工具开放。">
-          <span className="settings-badge available">始终启用</span>
-        </Row>
+          {snapshot?.session.kind === 'agent' && (
+            <Row title="当前任务权限" description={snapshot.session.workspace}>
+              <select
+                aria-label="当前任务权限"
+                value={snapshot.session.permissionMode ?? 'workspace-write'}
+                onChange={(e) => {
+                  void client
+                    .setPermissions?.(
+                      snapshot.session.id,
+                      snapshot.session.permissionRevision ?? 0,
+                      e.target.value as 'read-only' | 'workspace-write',
+                    )
+                    .then(() => setMessage('当前任务权限已更新。'))
+                    .catch((error) => setMessage(errorText(error)));
+                }}
+              >
+                <option value="workspace-write">工作区可写</option>
+                <option value="read-only">只读</option>
+              </select>
+            </Row>
+          )}
+          <Row title="内部数据保护" description="应用凭据、会话存储和受保护目录不向文件工具开放。">
+            <span className="settings-badge available">始终启用</span>
+          </Row>
+        </div>
       </section>
       <section className="settings-section">
         <h2>任务生命周期</h2>
-        <Row title="关闭应用时" description="停止当前客户端的任务，保留已经保存的历史记录。">
-          <span className="setting-value">停止执行</span>
-        </Row>
-        <Row title="再次打开时" description="由你发送新的要求后继续，历史工具调用不会自动重跑。">
-          <span className="setting-value">手动继续</span>
-        </Row>
+        <div className="settings-group">
+          <Row title="关闭应用时" description="停止当前客户端的任务，保留已经保存的历史记录。">
+            <span className="setting-value">停止执行</span>
+          </Row>
+          <Row title="再次打开时" description="由你发送新的要求后继续，历史工具调用不会自动重跑。">
+            <span className="setting-value">手动继续</span>
+          </Row>
+        </div>
       </section>
       <Status message={message} />
       <div className="settings-info-note">
@@ -1106,52 +1109,56 @@ function DataSettings({ client, snapshot }: { client: PraxisClient; snapshot: Sn
     <>
       <section className="settings-section">
         <h2>会话数据</h2>
-        <Row
-          title="历史记录保存位置"
-          description={
-            client.desktop
-              ? '此桌面客户端的会话保存在本机，和 CLI 的会话分别管理。'
-              : 'Web 对话保存在你的 Praxis 服务端，按登录账号隔离。'
-          }
-        >
-          <span className="setting-value">{client.desktop ? '本机' : 'Praxis 服务端'}</span>
-        </Row>
-        <Row
-          title="当前会话导出"
-          description={
-            snapshot
-              ? `导出“${snapshot.session.title}”的可见消息与状态，格式为 JSON。`
-              : '打开一个会话后，可以导出其中的可见消息与状态。'
-          }
-        >
-          <button
-            className="secondary-button"
-            disabled={!snapshot || busy}
-            onClick={() => {
-              void exportCurrent();
-            }}
+        <div className="settings-group">
+          <Row
+            title="历史记录保存位置"
+            description={
+              client.desktop
+                ? '此桌面客户端的会话保存在本机，和 CLI 的会话分别管理。'
+                : 'Web 对话保存在你的 Praxis 服务端，按登录账号隔离。'
+            }
           >
-            {busy ? '正在导出…' : '导出会话'}
-          </button>
-        </Row>
+            <span className="setting-value">{client.desktop ? '本机' : 'Praxis 服务端'}</span>
+          </Row>
+          <Row
+            title="当前会话导出"
+            description={
+              snapshot
+                ? `导出“${snapshot.session.title}”的可见消息与状态，格式为 JSON。`
+                : '打开一个会话后，可以导出其中的可见消息与状态。'
+            }
+          >
+            <button
+              className="secondary-button"
+              disabled={!snapshot || busy}
+              onClick={() => {
+                void exportCurrent();
+              }}
+            >
+              {busy ? '正在导出…' : '导出会话'}
+            </button>
+          </Row>
+        </div>
       </section>
       <section className="settings-section">
         <h2>模型与隐私</h2>
-        <Row
-          title="发送给模型的内容"
-          description="回答所需的消息与上下文会发送给你选择的模型提供商。"
-        >
-          <span className="setting-value">按请求发送</span>
-        </Row>
-        <Row
-          title="上下文压缩"
-          description="摘要用于之后的模型请求。已经保存的原始历史不会因为压缩而覆盖。"
-        >
-          <span className="setting-value">保留历史</span>
-        </Row>
-        <Row title="默认遥测上传" description="本地 Session 不会自动上传为服务端任务记录。">
-          <span className="setting-value">未启用</span>
-        </Row>
+        <div className="settings-group">
+          <Row
+            title="发送给模型的内容"
+            description="回答所需的消息与上下文会发送给你选择的模型提供商。"
+          >
+            <span className="setting-value">按请求发送</span>
+          </Row>
+          <Row
+            title="上下文压缩"
+            description="摘要用于之后的模型请求。已经保存的原始历史不会因为压缩而覆盖。"
+          >
+            <span className="setting-value">保留历史</span>
+          </Row>
+          <Row title="默认遥测上传" description="本地 Session 不会自动上传为服务端任务记录。">
+            <span className="setting-value">未启用</span>
+          </Row>
+        </div>
       </section>
       <Status message={message} />
     </>
@@ -1193,28 +1200,32 @@ function Account({
       <Status message={profileError} />
       <section className="settings-section">
         <h2>登录信息</h2>
-        <Row title="登录方式">
-          <span className="setting-value">{client.desktop ? 'Praxis API Key' : '账号与密码'}</span>
-        </Row>
-        {profile && (
-          <Row title="账户 ID">
-            <code className="settings-account-id">{profile.id}</code>
+        <div className="settings-group">
+          <Row title="登录方式">
+            <span className="setting-value">
+              {client.desktop ? 'Praxis API Key' : '账号与密码'}
+            </span>
           </Row>
-        )}
-        <Row title="退出当前客户端" description="退出前会停止当前客户端的任务。">
-          <button
-            className="secondary-button"
-            disabled={busy}
-            onClick={() => {
-              setBusy(true);
-              void logout()
-                .catch((e) => setMessage(errorText(e)))
-                .finally(() => setBusy(false));
-            }}
-          >
-            退出登录
-          </button>
-        </Row>
+          {profile && (
+            <Row title="账户 ID">
+              <code className="settings-account-id">{profile.id}</code>
+            </Row>
+          )}
+          <Row title="退出当前客户端" description="退出前会停止当前客户端的任务。">
+            <button
+              className="secondary-button"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                void logout()
+                  .catch((e) => setMessage(errorText(e)))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              退出登录
+            </button>
+          </Row>
+        </div>
       </section>
       {client.createKey && (
         <section className="settings-section">
