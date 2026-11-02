@@ -119,6 +119,24 @@ export class AuthClient {
     if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);
     return this.request('/v1/providers', 'GET', undefined, signal);
   }
+  async profile(signal: AbortSignal) {
+    if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);
+    return this.request<{ id: string; username: string; scopes: string[] }>(
+      '/v1/me',
+      'GET',
+      undefined,
+      signal,
+    );
+  }
+  async deleteProvider(id: string, expectedRevision: number, signal: AbortSignal) {
+    if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);
+    return this.request(
+      `/v1/providers/${encodeURIComponent(id)}`,
+      'DELETE',
+      { expectedRevision },
+      signal,
+    );
+  }
   async clear() {
     if (this.accessToken)
       await this.request('/v1/auth/logout', 'POST', {}, AbortSignal.timeout(1000)).catch(() => {});

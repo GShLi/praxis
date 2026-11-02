@@ -7,6 +7,7 @@ import type {
   ToolResult,
 } from '../../contracts/src/index.ts';
 import { SessionStore, uuid } from '../../storage-local/src/index.ts';
+import type { ActivePlugin } from '../../plugin-host/src/index.ts';
 import { WorkspaceFiles } from './files.ts';
 
 const shortText = z.string().min(1).max(4096);
@@ -190,6 +191,7 @@ export class ToolExecutor {
     readonly files: WorkspaceFiles,
     private ask: Ask,
     readonly processes?: ProcessService,
+    readonly plugins: readonly ActivePlugin[] = [],
   ) {
     this.definitions = (Object.keys(schemas) as Array<keyof typeof schemas>).map((name) => ({
       id: ids[name],
@@ -197,6 +199,14 @@ export class ToolExecutor {
       description: descriptions[name],
       parameters: z.toJSONSchema(schemas[name], { io: 'input' }),
     }));
+    for (const plugin of plugins)
+      for (const [name, tool] of plugin.tools)
+        this.definitions.push({
+          id: `${plugin.manifest.id}:${name}`,
+          modelName: name,
+          description: tool.description,
+          parameters: tool.parameters,
+        });
   }
   async execute(call: ToolCall, callId: string, signal: AbortSignal): Promise<ToolResult> {
     const started = performance.now();
@@ -213,7 +223,8 @@ export class ToolExecutor {
     };
     try {
       signal.throwIfAborted();
-      assert(Object.hasOwn(schemas, call.name), 'TOOL_NOT_AVAILABLE', '此工具未注册。');
+      const plugin = this.plugins.find((p) => p.tools.has(call.name));
+      assert(Object.hasOwn(schemas, call.name) || plugin, 'TOOL_NOT_AVAILABLE', '此工具未注册。');
       assert(
         Buffer.byteLength(call.arguments) <= 2 * 1024 * 1024,
         'INVALID_ARGUMENT',
@@ -222,6 +233,71 @@ export class ToolExecutor {
       const name = call.name as keyof typeof schemas;
       result.toolId = ids[name];
       const raw: unknown = JSON.parse(call.arguments);
+      for (const current of this.plugins)
+        for (const check of current.checks) {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const verdict = await Promise.race([
+              check(call.name, structuredClone(raw)),
+              new Promise<never>((_, reject) => {
+                timer = setTimeout(
+                  () => reject(new PraxisError('PLUGIN_TIMEOUT', '插件策略检查超时。')),
+                  2000,
+                );
+              }),
+            ]);
+            assert(
+              ['deny', 'ask', 'pass'].includes(verdict),
+              'PLUGIN_INVALID',
+              '插件策略结果无效。',
+            );
+            assert(verdict !== 'deny', 'ACCESS_DENIED', '插件策略拒绝此操作。');
+            assert(
+              verdict !== 'ask',
+              'APPROVAL_REQUIRED',
+              '插件要求额外授权；当前调用未获得授权。',
+            );
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+      signal.throwIfAborted();
+      if (plugin) {
+        result.toolId = `${plugin.manifest.id}:${call.name}`;
+        effect = true;
+        result.data = await plugin.tools.get(call.name)!.execute(raw, {
+          signal,
+          invokeCore: async (name, args) => {
+            assert(
+              Object.hasOwn(schemas, name),
+              'TOOL_NOT_AVAILABLE',
+              '插件只能通过此服务调用核心工具。',
+            );
+            const delegatedId = uuid();
+            this.store.append(this.sessionId, 'plugin/tool-intent', {
+              pluginId: plugin.manifest.id,
+              parentCallId: callId,
+              delegatedId,
+              name,
+            });
+            const value = await this.execute(
+              { id: delegatedId, name, arguments: JSON.stringify(args) },
+              delegatedId,
+              signal,
+            );
+            this.store.append(
+              this.sessionId,
+              'plugin/tool-result',
+              { pluginId: plugin.manifest.id, parentCallId: callId, result: value },
+              'tool',
+            );
+            return value;
+          },
+        });
+        result.effectState = 'unknown';
+        result.durationMs = Math.round(performance.now() - started);
+        return result;
+      }
       schemas[name].parse(raw);
       const permission = this.store.get(this.sessionId).permission;
       const writing = ['fs_write', 'fs_apply_patch', 'process_exec'].includes(name);

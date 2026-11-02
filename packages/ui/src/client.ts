@@ -39,6 +39,17 @@ export interface Snapshot {
   turnId: string | null;
 }
 export type HostMethod =
+  | 'auth/me'
+  | 'provider/delete'
+  | 'host/diagnostics'
+  | 'plugin/list'
+  | 'plugin/inspect'
+  | 'plugin/install'
+  | 'plugin/set-enabled'
+  | 'mcp/server-list'
+  | 'mcp/server-upsert'
+  | 'mcp/server-disable'
+  | 'mcp/test'
   | 'auth/bind'
   | 'auth/clear'
   | 'workspace/open'
@@ -66,6 +77,47 @@ declare global {
   interface Window {
     praxis?: DesktopBridge;
   }
+}
+export interface Profile {
+  id: string;
+  username: string;
+  scopes: string[];
+}
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  scopes: string[];
+  expires_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+}
+export interface PluginState {
+  revision: number;
+  value: Array<{
+    manifest: { id: string; version: string; capabilities: string[] };
+    digest: string;
+    enabled: boolean;
+  }>;
+  restartRequired?: boolean;
+  failures?: Array<{ id: string; mode: string; code: string }>;
+}
+export interface PluginReview {
+  manifest: { id: string; version: string; capabilities: string[] };
+  digest: string;
+  bytes: number;
+  warning: string;
+}
+export interface McpState {
+  revision: number;
+  value: Array<{
+    id: string;
+    namespace: string;
+    displayName: string;
+    revision: number;
+    enabled: boolean;
+    protocol: string;
+    transport: { type: string; endpoint?: string; executable?: string };
+  }>;
 }
 export interface PraxisClient {
   desktop: boolean;
@@ -112,6 +164,19 @@ export interface PraxisClient {
     mode: 'read-only' | 'workspace-write',
   ): Promise<void>;
   createKey?(): Promise<string>;
+  profile?(): Promise<Profile>;
+  deleteProvider?(id: string, revision: number): Promise<void>;
+  keys?(): Promise<ApiKeyInfo[]>;
+  revokeKey?(id: string): Promise<void>;
+  diagnostics?(): Promise<Record<string, unknown>>;
+  plugins?(): Promise<PluginState>;
+  inspectPlugin?(source: string): Promise<PluginReview>;
+  installPlugin?(source: string, digest: string, revision: number): Promise<void>;
+  enablePlugin?(id: string, enabled: boolean, revision: number): Promise<void>;
+  mcpServers?(): Promise<McpState>;
+  saveMcp?(config: unknown, storeRevision: number, configRevision: number | null): Promise<void>;
+  disableMcp?(id: string, revision: number): Promise<void>;
+  testMcp?(id: string): Promise<void>;
 }
 export class WebClient implements PraxisClient {
   desktop = false;
@@ -317,6 +382,20 @@ export class WebClient implements PraxisClient {
     source.onerror = () => failure(new Error('连接中断，正在尝试恢复。'));
     return () => source.close();
   }
+  profile() {
+    return this.request<Profile>('/v1/me');
+  }
+  keys() {
+    return this.request<ApiKeyInfo[]>('/v1/api-keys');
+  }
+  async revokeKey(id: string) {
+    await this.request(`/v1/api-keys/${encodeURIComponent(id)}`, 'DELETE');
+  }
+  async deleteProvider(id: string, revision: number) {
+    await this.request(`/v1/providers/${encodeURIComponent(id)}`, 'DELETE', {
+      expectedRevision: revision,
+    });
+  }
   async createKey() {
     const result = await this.request<{ key: string }>('/v1/api-keys', 'POST', {
       name: 'Praxis 客户端',
@@ -365,6 +444,10 @@ export class LocalClient implements PraxisClient {
       kind,
       ...(opened ? { workspaceId: opened.id } : {}),
     });
+    if (kind === 'agent' && localStorage.getItem('praxis-default-permission') === 'read-only') {
+      await this.setPermissions(s.id, s.permission.revision, 'read-only');
+      return (await this.read(s.id)).session;
+    }
     return { ...s, permissionRevision: s.permission.revision, permissionMode: s.permission.mode };
   }
   async read(id: string): Promise<Snapshot> {
@@ -420,6 +503,47 @@ export class LocalClient implements PraxisClient {
       off();
       void this.bridge.call('session/unsubscribe', { sessionId: id }).catch(() => {});
     };
+  }
+  profile() {
+    return this.bridge.call<Profile>('auth/me');
+  }
+  diagnostics() {
+    return this.bridge.call<Record<string, unknown>>('host/diagnostics');
+  }
+  plugins() {
+    return this.bridge.call<PluginState>('plugin/list');
+  }
+  inspectPlugin(source: string) {
+    return this.bridge.call<PluginReview>('plugin/inspect', { source });
+  }
+  async installPlugin(source: string, digest: string, revision: number) {
+    await this.bridge.call('plugin/install', {
+      source,
+      expectedDigest: digest,
+      expectedRevision: revision,
+    });
+  }
+  async enablePlugin(id: string, enabled: boolean, revision: number) {
+    await this.bridge.call('plugin/set-enabled', { id, enabled, expectedRevision: revision });
+  }
+  mcpServers() {
+    return this.bridge.call<McpState>('mcp/server-list');
+  }
+  async saveMcp(config: unknown, storeRevision: number, configRevision: number | null) {
+    await this.bridge.call('mcp/server-upsert', {
+      config,
+      expectedStoreRevision: storeRevision,
+      expectedRevision: configRevision,
+    });
+  }
+  async disableMcp(id: string, revision: number) {
+    await this.bridge.call('mcp/server-disable', { serverId: id, expectedStoreRevision: revision });
+  }
+  async testMcp(id: string) {
+    await this.bridge.call('mcp/test', { serverId: id });
+  }
+  async deleteProvider(id: string, revision: number) {
+    await this.bridge.call('provider/delete', { id, expectedRevision: revision });
   }
   selectWorkspace() {
     return this.bridge.selectWorkspace();

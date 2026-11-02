@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Event, ToolResult } from '../../contracts/src/index.ts';
+import { Settings } from './Settings.tsx';
 import { LocalClient, WebClient } from './client.ts';
 import type { PraxisClient, Provider, Snapshot, ViewSession } from './client.ts';
 import './styles.css';
@@ -188,7 +189,10 @@ export function App({ client: injected }: { client?: PraxisClient }) {
     setProviderId((previous) =>
       models.some((p) => p.id === previous && p.enabled)
         ? previous
-        : (models.find((p) => p.enabled)?.id ?? ''),
+        : (models.find((p) => p.enabled && p.id === localStorage.getItem('praxis-default-provider'))
+            ?.id ??
+          models.find((p) => p.enabled)?.id ??
+          ''),
     );
   };
   useEffect(() => {
@@ -278,6 +282,8 @@ export function App({ client: injected }: { client?: PraxisClient }) {
   );
   const newSession = () => {
     setSelected(null);
+    const preferred = localStorage.getItem('praxis-default-provider');
+    if (providers.some((p) => p.id === preferred && p.enabled)) setProviderId(preferred!);
     setDraft('');
     setPartial('');
     setError('');
@@ -352,6 +358,31 @@ export function App({ client: injected }: { client?: PraxisClient }) {
         }}
       />
     );
+  if (settings)
+    return (
+      <Settings
+        providers={providers}
+        client={client}
+        snapshot={snapshot}
+        close={() => {
+          setSettings(false);
+          const preferred = localStorage.getItem('praxis-default-provider');
+          if (!selected && providers.some((p) => p.id === preferred && p.enabled))
+            setProviderId(preferred!);
+        }}
+        saved={reloadLists}
+        logout={async () => {
+          await client.logout();
+          setAuthenticated(false);
+          setSelected(null);
+          setSessions([]);
+          setProviders([]);
+          setDraft('');
+          setSettings(false);
+        }}
+      />
+    );
+
   return (
     <div
       className={`app ${sidebar ? 'with-sidebar' : ''} ${panel && kind === 'agent' ? 'with-panel' : ''}`}
@@ -634,7 +665,14 @@ export function App({ client: injected }: { client?: PraxisClient }) {
               rows={2}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                if (
+                  e.key === 'Enter' &&
+                  !e.shiftKey &&
+                  !e.nativeEvent.isComposing &&
+                  (localStorage.getItem('praxis-send-mode') !== 'modifier' ||
+                    e.ctrlKey ||
+                    e.metaKey)
+                ) {
                   e.preventDefault();
                   if (!running || kind === 'agent') void send();
                 }
@@ -753,27 +791,6 @@ export function App({ client: injected }: { client?: PraxisClient }) {
             </div>
           )}
         </aside>
-      )}
-      {settings && (
-        <Settings
-          providers={providers}
-          client={client}
-          close={() => setSettings(false)}
-          saved={reloadLists}
-          logout={async () => {
-            try {
-              await client.logout();
-              setAuthenticated(false);
-              setSelected(null);
-              setSessions([]);
-              setProviders([]);
-              setDraft('');
-              setSettings(false);
-            } catch (e) {
-              fail(e);
-            }
-          }}
-        />
       )}
     </div>
   );
@@ -928,207 +945,5 @@ function QuestionCard({
         提交回答
       </button>
     </form>
-  );
-}
-function Settings({
-  providers,
-  client,
-  close,
-  saved,
-  logout,
-}: {
-  providers: Provider[];
-  client: PraxisClient;
-  close: () => void;
-  saved: () => Promise<void>;
-  logout: () => Promise<void>;
-}) {
-  const [selected, setSelected] = useState(''),
-    [name, setName] = useState('DeepSeek'),
-    [model, setModel] = useState('deepseek-flash'),
-    [key, setKey] = useState(''),
-    [windowSize, setWindowSize] = useState(128000),
-    [output, setOutput] = useState(4096),
-    [message, setMessage] = useState(''),
-    [busy, setBusy] = useState(false),
-    [platformKey, setPlatformKey] = useState('');
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-    const element = dialog.current;
-    const cancel = (e: EventInit) => {
-      close();
-    };
-    element?.addEventListener('cancel', cancel);
-    return () => {
-      element?.removeEventListener('cancel', cancel);
-      element?.close();
-    };
-  }, []);
-  function choose(id: string) {
-    setSelected(id);
-    setKey('');
-    setMessage('');
-    const p = providers.find((item) => item.id === id);
-    setName(p?.name ?? 'DeepSeek');
-    setModel(p?.model ?? 'deepseek-flash');
-    setWindowSize(p?.contextWindow ?? 128000);
-    setOutput(p?.maxOutputTokens ?? 4096);
-  }
-  return (
-    <dialog ref={dialog} className="settings-dialog">
-      <header>
-        <h2>设置</h2>
-        <button className="icon-button" aria-label="关闭设置" onClick={close}>
-          <Icon name="close" />
-        </button>
-      </header>
-      <div className="settings-content">
-        <section>
-          <h3>模型提供商</h3>
-          <p>ChatBot 与 Agent 共用同一份模型配置。</p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setBusy(true);
-              setMessage('');
-              const previous = providers.find((p) => p.id === selected);
-              void client
-                .saveProvider({
-                  config: {
-                    name,
-                    model,
-                    baseUrl: 'https://api.deepseek.com',
-                    contextWindow: windowSize,
-                    maxOutputTokens: output,
-                    enabled: true,
-                  },
-                  ...(key ? { apiKey: key } : {}),
-                  ...(previous ? { id: previous.id, expectedRevision: previous.revision } : {}),
-                })
-                .then(async () => {
-                  setKey('');
-                  await saved();
-                  setMessage('配置已保存。');
-                })
-                .catch((e: Error) => setMessage(e.message))
-                .finally(() => setBusy(false));
-            }}
-          >
-            <label>
-              配置
-              <select value={selected} onChange={(e) => choose(e.target.value)}>
-                <option value="">新增提供商</option>
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="field-row">
-              <label>
-                显示名称
-                <input value={name} onChange={(e) => setName(e.target.value)} required />
-              </label>
-              <label>
-                模型 ID
-                <input value={model} onChange={(e) => setModel(e.target.value)} required />
-              </label>
-            </div>
-            <label>
-              模型厂商 API Key
-              <input
-                type="password"
-                autoComplete="off"
-                value={key}
-                required={!selected}
-                placeholder={selected ? '已配置 · 留空保持当前 Key' : '输入 DeepSeek API Key'}
-                onChange={(e) => setKey(e.target.value)}
-              />
-            </label>
-            <details>
-              <summary>模型容量设置</summary>
-              <p>请按厂商公布的模型容量填写。</p>
-              <div className="field-row">
-                <label>
-                  上下文窗口
-                  <input
-                    type="number"
-                    min={8192}
-                    max={2000000}
-                    value={windowSize}
-                    onChange={(e) => setWindowSize(Number(e.target.value))}
-                  />
-                </label>
-                <label>
-                  最大输出
-                  <input
-                    type="number"
-                    min={256}
-                    max={393216}
-                    value={output}
-                    onChange={(e) => setOutput(Number(e.target.value))}
-                  />
-                </label>
-              </div>
-            </details>
-            <button className="primary-button" disabled={busy}>
-              {busy ? '正在保存…' : '保存配置'}
-            </button>
-            {message && <p role="status">{message}</p>}
-          </form>
-        </section>
-        <section>
-          <h3>外观</h3>
-          <select
-            aria-label="主题"
-            defaultValue={localStorage.getItem('praxis-theme') ?? 'system'}
-            onChange={(e) => {
-              document.documentElement.dataset.theme = e.target.value;
-              localStorage.setItem('praxis-theme', e.target.value);
-            }}
-          >
-            <option value="system">跟随系统</option>
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-          </select>
-        </section>
-        {client.createKey && (
-          <section>
-            <h3>客户端登录</h3>
-            <p>生成一个 Praxis API Key，用于桌面端与 CLI。</p>
-            <button
-              className="secondary-button"
-              onClick={() => {
-                void client.createKey!()
-                  .then(setPlatformKey)
-                  .catch((e: Error) => setMessage(e.message));
-              }}
-            >
-              创建客户端 Key
-            </button>
-            {platformKey && (
-              <div className="one-time-key">
-                <p>仅显示本次，请保存到安全位置。</p>
-                <code>{platformKey}</code>
-                <Copy text={platformKey} />
-              </div>
-            )}
-          </section>
-        )}
-        <section>
-          <h3>账户</h3>
-          <button
-            className="text-button danger"
-            onClick={() => {
-              void logout();
-            }}
-          >
-            退出登录
-          </button>
-        </section>
-      </div>
-    </dialog>
   );
 }

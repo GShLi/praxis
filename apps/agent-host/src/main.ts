@@ -18,6 +18,9 @@ import { AgentRuntime } from '../../../packages/agent-runtime/src/index.ts';
 import { DeepSeekClient } from '../../../packages/model-core/src/index.ts';
 import { AuthClient } from '../../../packages/auth-client/src/index.ts';
 import { acquireLease, acquireWorkspaceLease } from '../../../packages/workspace/src/index.ts';
+import { McpConfigService } from '../../../packages/mcp-core/src/index.ts';
+import { PluginHost, PluginInstaller } from '../../../packages/plugin-host/src/index.ts';
+import { schemas } from '../../../packages/tools/src/index.ts';
 import { providerInputSchema } from '../../../packages/auth/src/index.ts';
 
 const channel = new JsonLines(process.stdin, process.stdout);
@@ -32,6 +35,11 @@ let auth: AuthClient | undefined,
   runtime: AgentRuntime | undefined;
 let dataLease: Awaited<ReturnType<typeof acquireLease>> | undefined;
 let selectedProvider: string | undefined;
+let mcpConfig: McpConfigService | undefined;
+let pluginInstaller: PluginInstaller | undefined;
+let pluginHosts: Record<'chat' | 'agent', PluginHost> | undefined;
+let pluginsChanged = false;
+let pluginFailures: Array<{ id: string; mode: string; code: string }> = [];
 const workspaces = new Map<string, string>();
 const subscriptions = new Map<string, number>();
 const noArgs = z.strictObject({});
@@ -54,6 +62,12 @@ async function clearIdentity() {
   subscriptions.clear();
   await runtime?.close();
   runtime = undefined;
+  if (pluginHosts) await Promise.all(Object.values(pluginHosts).map((host) => host.dispose()));
+  mcpConfig = undefined;
+  pluginHosts = undefined;
+  pluginInstaller = undefined;
+  pluginsChanged = false;
+  pluginFailures = [];
   store?.close();
   store = undefined;
   await dataLease?.release();
@@ -161,11 +175,32 @@ serveRpc(channel, async (method, params) => {
       store = new SessionStore(path.join(directory, 'sessions.sqlite'));
       store.recover();
       selectedProvider = input.providerId;
+      mcpConfig = new McpConfigService(directory, () => {});
+      pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
+      pluginHosts = {
+        chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
+        agent: new PluginHost(new Set(Object.keys(schemas)), 'agent'),
+      };
+      for (const record of (await pluginInstaller.records.read()).value.filter((r) => r.enabled)) {
+        for (const mode of record.manifest.modes) {
+          try {
+            await pluginHosts[mode].load(pluginInstaller, record);
+          } catch (error) {
+            pluginFailures.push({
+              id: record.manifest.id,
+              mode,
+              code: error instanceof PraxisError ? error.code : 'PLUGIN_ACTIVATION_FAILED',
+            });
+          }
+        }
+      }
+
       runtime = new AgentRuntime(store, {
         model: new DeepSeekClient(),
         interactive: input.interactive,
         beginUse: (_owner, signal) => candidate.beginUse(selectedProvider, signal),
         protectedPaths: [baseData, commonData],
+        plugins: (kind) => pluginHosts?.[kind].snapshot() ?? [],
         acquireWorkspace: (root, signal) =>
           acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),
       });
@@ -189,6 +224,16 @@ serveRpc(channel, async (method, params) => {
   }
   assert(auth && store && runtime && !binding, 'UNAUTHENTICATED', '请先使用 Praxis 身份登录。');
   const owner = auth.userId;
+  if (method === 'auth/me') {
+    noArgs.parse(params);
+    return auth.profile(AbortSignal.timeout(15000));
+  }
+  if (method === 'provider/delete') {
+    const input = z
+      .strictObject({ id: idSchema, expectedRevision: z.number().int().positive() })
+      .parse(params);
+    return auth.deleteProvider(input.id, input.expectedRevision, AbortSignal.timeout(15000));
+  }
   if (method === 'provider/list') {
     noArgs.parse(params);
     return auth.providers(AbortSignal.timeout(15_000));
@@ -236,6 +281,79 @@ serveRpc(channel, async (method, params) => {
     const workspace = input.workspaceId ? workspaces.get(input.workspaceId) : undefined;
     return store.create(owner, input.kind, workspace);
   }
+  if (method === 'mcp/server-list') {
+    noArgs.parse(params);
+    return mcpConfig!.file.read();
+  }
+  if (method === 'mcp/server-upsert') {
+    const input = z
+      .strictObject({
+        config: z.unknown(),
+        expectedStoreRevision: z.number().int().nonnegative(),
+        expectedRevision: z.number().int().positive().nullable(),
+      })
+      .parse(params);
+    return mcpConfig!.upsert(input.config, input.expectedStoreRevision, input.expectedRevision);
+  }
+  if (method === 'mcp/server-disable') {
+    const input = z
+      .strictObject({ serverId: z.uuid(), expectedStoreRevision: z.number().int().nonnegative() })
+      .parse(params);
+    return mcpConfig!.disable(input.serverId, input.expectedStoreRevision);
+  }
+  if (method === 'mcp/test' || method === 'mcp/server-enable') {
+    z.strictObject({ serverId: z.uuid() }).parse(params);
+    throw new PraxisError(
+      'MCP_TRANSPORT_UNAVAILABLE',
+      'MCP 协议传输与原生执行边界尚未完成验收；当前只可保存禁用配置。',
+    );
+  }
+  if (method === 'plugin/list') {
+    noArgs.parse(params);
+    return {
+      ...(await pluginInstaller!.records.read()),
+      restartRequired: pluginsChanged,
+      failures: pluginFailures,
+    };
+  }
+  if (method === 'plugin/inspect') {
+    const input = z.strictObject({ source: z.string().max(4096) }).parse(params);
+    return pluginInstaller!.inspect(input.source);
+  }
+  if (method === 'plugin/install') {
+    const input = z
+      .strictObject({
+        source: z.string().max(4096),
+        expectedDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        expectedRevision: z.number().int().nonnegative(),
+      })
+      .parse(params);
+    assert(!runtime.busy, 'SESSION_BUSY', '安装插件前请停止活动任务。');
+    const result = await pluginInstaller!.install(
+      input.source,
+      input.expectedDigest,
+      input.expectedRevision,
+    );
+    pluginsChanged = true;
+    return { ...result, restartRequired: true };
+  }
+  if (method === 'plugin/set-enabled') {
+    const input = z
+      .strictObject({
+        id: z.string().max(100),
+        enabled: z.boolean(),
+        expectedRevision: z.number().int().nonnegative(),
+      })
+      .parse(params);
+    assert(!runtime.busy, 'SESSION_BUSY', '更改插件前请停止活动任务。');
+    const result = await pluginInstaller!.setEnabled(
+      input.id,
+      input.enabled,
+      input.expectedRevision,
+    );
+    pluginsChanged = true;
+    return { ...result, restartRequired: true };
+  }
   if (method === 'session/list') {
     noArgs.parse(params);
     return store.list(owner);
@@ -253,8 +371,14 @@ serveRpc(channel, async (method, params) => {
       question: runtime.pendingQuestion(session.id),
     };
   }
-  if (method === 'session/prompt' || method === 'session/continue')
+  if (method === 'session/prompt' || method === 'session/continue') {
+    assert(
+      !pluginsChanged,
+      'HOST_RESTART_REQUIRED',
+      '插件配置已变化，请重新登录或重启客户端后开始任务。',
+    );
     return runtime.prompt(owner, params);
+  }
   if (method === 'session/cancel') {
     const input = z
       .strictObject({

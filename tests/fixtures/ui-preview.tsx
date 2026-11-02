@@ -16,6 +16,24 @@ const provider: Provider = {
 };
 const client: PraxisClient = {
   desktop: true,
+  async profile() {
+    return { id: 'development-fixture', username: '开发样例', scopes: [] };
+  },
+  async plugins() {
+    return { revision: 0, value: [] };
+  },
+  async mcpServers() {
+    return { revision: 0, value: [] };
+  },
+  async diagnostics() {
+    return { platform: '开发样例', arch: '未读取系统', node: '无 Host 连接', fixture: true };
+  },
+  async inspectPlugin() {
+    throw new Error('开发样例不会读取或安装插件。');
+  },
+  async saveMcp() {
+    throw new Error('开发样例不会保存真实连接配置。');
+  },
   async current() {
     return true;
   },

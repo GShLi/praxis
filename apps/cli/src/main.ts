@@ -14,6 +14,7 @@ async function main() {
       provider: { type: 'string' },
       resume: { type: 'string' },
       prompt: { type: 'string' },
+      digest: { type: 'string' },
       json: { type: 'boolean' },
       'read-only': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
@@ -22,12 +23,12 @@ async function main() {
   const command = positionals[0] ?? 'help';
   if (values.help || command === 'help') {
     console.log(
-      '知行 Praxis\n\npnpm cli doctor\npnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_ID]\npnpm cli sessions\npnpm cli providers\n\n配置 PRAXIS_SERVER_URL 和 PRAXIS_API_KEY；厂商 Key 在统一模型设置中填写。\n交互命令：/cancel、/steer 内容、/queue 内容、/exit。Ctrl-C 请求取消，再按一次退出。',
+      '知行 Praxis\n\npnpm cli doctor\npnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_ID]\npnpm cli sessions\npnpm cli providers\npnpm cli plugins [list|inspect PATH|install PATH --digest SHA256|enable ID|disable ID]\n\n配置 PRAXIS_SERVER_URL 和 PRAXIS_API_KEY；厂商 Key 在统一模型设置中填写。\n交互命令：/cancel、/steer 内容、/queue 内容、/exit。Ctrl-C 请求取消，再按一次退出。',
     );
     return;
   }
   assert(
-    ['doctor', 'run', 'sessions', 'providers'].includes(command),
+    ['doctor', 'run', 'sessions', 'providers', 'plugins'].includes(command),
     'INVALID_COMMAND',
     '未知命令，使用 --help 查看帮助。',
   );
@@ -90,6 +91,37 @@ async function main() {
       ...(values.provider ? { providerId: values.provider } : {}),
       interactive: Boolean(process.stdin.isTTY && !values.prompt),
     });
+    if (command === 'plugins') {
+      const action = positionals[1] ?? 'list',
+        source = positionals[2];
+      const state = await host.rpc.request<{ revision: number }>('plugin/list');
+      let result: unknown;
+      if (action === 'list') result = state;
+      else if (action === 'inspect') {
+        assert(source, 'INVALID_ARGUMENT', '需要插件目录。');
+        result = await host.rpc.request('plugin/inspect', { source });
+      } else if (action === 'install') {
+        assert(
+          source && values.digest,
+          'INVALID_ARGUMENT',
+          '请先 inspect 检查来源与能力，再用 --digest 指定确认的摘要安装可信插件。',
+        );
+        result = await host.rpc.request('plugin/install', {
+          source,
+          expectedDigest: values.digest,
+          expectedRevision: state.revision,
+        });
+      } else if (action === 'enable' || action === 'disable') {
+        assert(source, 'INVALID_ARGUMENT', '需要插件 ID。');
+        result = await host.rpc.request('plugin/set-enabled', {
+          id: source,
+          enabled: action === 'enable',
+          expectedRevision: state.revision,
+        });
+      } else throw new Error('plugins 支持 list / inspect / install / enable / disable。');
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
     if (command === 'sessions' || command === 'providers') {
       console.log(
         JSON.stringify(

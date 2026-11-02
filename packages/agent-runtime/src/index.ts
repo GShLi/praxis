@@ -15,6 +15,7 @@ import { ContextBuilder } from '../../context/src/index.ts';
 import type { ModelClient } from '../../model-core/src/index.ts';
 import { ToolExecutor } from '../../tools/src/index.ts';
 import type { Ask, ProcessService } from '../../tools/src/index.ts';
+import type { ActivePlugin } from '../../plugin-host/src/index.ts';
 import { WorkspaceFiles } from '../../tools/src/files.ts';
 
 export interface RuntimeOptions {
@@ -22,6 +23,7 @@ export interface RuntimeOptions {
   beginUse: (owner: string, signal: AbortSignal) => Promise<ModelConfig>;
   interactive?: boolean;
   protectedPaths?: string[];
+  plugins?: (kind: 'chat' | 'agent') => readonly ActivePlugin[];
   processes?: (session: Session, store: SessionStore) => ProcessService;
   maxSteps?: number;
   maxTools?: number;
@@ -72,6 +74,9 @@ export class AgentRuntime extends EventEmitter {
     readonly options: RuntimeOptions,
   ) {
     super();
+  }
+  get busy() {
+    return this.active.size > 0;
   }
   pendingQuestion(sessionId: string) {
     for (const [questionId, q] of this.questions)
@@ -266,6 +271,7 @@ export class AgentRuntime extends EventEmitter {
   private async run(id: string, turn: Active) {
     const session = this.store.get(id);
     const signal = turn.controller.signal;
+    const plugins = this.options.plugins?.(session.kind) ?? [];
     let workspace: string | undefined;
     let claimed = false;
     let partial = '';
@@ -304,6 +310,7 @@ export class AgentRuntime extends EventEmitter {
           files,
           this.ask(id, turn),
           this.options.processes?.(session, this.store),
+          plugins,
         );
       }
       signal.throwIfAborted();
@@ -463,6 +470,7 @@ export class AgentRuntime extends EventEmitter {
           if (turn.executor?.processes?.active) {
             await turn.executor.processes.close();
           }
+          if (this.store.claim(id, turn.id, false).length) continue;
           break;
         }
       }

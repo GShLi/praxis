@@ -27,7 +27,7 @@ ChatBot 会话不直接转换为 Agent 会话。切换模式回到各自最近�
 
 基础间距以 4px 为单位，常用 8/12/16/24px；正文初始 14–16px、行高 1.6，代码使用等宽字体，字体优先系统字体。主按钮使用中性色高对比，绿色仅表示已验证成功，红色用于错误/拒绝，橙色用于待输入或状态需核对。
 
-共用组件包括 AppShell、SessionSidebar、MessageList、MessageItem、Composer、ModelPicker、RunStatus、ToolActivity、ApprovalCard、QuestionCard、DiffViewer、OutputViewer、SettingsDialog。纯展示组件不读取数据库、不执行工具，桌面能力经主进程/Host 客户端注入。
+共用组件包括 AppShell、SessionSidebar、MessageList、MessageItem、Composer、ModelPicker、RunStatus、ToolActivity、ApprovalCard、QuestionCard、DiffViewer、OutputViewer、Settings。纯展示组件不读取数据库、不执行工具，桌面能力经主进程/Host 客户端注入。
 
 ## 4. ChatBot 完整流程
 
@@ -71,7 +71,9 @@ MCP 设置包含服务器类型、配置、启用/禁用、连接测试、认证
 
 ## 7. 设置与账户
 
-设置分为账户与 Praxis API Key、模型提供商、外观、Agent 权限/工作区、MCP、可信插件、诊断。Web 只显示其支持的部分，桌面设置按模式和能力可用性展示。
+用户在实现阶段明确要求设置页面参考 ChatGPT，原先单一弹窗过于简单。设置改为独立页面：顶部返回入口，左侧分类与搜索，右侧分组表单、配置列表和行内编辑。打开设置不卸载应用会话状态，返回后保留当前会话及未发送草稿。
+
+分类包括通用、模型提供商、Agent 与工作区、MCP 连接、插件、数据与隐私、账户与安全、关于知行。Web 隐藏本地 Agent/MCP/插件分类。通用设置提供主题预览、回答字号、发送快捷键、默认模型；桌面 Agent 权限区区分新任务默认值与当前任务权限。未接入的能力显示真实状态，不添加无作用的开关。
 
 模型提供商采用同一管理页，新增/替换 Key 是只写操作，保存后仅显示已配置状态/掩码；配置冲突提示重新加载，不静默覆盖。MCP 服务凭据有独立归属，不能把它误认为模型 Key。
 

@@ -6,6 +6,17 @@ import { assert, safeError } from '../../../packages/contracts/src/index.ts';
 
 const allowed = new Set([
   'auth/bind',
+  'auth/me',
+  'provider/delete',
+  'host/diagnostics',
+  'plugin/list',
+  'plugin/inspect',
+  'plugin/install',
+  'plugin/set-enabled',
+  'mcp/server-list',
+  'mcp/server-upsert',
+  'mcp/server-disable',
+  'mcp/test',
   'auth/clear',
   'workspace/open',
   'provider/list',
