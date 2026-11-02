@@ -13,7 +13,7 @@
 
 已完成第一版核心模块与 MCP 的详细设计，正在进入开发准备。当前仓库尚无应用实现、依赖安装或可启动命令；不把设计目标视为已实现能力。
 
-设计入口：[文档索引](docs/README.md)。UI 的布局与交互参考 ChatGPT、Codex，保留 Praxis 的产品名称和模式边界。
+设计入口：[文档索引](docs/README.md)。[UI 基线](docs/superpowers/specs/2026-11-03-praxis-ui-design.md)参考 ChatGPT、Codex，保留 Praxis 的产品名称和模式边界；[开发计划](docs/superpowers/plans/2026-11-03-praxis-development-plan.md)规定工程基座、核心闭环、三端交付及平台验证的顺序。
 
 ## 开发与提交
 
