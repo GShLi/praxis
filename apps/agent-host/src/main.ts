@@ -17,7 +17,7 @@ import { SessionStore, hash } from '../../../packages/storage-local/src/index.ts
 import { AgentRuntime } from '../../../packages/agent-runtime/src/index.ts';
 import { DeepSeekClient } from '../../../packages/model-core/src/index.ts';
 import { AuthClient } from '../../../packages/auth-client/src/index.ts';
-import { acquireLease } from '../../../packages/workspace/src/index.ts';
+import { acquireLease, acquireWorkspaceLease } from '../../../packages/workspace/src/index.ts';
 import { providerInputSchema } from '../../../packages/auth/src/index.ts';
 
 const channel = new JsonLines(process.stdin, process.stdout);
@@ -36,13 +36,13 @@ const workspaces = new Map<string, string>();
 const subscriptions = new Map<string, number>();
 const noArgs = z.strictObject({});
 const sessionArg = z.strictObject({ sessionId: idSchema });
-const baseData =
-  process.env.PRAXIS_DATA_DIR ??
-  (process.platform === 'darwin'
+const commonData =
+  process.platform === 'darwin'
     ? path.join(homedir(), 'Library', 'Application Support', 'Praxis')
     : process.platform === 'win32'
       ? path.join(process.env.LOCALAPPDATA ?? homedir(), 'Praxis')
-      : path.join(process.env.XDG_DATA_HOME ?? path.join(homedir(), '.local', 'share'), 'praxis'));
+      : path.join(process.env.XDG_DATA_HOME ?? path.join(homedir(), '.local', 'share'), 'praxis');
+const baseData = process.env.PRAXIS_DATA_DIR ?? commonData;
 function notify(method: string, params: unknown) {
   try {
     channel.send({ jsonrpc: '2.0', method, params });
@@ -165,19 +165,9 @@ serveRpc(channel, async (method, params) => {
         model: new DeepSeekClient(),
         interactive: input.interactive,
         beginUse: (_owner, signal) => candidate.beginUse(selectedProvider, signal),
-        acquireWorkspace: async (root, signal) => {
-          signal.throwIfAborted();
-          const info = await stat(root);
-          return acquireLease(
-            path.join(
-              baseData,
-              'workspace-locks',
-              hash(
-                `${info.dev}:${info.ino}:${process.platform === 'win32' ? root.toLowerCase() : ''}`,
-              ) + '.lock',
-            ),
-          );
-        },
+        protectedPaths: [baseData, commonData],
+        acquireWorkspace: (root, signal) =>
+          acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),
       });
       runtime.on('delta', (delta) => notify('session/delta', delta));
       runtime.on('fatal', () => {

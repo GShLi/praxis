@@ -269,3 +269,59 @@ test('events are emitted after commit; rollback publishes nothing', async () => 
     await env.close();
   }
 });
+
+test('private application data and linked aliases remain protected inside a parent workspace', async () => {
+  const { mkdir, link } = await import('node:fs/promises');
+  const env = await setup();
+  try {
+    const privateRoot = path.join(env.workspace, 'Application Support', 'Praxis');
+    await mkdir(privateRoot, { recursive: true });
+    await writeFile(path.join(privateRoot, 'secret.txt'), 'fixture only');
+    await symlink(privateRoot, path.join(env.workspace, 'shortcut'), 'junction');
+    await link(path.join(privateRoot, 'secret.txt'), path.join(env.workspace, 'alias.txt'));
+    const files = await WorkspaceFiles.open(env.workspace, () => 'artifact', [privateRoot]);
+    for (const name of [
+      'Application Support/Praxis/secret.txt',
+      'shortcut/secret.txt',
+      'alias.txt',
+      'report.txt:secret',
+      'NUL',
+    ]) {
+      await assert.rejects(
+        files.read({ path: name, startLine: 1, lineCount: 10 }),
+        (e: unknown) => (e as { code: string }).code === 'ACCESS_DENIED',
+      );
+    }
+    await assert.rejects(
+      WorkspaceFiles.open(privateRoot, () => '', [privateRoot]),
+      /内部目录/,
+    );
+  } finally {
+    await env.close();
+  }
+});
+
+test('file publishing rechecks user permissions after asynchronous preparation', async () => {
+  const env = await setup();
+  let writes = 0;
+  try {
+    const files = await WorkspaceFiles.open(
+      env.workspace,
+      () => 'artifact',
+      [],
+      () => {
+        if (++writes > 1) throw new Error('permission revoked');
+      },
+    );
+    await assert.rejects(
+      files.write(
+        { path: 'revoked.txt', mode: 'create', content: 'must not publish', createParents: false },
+        new AbortController().signal,
+      ),
+      /permission revoked/,
+    );
+    await assert.rejects(readFile(path.join(env.workspace, 'revoked.txt')), { code: 'ENOENT' });
+  } finally {
+    await env.close();
+  }
+});

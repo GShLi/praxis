@@ -11,7 +11,9 @@ const DISPLAY_LIMIT = 12 * 1024;
 const protectedParts = new Set(['.git', '.hg', '.svn', '.ssh', '.aws', '.gnupg', '.praxis']);
 function sensitive(name: string) {
   return (
-    protectedParts.has(name) || /^\.env(?:\.|$)/i.test(name) || /\.(?:pem|key|p12|pfx)$/i.test(name)
+    protectedParts.has(name.toLowerCase()) ||
+    /^\.env(?:\.|$)/i.test(name) ||
+    /\.(?:pem|key|p12|pfx)$/i.test(name)
   );
 }
 export function isInside(root: string, target: string) {
@@ -45,18 +47,54 @@ export class WorkspaceFiles {
   private constructor(
     readonly root: string,
     private artifact: (kind: string, text: string) => string,
+    private protectedPaths: string[],
+    private beforeWrite: () => void,
   ) {}
-  static async open(root: string, artifact: (kind: string, text: string) => string) {
+  static async open(
+    root: string,
+    artifact: (kind: string, text: string) => string,
+    protectedPaths: string[] = [],
+    beforeWrite: () => void = () => {},
+  ) {
     const canonical = await fs.realpath(root);
     const stat = await fs.stat(canonical);
     assert(stat.isDirectory(), 'INVALID_WORKSPACE', '工作区必须是目录。');
-    return new WorkspaceFiles(canonical, artifact);
+    const protectedRoots = await Promise.all(
+      protectedPaths.map(async (p) => {
+        try {
+          return await fs.realpath(p);
+        } catch {
+          return path.resolve(p);
+        }
+      }),
+    );
+    assert(
+      !protectedRoots.some((p) => isInside(p, canonical)),
+      'ACCESS_DENIED',
+      '不能使用 Praxis 内部目录作为工作区。',
+    );
+    return new WorkspaceFiles(canonical, artifact, protectedRoots, beforeWrite);
   }
   async resolve(input: string, writing = false): Promise<string> {
     assert(!input.includes('\0'), 'INVALID_ARGUMENT', '路径包含非法字符。');
     const target = path.resolve(this.root, input);
     assert(isInside(this.root, target), 'ACCESS_DENIED', '目标不在工作区内。');
+    assert(
+      !this.protectedPaths.some((p) => isInside(p, target)),
+      'ACCESS_DENIED',
+      '目标属于受保护的应用数据。',
+    );
     const components = path.relative(this.root, target).split(path.sep).filter(Boolean);
+    assert(
+      !components.some(
+        (part) =>
+          /[:\x00-\x1f]/.test(part) ||
+          /[. ]$/.test(part) ||
+          /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part),
+      ),
+      'ACCESS_DENIED',
+      '不支持设备路径、数据流或不明确的文件别名。',
+    );
     assert(!components.some(sensitive), 'ACCESS_DENIED', '该路径属于敏感或内部数据。');
     let current = this.root;
     for (const component of components) {
@@ -68,6 +106,7 @@ export class WorkspaceFiles {
           const real = await fs.realpath(current);
           assert(
             isInside(this.root, real) &&
+              !this.protectedPaths.some((p) => isInside(p, real)) &&
               !path.relative(this.root, real).split(path.sep).some(sensitive),
             'ACCESS_DENIED',
             '链接目标超出读取范围。',
@@ -89,6 +128,7 @@ export class WorkspaceFiles {
       await this.resolve(real, writing);
       handle = await fs.open(real, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       const before = await handle.stat();
+      assert(before.nlink === 1, 'ACCESS_DENIED', '拒绝读取来源不明确的多硬链接文件。');
       assert(before.isFile(), 'UNSUPPORTED_FILE', '只支持普通文本文件。');
       assert(before.size <= FILE_LIMIT, 'FILE_TOO_LARGE', '文件超过 2 MiB。');
       const buffer = await handle.readFile();
@@ -191,6 +231,7 @@ export class WorkspaceFiles {
     before: Loaded | undefined,
     signal: AbortSignal,
   ) {
+    this.beforeWrite();
     const diffArtifactId = this.artifact(
       'file-change',
       JSON.stringify({ path: target, before: before?.text ?? null, after: content }),
@@ -207,10 +248,14 @@ export class WorkspaceFiles {
           'FILE_VERSION_CONFLICT',
           '发布前文件发生变化。',
         );
+        signal.throwIfAborted();
+        this.beforeWrite();
         await fs.rename(temporary, target);
       } else {
         // Linking an already complete temporary file is atomic and fails if the destination exists.
         try {
+          signal.throwIfAborted();
+          this.beforeWrite();
           await fs.link(temporary, target);
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === 'EEXIST')

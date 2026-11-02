@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PraxisError } from '../../contracts/src/index.ts';
@@ -15,9 +16,13 @@ export const defaultLeaseExecutable = process.env.PRAXIS_NATIVE_DIR
         import.meta.url,
       ),
     );
-export async function acquireLease(lockFile: string, executable = defaultLeaseExecutable) {
+export async function acquireLease(
+  lockFile: string,
+  executable = defaultLeaseExecutable,
+  shared = false,
+) {
   await mkdir(path.dirname(lockFile), { recursive: true, mode: 0o700 });
-  const child = spawn(executable, [lockFile], {
+  const child = spawn(executable, [lockFile, ...(shared ? ['shared'] : [])], {
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -71,6 +76,44 @@ export async function acquireLease(lockFile: string, executable = defaultLeaseEx
         });
         child.stdin.end();
       });
+    },
+  };
+}
+
+/** Shared ancestors + exclusive root exclude nested/aliased writers without blocking siblings. */
+export async function acquireWorkspaceLease(root: string, directory: string, signal: AbortSignal) {
+  const canonical = await realpath(root);
+  const ancestors: string[] = [];
+  for (let current = canonical; ; current = path.dirname(current)) {
+    ancestors.unshift(current);
+    if (path.dirname(current) === current) break;
+  }
+  const leases: Awaited<ReturnType<typeof acquireLease>>[] = [];
+  try {
+    for (const target of ancestors) {
+      signal.throwIfAborted();
+      const info = await stat(target);
+      const identity = `${info.dev}:${info.ino}:${process.platform === 'win32' ? target.toLowerCase() : ''}`;
+      const name = createHash('sha256').update(identity).digest('hex') + '.lock';
+      leases.push(
+        await acquireLease(
+          path.join(directory, name),
+          defaultLeaseExecutable,
+          target !== canonical,
+        ),
+      );
+    }
+    signal.throwIfAborted();
+  } catch (error) {
+    await Promise.all(leases.map((lease) => lease.release()));
+    throw error;
+  }
+  return {
+    onLost(callback: () => void) {
+      for (const lease of leases) lease.onLost(callback);
+    },
+    async release() {
+      await Promise.all(leases.map((lease) => lease.release()));
     },
   };
 }

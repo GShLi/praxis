@@ -27,3 +27,9 @@
 2026-11-03：React/Vite 共享界面连接 Web HTTP/SSE 或 Electron 私有 preload RPC；支持身份登录、统一模型设置、历史、多轮流式回答、停止、工作区选择、问题回答和文件变更快照。Web 会话刷新使用同源互斥与会话绑定 CSRF，兼容多标签页；Electron renderer 禁止 Node、远程连接和任意 IPC。生产 Web 文件由同一服务端提供。
 
 本机 19 项测试、TypeScript 与 Web/Host/CLI/桌面构建通过。通过 Chrome 打开独立开发样例，检查了对话代码块、Chat/Agent 切换和工具记录；样例明确标注无模型调用，不能替代真实登录/服务端/模型端到端验收。Electron 安装包、三平台沙箱、插件/MCP 与发布仍未完成。
+
+## 工作区和文件边界
+
+原生锁已增加祖先共享锁/目标独占锁，真实子进程测试覆盖同目录、嵌套目录、符号链接别名排他及兄弟目录并行；桌面与 CLI 使用同一用户级协调目录，profile 数据目录不再影响占用一致性。文件工具拒绝受保护应用数据、链接别名、硬链接和 Windows 设备/ADS 歧义路径，并在异步准备后重新检查写权限。SQLite 文件以 0600 创建。22 项本机测试通过。
+
+当前执行环境运行 `/usr/bin/sandbox-exec` 返回 `sandbox_apply: Operation not permitted`，无法完成 Seatbelt 内核验收；npm registry DNS 无法解析，官方 MCP v2 client 缓存缺失。没有以普通进程或 v1 SDK 冒充设计中的隔离和协议支持。

@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID, createHash } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, chmodSync, openSync, closeSync, constants, lstatSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { assert, permissionSchema } from '../../contracts/src/index.ts';
@@ -27,6 +27,20 @@ export class SessionStore extends EventEmitter {
   constructor(path: string) {
     super();
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    if (path !== ':memory:') {
+      const fd = openSync(
+        path,
+        constants.O_CREAT | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+      closeSync(fd);
+      assert(
+        lstatSync(path).isFile() && lstatSync(path).nlink === 1,
+        'STORAGE_PATH_UNSAFE',
+        '数据库路径不是独占普通文件。',
+      );
+      chmodSync(path, 0o600);
+    }
     this.db = new DatabaseSync(path);
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     const version = (this.db.prepare('PRAGMA user_version').get() as Row).user_version;

@@ -21,6 +21,7 @@ export interface RuntimeOptions {
   model: ModelClient;
   beginUse: (owner: string, signal: AbortSignal) => Promise<ModelConfig>;
   interactive?: boolean;
+  protectedPaths?: string[];
   processes?: (session: Session, store: SessionStore) => ProcessService;
   maxSteps?: number;
   maxTools?: number;
@@ -286,8 +287,16 @@ export class AgentRuntime extends EventEmitter {
         this.workspaceOwners.set(workspace, id);
         workspaceLease = await this.options.acquireWorkspace?.(workspace, signal);
         workspaceLease?.onLost(() => turn.controller.abort());
-        const files = await WorkspaceFiles.open(workspace, (kind, text) =>
-          this.store.artifact(id, kind, text),
+        const files = await WorkspaceFiles.open(
+          workspace,
+          (kind, text) => this.store.artifact(id, kind, text),
+          this.options.protectedPaths,
+          () =>
+            assert(
+              this.store.get(id).permission.mode === 'workspace-write',
+              'ACCESS_DENIED',
+              '当前权限禁止写入。',
+            ),
         );
         turn.executor = new ToolExecutor(
           id,
