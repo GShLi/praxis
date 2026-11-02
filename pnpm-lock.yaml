@@ -35,9 +35,19 @@ importers:
 
   apps/cli: {}
 
+  packages/agent-runtime: {}
+
   packages/client-host: {}
 
+  packages/context: {}
+
   packages/contracts: {}
+
+  packages/model-core: {}
+
+  packages/storage-local: {}
+
+  packages/tools: {}
 
   packages/transport: {}
 
