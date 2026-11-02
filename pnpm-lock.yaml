@@ -366,21 +366,33 @@ importers:
       '@modelcontextprotocol/client':
         specifier: 2.3.1
         version: 2.3.1
+      '@praxis/config':
+        specifier: workspace:*
+        version: link:../config
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@praxis/mcp-core':
         specifier: workspace:*
         version: link:../mcp-core
+      '@praxis/permissions':
+        specifier: workspace:*
+        version: link:../permissions
       '@praxis/schema':
         specifier: workspace:*
         version: link:../schema
       '@praxis/storage-local':
         specifier: workspace:*
         version: link:../storage-local
+      '@praxis/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@praxis/transport':
         specifier: workspace:*
         version: link:../transport
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
 
   packages/mcp-core:
     dependencies:
@@ -468,6 +480,9 @@ importers:
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../contracts
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
 
   packages/storage-server:
     dependencies:

@@ -157,6 +157,13 @@ export class LocalClient implements PraxisClient {
       expectedRevision: revision,
     });
   }
+  async enableMcp(id: string, storeRevision: number, configRevision: number) {
+    await this.bridge.call('mcp/server-enable', {
+      serverId: id,
+      expectedStoreRevision: storeRevision,
+      expectedRevision: configRevision,
+    });
+  }
   async respondApproval(input: {
     sessionId: string;
     turnId: string;

@@ -57,6 +57,7 @@ export type HostMethod =
   | 'mcp/server-list'
   | 'mcp/server-upsert'
   | 'mcp/server-disable'
+  | 'mcp/server-enable'
   | 'mcp/test'
   | 'auth/bind'
   | 'auth/clear'
@@ -212,4 +213,5 @@ export interface PraxisClient {
   saveMcp?(config: unknown, storeRevision: number, configRevision: number | null): Promise<void>;
   disableMcp?(id: string, revision: number): Promise<void>;
   testMcp?(id: string, revision: number): Promise<McpTestResult>;
+  enableMcp?(id: string, storeRevision: number, configRevision: number): Promise<void>;
 }

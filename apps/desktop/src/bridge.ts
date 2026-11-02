@@ -13,6 +13,7 @@ const allowed = new Set([
   'mcp/server-list',
   'mcp/server-upsert',
   'mcp/server-disable',
+  'mcp/server-enable',
   'mcp/test',
   'auth/clear',
   'workspace/open',

@@ -57,4 +57,24 @@ export class McpConfigService {
     this.invalidate(serverId);
     return result;
   }
+  async enable(serverId: string, expectedStoreRevision: number, testedRevision: number) {
+    const result = await this.file.update(expectedStoreRevision, (configs) => {
+      const config = configs.find((c) => c.id === serverId);
+      assert(
+        config?.revision === testedRevision,
+        'MCP_CONFIG_CHANGED',
+        '检查后配置已变化，请重新检查。',
+      );
+      assert(
+        config.transport.type === 'streamable-http' && config.transport.auth.type === 'none',
+        'MCP_TRANSPORT_UNAVAILABLE',
+        '当前仅能启用无认证 HTTP 工具。',
+      );
+      return configs.map((c) =>
+        c.id === serverId ? { ...c, enabled: true, revision: c.revision + 1 } : c,
+      );
+    });
+    this.invalidate(serverId);
+    return result;
+  }
 }

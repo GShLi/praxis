@@ -2,6 +2,7 @@ import { AgentRuntime } from '@praxis/agent-runtime';
 import { AuthClient } from '@praxis/auth-client';
 import { PraxisError, assert, idSchema } from '@praxis/contracts';
 import { McpMaintenance } from '@praxis/mcp-client/maintenance';
+import { McpRuntime } from '@praxis/mcp-client/runtime';
 import { McpConfigService } from '@praxis/mcp-core';
 import { DeepSeekClient } from '@praxis/model-core';
 import { PluginHost, PluginInstaller } from '@praxis/plugin-host';
@@ -21,6 +22,7 @@ export class HostIdentity {
   selectedProvider: string | undefined;
   mcpConfig: McpConfigService | undefined;
   mcpMaintenance: McpMaintenance | undefined;
+  mcpRuntime: McpRuntime | undefined;
   pluginInstaller: PluginInstaller | undefined;
   pluginHosts: Record<'chat' | 'agent', PluginHost> | undefined;
   pluginsChanged = false;
@@ -41,6 +43,8 @@ export class HostIdentity {
     this.mcpMaintenance = undefined;
     await this.runtime?.close();
     this.runtime = undefined;
+    await this.mcpRuntime?.close();
+    this.mcpRuntime = undefined;
     if (this.pluginHosts)
       await Promise.all(Object.values(this.pluginHosts).map((host) => host.dispose()));
     this.mcpConfig = undefined;
@@ -81,33 +85,23 @@ export class HostIdentity {
       this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
       this.store.recover();
       this.selectedProvider = input.providerId;
-      this.mcpConfig = new McpConfigService(directory, (id) => this.mcpMaintenance?.cancel(id));
+      this.mcpConfig = new McpConfigService(directory, (id) => {
+        this.mcpMaintenance?.cancel(id);
+        this.mcpRuntime?.invalidate(id);
+      });
       this.mcpMaintenance = new McpMaintenance(
         this.mcpConfig,
         this.store,
         candidate.userId,
         this.clientKind(),
       );
+      this.mcpRuntime = new McpRuntime(this.mcpConfig, this.store, this.clientKind());
       this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
       this.pluginHosts = {
         chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
         agent: new PluginHost(new Set(Object.keys(schemas)), 'agent'),
       };
-      for (const record of (await this.pluginInstaller.records.read()).value.filter(
-        (r) => r.enabled,
-      )) {
-        for (const mode of record.manifest.modes) {
-          try {
-            await this.pluginHosts[mode].load(this.pluginInstaller, record);
-          } catch (error) {
-            this.pluginFailures.push({
-              id: record.manifest.id,
-              mode,
-              code: error instanceof PraxisError ? error.code : 'PLUGIN_ACTIVATION_FAILED',
-            });
-          }
-        }
-      }
+      await this.loadPlugins();
 
       this.runtime = new AgentRuntime(this.store, {
         model: new DeepSeekClient(),
@@ -115,6 +109,11 @@ export class HostIdentity {
         beginUse: (_owner, signal) => candidate.beginUse(this.selectedProvider, signal),
         protectedPaths: [baseData, commonData],
         plugins: (kind) => this.pluginHosts?.[kind].snapshot() ?? [],
+        toolExtension: (session, config, approve, signal) =>
+          this.mcpRuntime!.create(session, config.contextWindow, approve, signal, [
+            config.apiKey,
+            input.praxisApiKey,
+          ]),
         acquireWorkspace: (root, signal) =>
           acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),
       });
@@ -128,6 +127,24 @@ export class HostIdentity {
       throw error;
     } finally {
       this.binding = false;
+    }
+  }
+  private async loadPlugins() {
+    const installer = this.pluginInstaller,
+      hosts = this.pluginHosts;
+    assert(installer && hosts, 'PLUGIN_UNAVAILABLE', '插件宿主尚未初始化。');
+    for (const record of (await installer.records.read()).value.filter((r) => r.enabled)) {
+      for (const mode of record.manifest.modes) {
+        try {
+          await hosts[mode].load(installer, record);
+        } catch (error) {
+          this.pluginFailures.push({
+            id: record.manifest.id,
+            mode,
+            code: error instanceof PraxisError ? error.code : 'PLUGIN_ACTIVATION_FAILED',
+          });
+        }
+      }
     }
   }
   require() {

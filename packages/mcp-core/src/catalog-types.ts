@@ -12,6 +12,7 @@ export interface CatalogBinding {
 export interface CatalogTool extends ToolDefinition {
   rawName: string;
   inputHash: string;
+  wireParameters: JsonSchema;
   outputSchema?: JsonSchema;
   headerPaths: Array<{ name: string; path: string[] }>;
   validate(input: unknown): void;

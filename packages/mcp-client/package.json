@@ -6,14 +6,19 @@
   "exports": {
     ".": "./src/index.ts",
     "./maintenance": "./src/maintenance.ts",
+    "./runtime": "./src/runtime.ts",
     "./http": "./src/http.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "2.3.1",
     "@praxis/contracts": "workspace:*",
+    "@praxis/config": "workspace:*",
     "@praxis/mcp-core": "workspace:*",
+    "@praxis/permissions": "workspace:*",
     "@praxis/schema": "workspace:*",
     "@praxis/storage-local": "workspace:*",
-    "@praxis/transport": "workspace:*"
+    "@praxis/transport": "workspace:*",
+    "@praxis/tools": "workspace:*",
+    "zod": "4.3.6"
   }
 }

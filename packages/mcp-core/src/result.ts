@@ -13,7 +13,7 @@ export function normalizeResult(raw: unknown, outputSchema?: JsonSchema) {
   const result = z
     .object({
       content: z.array(z.object({ type: z.string() }).passthrough()).max(1000),
-      structuredContent: z.record(z.string(), z.unknown()).optional(),
+      structuredContent: z.json().optional(),
       isError: z.boolean().optional(),
     })
     .parse(raw);
@@ -40,7 +40,9 @@ export function normalizeResult(raw: unknown, outputSchema?: JsonSchema) {
     status: result.isError ? 'failed' : 'succeeded',
     effectState: 'unknown',
     content,
-    ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
+    ...(result.structuredContent !== undefined
+      ? { structuredContent: result.structuredContent }
+      : {}),
     unsupportedContent,
   };
 }

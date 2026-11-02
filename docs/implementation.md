@@ -20,6 +20,20 @@
 
 ## 工程与协议
 
+### MCP 远程工具执行
+
+2026-11-03：接入可选的 turn 级工具扩展，Agent Loop 不引用具体 MCP 服务。支持用户先检查再明确启用无认证 Streamable HTTP 服务；桌面设置提供启用入口，CLI 提供 `mcp list/import/test/enable/disable`。CLI 的 enable 在同一 Host 内先执行检查，成功后提交启用，不因 test 自动启用。
+
+`mcp_discover_tools` 只读取已启用固定端点的目录，不向远端发送查询文本。定义在下一 step 激活，同一工具批次中猜测名称会拒绝。每个业务调用通过真实 ApprovalGate，核对配置、权限与实际远端目录后消费一次票据，记录 dispatch 后才发送请求。保留原始参数 Schema，由官方 SDK 生成新版参数镜像头；旧版初始化和调用也已验证。已知厂商 Key/Praxis Key 出现在参数时拒绝发送。目录按会话产物保存，事件保留引用，模型请求与工具集快照可以重建当时可见定义。
+
+编辑/停用立即取消该服务器当前操作；Host 关闭回收请求。远端业务失败、Schema 错误、断流及分发后取消均保守保留未知效果，不自动重放。结构化结果支持完整 JSON 值，包括 `false`。崩溃恢复补记未终结操作为 interrupted，分发后的效果为 unknown，不恢复网络会话或审批。
+
+本机 79 项核心测试、结构检查、TypeScript 与四入口构建通过。新增 11 项 MCP 测试使用真实本机 HTTP、官方 SDK、Agent/ToolExecutor、ApprovalGate 和 SQLite，覆盖新旧协议、下一步生效、参数头、版本变化、审批撤销、停用取消、断流不重试和重启恢复。模型仍为确定性 fixture；本轮未做桌面实际点击或外部生产服务验收。
+
+代码复查额外发现最终输入领取与异步收尾之间仍可接纳迟到 steer；已用微任务边界测试复现，再同步设置 finishing 标记，回归通过。
+
+此切片不包含 stdio、Bearer/OAuth、资源与模板/提示词、MRTR 表单续交。收到尚不支持的 input_required 明确失败，不保存 requestState 或自动续交；Web/桌面 ChatBot 不装配 MCP。
+
 ### 插件运行时与静态检查补全
 
 2026-11-03：可信插件的 `contributeContext` 在每个本地 turn 开始时执行一次，接收该轮取消信号，生成带插件 ID、版本、包摘要的数据包络；同一轮各 step 重用该快照，请求快照保存实际内容，不伪造原始对话。单项限制 8 KiB、合计 32 KiB，单项执行限制 2 秒。上下文贡献失败会终止本轮，不静默忽略。

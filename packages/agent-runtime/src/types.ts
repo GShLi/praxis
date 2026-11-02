@@ -1,8 +1,9 @@
 import type { Message, ModelConfig, Session } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
 import type { ActivePlugin } from '@praxis/plugin-host';
+import type { Approve } from '@praxis/permissions';
 import { SessionStore } from '@praxis/storage-local';
-import type { Ask, ProcessService } from '@praxis/tools';
+import type { Ask, ProcessService, ToolExtension } from '@praxis/tools';
 import { ToolExecutor } from '@praxis/tools';
 
 export interface RuntimeOptions {
@@ -12,6 +13,12 @@ export interface RuntimeOptions {
   protectedPaths?: string[];
   plugins?: (kind: 'chat' | 'agent') => readonly ActivePlugin[];
   processes?: (session: Session, store: SessionStore) => ProcessService;
+  toolExtension?: (
+    session: Session,
+    config: ModelConfig,
+    approve: Approve,
+    signal: AbortSignal,
+  ) => Promise<ToolExtension>;
   maxSteps?: number;
   maxTools?: number;
   maxAttempts?: number;

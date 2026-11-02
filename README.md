@@ -60,3 +60,39 @@ CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置�
 - CI 的 `postgres` job 已配置 PostgreSQL 18 服务；该配置仍需在远端实际运行。
 
 示例：`PRAXIS_TEST_PG_BIN=/path/to/postgresql/bin pnpm test:postgres`。普通 `pnpm check` 保持无需数据库服务，包含结构检查、类型检查和核心回归。
+
+### MCP 远程工具
+
+桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证 Streamable HTTP；每次业务调用展示实际参数与目标地址并等待单次审批。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
+
+CLI 与桌面使用独立 profile，可通过以下命令管理 CLI 的服务器：
+
+```sh
+pnpm cli mcp import /absolute/path/server.json
+pnpm cli mcp test SERVER_ID
+pnpm cli mcp enable SERVER_ID
+pnpm cli mcp list
+pnpm cli mcp disable SERVER_ID
+```
+
+`enable` 会先检查该版本，成功才启用；`test` 本身不启用。配置示例（替换 ID、名称与固定 HTTPS 地址）：
+
+```json
+{
+  "id": "ffdb764e-d237-49dd-914f-fd7dd66c1ced",
+  "namespace": "docs",
+  "displayName": "文档工具",
+  "revision": 1,
+  "enabled": false,
+  "protocol": "auto",
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "https://your-server.example/mcp",
+    "allowPrivateDestination": false,
+    "auth": { "type": "none" }
+  },
+  "capabilities": { "tools": true, "resources": false, "prompts": false }
+}
+```
+
+使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。stdio、Bearer/OAuth、资源/提示词及 MRTR 表单续交尚未接入。详见 [实现记录](docs/implementation.md)。

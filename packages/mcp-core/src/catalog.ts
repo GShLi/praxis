@@ -1,10 +1,9 @@
 import { fingerprint } from '@praxis/config';
 import { assert, safeError } from '@praxis/contracts';
-import { compileSchema } from '@praxis/schema';
 import { z } from 'zod';
 import type { Catalog, CatalogBinding, CatalogTool, MetadataRpc } from './catalog-types.ts';
 import { text } from './config.ts';
-import { modelToolName, prepareSchema } from './tool-schema.ts';
+import { catalogTool } from './catalog-tool.ts';
 
 export class McpCatalog {
   private current: Catalog | undefined;
@@ -48,35 +47,7 @@ export class McpCatalog {
           seen.add(entry.name);
           assert(++count <= 200, 'MCP_CATALOG_LIMIT', '服务器工具超过 200 项。');
           try {
-            assert(
-              !entry.execution ||
-                (entry.execution as { taskSupport?: string }).taskSupport !== 'required',
-              'MCP_CAPABILITY_UNSUPPORTED',
-              '此工具要求后台 Tasks。',
-            );
-            const schema = prepareSchema(entry.inputSchema),
-              name = modelToolName(binding.serverId, namespace, entry.name);
-            assert(!modelNames.has(name), 'MCP_NAME_COLLISION', '模型工具名摘要碰撞。');
-            modelNames.add(name);
-            const description = z
-              .string()
-              .max(16384)
-              .parse(entry.description ?? '');
-            const outputSchema =
-              entry.outputSchema === undefined
-                ? undefined
-                : compileSchema(entry.outputSchema).schema;
-            tools.push({
-              id: JSON.stringify([binding.serverId, entry.name]),
-              rawName: entry.name,
-              modelName: name,
-              description,
-              parameters: schema.schema,
-              inputHash: fingerprint(entry.inputSchema),
-              headerPaths: schema.headerPaths,
-              validate: schema.validate,
-              ...(outputSchema ? { outputSchema } : {}),
-            });
+            tools.push(catalogTool(entry, binding, namespace, modelNames));
           } catch (error) {
             const code = safeError(error).code;
             if (code === 'MCP_NAME_COLLISION') throw error;

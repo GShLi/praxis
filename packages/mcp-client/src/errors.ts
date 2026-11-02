@@ -20,5 +20,10 @@ export function mcpError(error: unknown, signal?: AbortSignal): PraxisError {
     return new PraxisError('MCP_PROTOCOL_UNSUPPORTED', '服务器协议与 Praxis 支持的版本不兼容。');
   if (error instanceof SdkError && error.code === SdkErrorCode.RequestTimeout)
     return new PraxisError('MCP_OPERATION_TIMEOUT', 'MCP 请求超时。');
+  if (error instanceof SdkError && error.code === SdkErrorCode.UnsupportedResultType)
+    return new PraxisError(
+      'MCP_CAPABILITY_UNSUPPORTED',
+      '服务器要求尚未支持的交互或结果类型；未自动续交。',
+    );
   return new PraxisError('MCP_PROTOCOL_FAILED', 'MCP 协议请求失败；未自动重放业务请求。');
 }

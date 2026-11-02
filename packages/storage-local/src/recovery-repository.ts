@@ -2,6 +2,7 @@ import type { Session } from '@praxis/contracts';
 import { uuid } from './identity.ts';
 import type { StoreAccess } from './store-access.ts';
 import type { Row } from './types.ts';
+import { recoverMcpOperations } from './mcp-recovery.ts';
 export class RecoveryRepository {
   constructor(
     private store: Pick<
@@ -49,6 +50,7 @@ export class RecoveryRepository {
             effects: 'inspect_unfinished_tools',
             approvalsInvalidated: true,
           });
+          recoverMcpOperations(this.store, s.id);
           const messages = this.store.messages(s.id);
           const lastAssistant = messages.findLastIndex((m) => m.role === 'assistant');
           const assistant = messages[lastAssistant];

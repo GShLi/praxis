@@ -41,7 +41,14 @@ export class ToolSelector {
       const candidate = new Map(this.selected);
       candidate.set(name, tool);
       const bytes = Buffer.byteLength(
-        JSON.stringify([...candidate.values()].map(({ validate: _validate, ...item }) => item)),
+        JSON.stringify(
+          [...candidate.values()].map(({ id, modelName, description, parameters }) => ({
+            id,
+            modelName,
+            description,
+            parameters,
+          })),
+        ),
       );
       if (candidate.size > this.maxTools || Math.ceil(bytes / 2) > Math.min(4000, this.tokenBudget))
         excluded.push(name);

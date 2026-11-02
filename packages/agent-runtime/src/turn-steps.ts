@@ -35,6 +35,7 @@ export class TurnSteps {
       );
       this.store.claim(id, turn.id, false);
       const fixed = await fixedPrompt(session, turn, this.store, this.options);
+      turn.executor?.boundary();
       const tools = turn.executor?.definitions ?? [];
       const messages = await context.build(id, fixed, tools, config, signal, () =>
         this.consumeAttempt(turn),
@@ -75,15 +76,15 @@ export class TurnSteps {
       this.store.append(id, 'step/finished', { turnId: turn.id, stepId, usage: response.usage });
       signal.throwIfAborted();
       assert(turn.tools <= (this.options.maxTools ?? 200), 'BUDGET_EXHAUSTED', '工具预算已用完。');
-      if (!message.toolCalls?.length) {
-        // No await between the final steer claim and completion decision.
-        if (this.store.claim(id, turn.id, false).length) continue;
-        if (turn.executor?.processes?.active) {
-          await turn.executor.processes.close();
-        }
-        if (this.store.claim(id, turn.id, false).length) continue;
-        break;
-      }
+      if (!message.toolCalls?.length && (await this.done(id, turn))) break;
     }
+  }
+  private async done(id: string, turn: Active) {
+    // Close steer acceptance synchronously with the final claim, before the caller's await resumes.
+    if (this.store.claim(id, turn.id, false).length) return false;
+    if (turn.executor?.processes?.active) await turn.executor.processes.close();
+    if (this.store.claim(id, turn.id, false).length) return false;
+    turn.finishing = true;
+    return true;
   }
 }

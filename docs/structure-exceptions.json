@@ -1,21 +1,11 @@
 {
   "apps/agent-host/src/identity.ts#bind:1": {
-    "maxLines": 74,
+    "maxLines": 69,
     "reason": "bind 按身份顺序装配存储、运行时、插件和 MCP；clear 是对应统一释放路径，业务已委托服务。",
     "validation": "client-lifecycle、runtime、plugins-mcp、mcp-client 测试及 CLI doctor"
   },
-  "apps/agent-host/src/plugins-rpc.ts#pluginsRoutes:1": {
-    "maxLines": 61,
-    "reason": "插件 RPC 路由表；每个 handler 仅验证参数、取得身份并调用插件安装服务。",
-    "validation": "plugins-mcp 测试、Host 构建"
-  },
-  "apps/agent-host/src/providers-rpc.ts#providersRoutes:1": {
-    "maxLines": 63,
-    "reason": "Provider RPC 路由表；模型列表网络策略与凭据操作均在 model-core/auth-client。",
-    "validation": "model-catalog 测试、Host 构建"
-  },
   "apps/agent-host/src/sessions-rpc.ts#sessionsRoutes:1": {
-    "maxLines": 178,
+    "maxLines": 163,
     "reason": "会话 RPC 路由表；单个 handler 有界，统一保留身份检查、Session ID 和 runtime 调用的对应关系。",
     "validation": "runtime、permissions 测试、Host 构建"
   },
@@ -25,14 +15,9 @@
     "validation": "auth-http 测试、Server 构建"
   },
   "packages/agent-runtime/src/turn-executor.ts#run:1": {
-    "maxLines": 118,
+    "maxLines": 110,
     "reason": "单个 turn 的资源获取、输入领取、运行、失败记录和 finally 回收需要在同一生命周期闭包；实际步骤在 TurnSteps。 本轮新增的插件上下文和结束钩子委托 plugin-host，前者固定于 turn，后者只在终态提交后运行。",
     "validation": "runtime 的取消、恢复、独占执行测试；plugin-hooks 的跨 step 固定快照与提交后回调验证"
-  },
-  "packages/agent-runtime/src/turn-steps.ts#run:1": {
-    "maxLines": 64,
-    "reason": "协调一个模型 step：上下文、快照、完整响应验证、工具批次和结束判定；提示词、验证与工具持久化已分别提取。",
-    "validation": "runtime、context-model、permissions 测试"
   },
   "packages/chat-runtime/src/context.ts#buildChatContext:1": {
     "maxLines": 119,
@@ -69,13 +54,8 @@
     "reason": "单个 MCP 连接的受控 HTTP 装配、协议协商及失败清理，网络策略和错误映射已移出。",
     "validation": "mcp-client 协议、取消、网络边界测试"
   },
-  "packages/mcp-client/src/maintenance.ts#perform:1": {
-    "maxLines": 70,
-    "reason": "单次维护操作状态机，共享取消控制器、配置版本、连接与最终记录；不产生会话工具副作用。",
-    "validation": "mcp-client 配置变化、Host 关闭、恢复不重启测试"
-  },
   "packages/mcp-core/src/catalog.ts#refresh:1": {
-    "maxLines": 102,
+    "maxLines": 74,
     "reason": "完整目录刷新候选在分页/去重/Schema 校验后一次发布；失败不覆盖旧代际。",
     "validation": "plugins-mcp 目录代际和污染 Schema 测试"
   },
@@ -115,7 +95,7 @@
     "validation": "plugins-mcp/MCP 对未知关键字、递归/正则限制和输入校验测试"
   },
   "packages/tools/src/executor.ts#execute:1": {
-    "maxLines": 94,
+    "maxLines": 61,
     "reason": "工具执行用例协调参数验证、权限、附加审批和适配器派发；插件调用、文件/进程/会话操作及结果失败映射已独立。",
     "validation": "runtime、permissions、plugins-mcp 测试"
   },
@@ -155,7 +135,7 @@
     "validation": "mcp-client/model-catalog 的 DNS、重定向、私网拒绝、超时/取消测试"
   },
   "packages/ui/src/App.tsx#App:1": {
-    "maxLines": 229,
+    "maxLines": 223,
     "reason": "主视图组合和明确组件 props，状态与网络均由 hooks/client 管理；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
@@ -220,12 +200,12 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/Sidebar.tsx#Sidebar:1": {
-    "maxLines": 73,
+    "maxLines": 61,
     "reason": "同一会话侧栏列表 JSX；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/TopBar.tsx#TopBar:1": {
-    "maxLines": 92,
+    "maxLines": 90,
     "reason": "模式/标题/面板工具栏 JSX；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
@@ -244,8 +224,13 @@
     "reason": "数据设置 JSX，已实现项与不可用项按真实能力展示；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
+  "packages/ui/src/settings/McpEditor.tsx#McpEditor:1": {
+    "reason": "单一 MCP 配置表单的连续 JSX 与局部输入状态；网络、异步结果和启停由 useMcpSettings 管理。",
+    "validation": "TypeScript、Web/桌面构建；本轮无浏览器访问，不声称视觉点击已验证。",
+    "maxLines": 93
+  },
   "packages/ui/src/settings/McpSettings.tsx#McpSettings:1": {
-    "maxLines": 183,
+    "maxLines": 79,
     "reason": "MCP 配置表单与列表 JSX，各异步操作短回调委托客户端；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
@@ -264,6 +249,11 @@
     "reason": "纯表单 JSX；目录请求与保存状态已提取到 useProviderEditor；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
+  "packages/ui/src/settings/useMcpSettings.ts#useMcpSettings:1": {
+    "reason": "同一设置页异步状态所有者，包含客户端切换/卸载代次、加载、检查凭据和动作结果；各网络请求经 PraxisClient，未在 hook 内实现 MCP 协议。",
+    "validation": "类型检查及构建；底层启停/检查/版本绑定通过真实 HTTP MCP 用例。UI 生命周期尚无真实浏览器复查。",
+    "maxLines": 78
+  },
   "packages/ui/src/settings/useProviderEditor.ts#useProviderEditor:1": {
     "maxLines": 132,
     "reason": "单个模型配置表单的 draft 与异步版本戳；目录请求、表单保存均为短命名操作，视图完全分离。",
@@ -278,6 +268,11 @@
     "maxLines": 73,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
+  },
+  "tests/fixtures/mcp-executor.ts#mcpExecutor:1": {
+    "reason": "单个 MCP 执行 fixture 的资源装配和统一释放；HTTP 服务、配置和调用工具分别在独立 fixture 中。",
+    "validation": "真实 HTTP、ApprovalGate 与 ToolExecutor 的版本变化、拒绝、取消、结果、断流和协议兼容场景。",
+    "maxLines": 74
   },
   "tests/fixtures/ui-preview.tsx#read:1": {
     "maxLines": 76,
@@ -299,6 +294,11 @@
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
+  "tests/mcp-runtime.test.ts#test(Agent uses MCP only after next-step selection and single-use approval over real HTTP):1": {
+    "reason": "连续完整的三步 Agent 集成场景：发现、同批猜测拒绝、次步授权执行和保存快照；保留前后行为断言。",
+    "validation": "使用真实本机 HTTP 服务与官方 MCP SDK，核验网络请求次数、镜像参数头和已持久化事实。",
+    "maxLines": 70
+  },
   "tests/model-catalog.test.ts": {
     "maxLines": 346,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
@@ -314,6 +314,11 @@
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
+  "tests/plugin-hooks.test.ts#test(runtime freezes plugin context for every step and invokes finish hook after terminal commit):1": {
+    "maxLines": 73,
+    "reason": "完整两步运行时用例将插件激活、上下文计数、工具 step、终态提交检查和临时资源释放保持在同一测试场景。",
+    "validation": "实际 AgentRuntime 与 SQLite 内存存储运行；断言上下文不进入原始消息且两次模型请求相同。"
+  },
   "tests/plugins-mcp.test.ts": {
     "maxLines": 360,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
@@ -328,10 +333,5 @@
     "maxLines": 66,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
-  },
-  "tests/plugin-hooks.test.ts#test(runtime freezes plugin context for every step and invokes finish hook after terminal commit):1": {
-    "maxLines": 73,
-    "reason": "完整两步运行时用例将插件激活、上下文计数、工具 step、终态提交检查和临时资源释放保持在同一测试场景。",
-    "validation": "实际 AgentRuntime 与 SQLite 内存存储运行；断言上下文不进入原始消息且两次模型请求相同。"
   }
 }

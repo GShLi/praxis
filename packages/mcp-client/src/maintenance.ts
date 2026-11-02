@@ -16,6 +16,7 @@ export interface McpTestResult {
 }
 /** User-initiated maintenance only. No credentials, model inputs or business calls. */
 export class McpMaintenance {
+  private tested = new Map<string, number>();
   private active = new Map<string, { cancel: AbortController; promise: Promise<McpTestResult> }>();
   private closed = false;
   constructor(
@@ -28,6 +29,7 @@ export class McpMaintenance {
   test(serverId: string, expectedRevision: number) {
     assert(!this.closed, 'MCP_CLOSED', 'MCP 已关闭。');
     assert(!this.active.has(serverId) && this.active.size < 4, 'MCP_BUSY', '连接检查正在进行。');
+    this.tested.delete(serverId);
     const cancel = new AbortController();
     const promise = this.perform(serverId, expectedRevision, cancel.signal).finally(() =>
       this.active.delete(serverId),
@@ -37,23 +39,7 @@ export class McpMaintenance {
   }
   private async perform(serverId: string, expectedRevision: number, cancellation: AbortSignal) {
     const signal = AbortSignal.any([cancellation, AbortSignal.timeout(60_000)]);
-    const config = (await this.configs.file.read()).value.find((c) => c.id === serverId);
-    assert(
-      config && config.revision === expectedRevision,
-      'MCP_CONFIG_CHANGED',
-      '服务器配置已变化，请重新读取后检查。',
-    );
-    assert(
-      config.transport.type === 'streamable-http',
-      'MCP_SANDBOX_UNAVAILABLE',
-      '本地 stdio 服务需要已验证的原生沙箱。',
-    );
-    assert(
-      config.transport.auth.type === 'none',
-      'MCP_AUTH_REQUIRED',
-      '此连接需要先配置本地 MCP 凭据。',
-    );
-    signal.throwIfAborted();
+    const config = await this.checkedConfig(serverId, expectedRevision, signal);
     const operationId = randomUUID();
     this.store.startMaintenance(operationId, this.owner, serverId, config.revision);
     const connection = new McpConnection(
@@ -103,9 +89,39 @@ export class McpMaintenance {
       failure?.code,
     );
     if (failure) throw failure;
+    this.tested.set(serverId, config.revision);
     return result!;
   }
+  private async checkedConfig(serverId: string, expectedRevision: number, signal: AbortSignal) {
+    const config = (await this.configs.file.read()).value.find((c) => c.id === serverId);
+    assert(
+      config && config.revision === expectedRevision,
+      'MCP_CONFIG_CHANGED',
+      '服务器配置已变化，请重新读取后检查。',
+    );
+    assert(
+      config.transport.type === 'streamable-http',
+      'MCP_SANDBOX_UNAVAILABLE',
+      '本地 stdio 服务需要已验证的原生沙箱。',
+    );
+    assert(
+      config.transport.auth.type === 'none',
+      'MCP_AUTH_REQUIRED',
+      '此连接需要先配置本地 MCP 凭据。',
+    );
+    signal.throwIfAborted();
+    return config;
+  }
+  async enable(serverId: string, expectedStoreRevision: number, expectedRevision: number) {
+    assert(
+      !this.closed && this.tested.get(serverId) === expectedRevision,
+      'MCP_TEST_REQUIRED',
+      '请先在当前客户端检查此配置，再明确启用。',
+    );
+    return this.configs.enable(serverId, expectedStoreRevision, expectedRevision);
+  }
   cancel(serverId: string) {
+    this.tested.delete(serverId);
     this.active
       .get(serverId)
       ?.cancel.abort(new PraxisError('MCP_CONFIG_CHANGED', '服务器已停用或配置已变化。'));

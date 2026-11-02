@@ -1,5 +1,12 @@
 import { pluginContext, finishPluginTurn } from '@praxis/plugin-host';
-import { assert, PraxisError, safeError, type TurnStatus } from '@praxis/contracts';
+import {
+  assert,
+  PraxisError,
+  safeError,
+  type TurnStatus,
+  type Session,
+  type ModelConfig,
+} from '@praxis/contracts';
 import { ApprovalGate } from '@praxis/permissions';
 import { SessionStore } from '@praxis/storage-local';
 import { ToolExecutor } from '@praxis/tools';
@@ -68,25 +75,17 @@ export class TurnExecutor {
               '工具预算已用完。',
             );
           },
+          await this.options.toolExtension?.(
+            session,
+            config,
+            this.approvals.forTurn(id, turn.id),
+            signal,
+          ),
         );
       }
       signal.throwIfAborted();
       turn.pluginContext = await pluginContext(plugins, session, signal);
-      const inputs = this.store.transaction(() => {
-        const inputs = this.store.claim(id, turn.id, true);
-        if (!inputs.length) return [];
-        this.store.update(id, {
-          status: 'running',
-          title: session.title === '新会话' ? inputs[0]!.text.slice(0, 60) : session.title,
-        });
-        this.store.append(id, 'turn/started', {
-          turnId: turn.id,
-          inputIds: inputs.map((i) => i.id),
-          providerId: config.id,
-          configRevision: config.revision,
-        });
-        return inputs;
-      });
+      const inputs = this.claim(session, turn, config);
       if (!inputs.length) return;
       claimed = true;
       await steps.run(session, turn, config);
@@ -134,5 +133,23 @@ export class TurnExecutor {
           });
         });
     }
+  }
+  private claim(session: Session, turn: Active, config: ModelConfig) {
+    const id = session.id;
+    return this.store.transaction(() => {
+      const inputs = this.store.claim(id, turn.id, true);
+      if (!inputs.length) return [];
+      this.store.update(id, {
+        status: 'running',
+        title: session.title === '新会话' ? inputs[0]!.text.slice(0, 60) : session.title,
+      });
+      this.store.append(id, 'turn/started', {
+        turnId: turn.id,
+        inputIds: inputs.map((i) => i.id),
+        providerId: config.id,
+        configRevision: config.revision,
+      });
+      return inputs;
+    });
   }
 }

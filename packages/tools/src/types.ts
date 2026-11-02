@@ -1,4 +1,4 @@
-import type { Permission } from '@praxis/contracts';
+import type { Permission, ToolDefinition, ToolResult } from '@praxis/contracts';
 import { z } from 'zod';
 import { schemas } from './schemas.ts';
 
@@ -19,3 +19,10 @@ export type Ask = (
   questions: z.infer<typeof schemas.user_ask>['questions'],
   signal: AbortSignal,
 ) => Promise<unknown>;
+
+/** Owned by one turn; registrations change only before the next model request. */
+export interface ToolExtension {
+  boundary(): ToolDefinition[];
+  execute(name: string, input: unknown, signal: AbortSignal, result: ToolResult): Promise<void>;
+  close(): Promise<void>;
+}
