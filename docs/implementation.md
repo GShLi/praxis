@@ -20,6 +20,14 @@
 
 ## 工程与协议
 
+### 插件运行时与静态检查补全
+
+2026-11-03：可信插件的 `contributeContext` 在每个本地 turn 开始时执行一次，接收该轮取消信号，生成带插件 ID、版本、包摘要的数据包络；同一轮各 step 重用该快照，请求快照保存实际内容，不伪造原始对话。单项限制 8 KiB、合计 32 KiB，单项执行限制 2 秒。上下文贡献失败会终止本轮，不静默忽略。
+
+`onTurnFinished` 在终态及 checkpoint 提交后调用，所有结束钩子共享 2 秒预算；取消的任务同样执行有界清理钩子。迟到返回不进入运行时，异常只记录稳定错误。插件仍是用户信任的同进程代码，取消信号不是隔离恶意代码或强制终止同步死循环的沙箱。
+
+启用 TypeScript `noUnusedLocals` / `noUnusedParameters`，清除拆分后未使用的 RPC 解构和 UI 参数，同时保留身份检查副作用。结构检查、类型检查、67 项核心测试和全部入口构建通过；新增 4 项测试覆盖固定上下文、提交顺序、超时取消、大小和敏感错误边界。插件 Provider 路由、用户命令等尚未接入。
+
 2026-11-03：建立 pnpm workspace、TypeScript strict、版本锁、共享 Zod 合同、JSON 行 RPC、独立 Host 和 CLI doctor。Host 支持主版本校验、实例 nonce 回传、心跳失效退出、管道断开退出及显式关闭；帧和发送缓冲有 8 MiB 上限，控制请求不等待慢业务请求完成。
 
 本机验证：类型检查、3 个协议/子进程测试、CLI doctor 通过。依赖网络 DNS 被当前执行环境限制，使用本机 npm 缓存中的完整性校验包进行离线安装，并由 package-lock 导入 pnpm-lock；未完成联网的干净 pnpm 安装验证。验证时使用 `pnpm_config_verify_deps_before_run=false pnpm check`，避免 pnpm 对非 pnpm 安装目录自动联网重装。常规开发环境仍按 README 使用冻结锁文件安装。

@@ -1,4 +1,5 @@
-import { assert, PraxisError, safeError } from '@praxis/contracts';
+import { pluginContext, finishPluginTurn } from '@praxis/plugin-host';
+import { assert, PraxisError, safeError, type TurnStatus } from '@praxis/contracts';
 import { ApprovalGate } from '@praxis/permissions';
 import { SessionStore } from '@praxis/storage-local';
 import { ToolExecutor } from '@praxis/tools';
@@ -23,7 +24,7 @@ export class TurnExecutor {
     let workspace: string | undefined;
     let claimed = false;
     const steps = new TurnSteps(this.store, this.options, this.emit);
-    let terminal = 'completed';
+    let terminal: TurnStatus = 'completed';
     let workspaceLease:
       | Awaited<ReturnType<NonNullable<RuntimeOptions['acquireWorkspace']>>>
       | undefined;
@@ -70,6 +71,7 @@ export class TurnExecutor {
         );
       }
       signal.throwIfAborted();
+      turn.pluginContext = await pluginContext(plugins, session, signal);
       const inputs = this.store.transaction(() => {
         const inputs = this.store.claim(id, turn.id, true);
         if (!inputs.length) return [];
@@ -113,9 +115,7 @@ export class TurnExecutor {
         this.workspaceOwners.delete(workspace);
       await workspaceLease?.release();
       this.store.transaction(() => {
-        this.store.update(id, {
-          status: terminal as 'completed' | 'cancelled' | 'failed' | 'interrupted',
-        });
+        this.store.update(id, { status: terminal });
         this.store.append(id, 'turn/finished', {
           turnId: turn.id,
           status: terminal,
@@ -126,6 +126,13 @@ export class TurnExecutor {
         });
         this.store.checkpoint(id);
       });
+      if (claimed)
+        await finishPluginTurn(plugins, id, terminal, (details) => {
+          this.store.transaction(() => {
+            this.store.append(id, 'plugin/hook-error', { turnId: turn.id, ...details });
+            this.store.checkpoint(id);
+          });
+        });
     }
   }
 }

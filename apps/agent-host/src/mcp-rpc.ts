@@ -3,17 +3,15 @@ import { z } from 'zod';
 import type { HostIdentity } from './identity.ts';
 import type { RpcRoutes } from './rpc-schema.ts';
 import { noArgs } from './rpc-schema.ts';
-export function mcpRoutes(identity: HostIdentity, clientKind: () => 'cli' | 'desktop'): RpcRoutes {
+export function mcpRoutes(identity: HostIdentity): RpcRoutes {
   return {
     'mcp/server-list': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { mcpConfig } = identity.require();
       noArgs.parse(params);
       return mcpConfig!.file.read();
     },
     'mcp/server-upsert': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { mcpConfig } = identity.require();
       const input = z
         .strictObject({
           config: z.unknown(),
@@ -24,24 +22,21 @@ export function mcpRoutes(identity: HostIdentity, clientKind: () => 'cli' | 'des
       return mcpConfig!.upsert(input.config, input.expectedStoreRevision, input.expectedRevision);
     },
     'mcp/server-disable': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { mcpConfig } = identity.require();
       const input = z
         .strictObject({ serverId: z.uuid(), expectedStoreRevision: z.number().int().nonnegative() })
         .parse(params);
       return mcpConfig!.disable(input.serverId, input.expectedStoreRevision);
     },
     'mcp/test': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { mcpMaintenance } = identity.require();
       const input = z
         .strictObject({ serverId: z.uuid(), expectedRevision: z.number().int().positive() })
         .parse(params);
       return mcpMaintenance!.test(input.serverId, input.expectedRevision);
     },
     'mcp/server-enable': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      identity.require();
       z.strictObject({ serverId: z.uuid() }).parse(params);
       throw new PraxisError(
         'MCP_TRANSPORT_UNAVAILABLE',

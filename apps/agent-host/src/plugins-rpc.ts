@@ -3,14 +3,10 @@ import { z } from 'zod';
 import type { HostIdentity } from './identity.ts';
 import type { RpcRoutes } from './rpc-schema.ts';
 import { noArgs } from './rpc-schema.ts';
-export function pluginsRoutes(
-  identity: HostIdentity,
-  clientKind: () => 'cli' | 'desktop',
-): RpcRoutes {
+export function pluginsRoutes(identity: HostIdentity): RpcRoutes {
   return {
     'plugin/list': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { pluginInstaller } = identity.require();
       noArgs.parse(params);
       return {
         ...(await pluginInstaller!.records.read()),
@@ -19,14 +15,12 @@ export function pluginsRoutes(
       };
     },
     'plugin/inspect': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { pluginInstaller } = identity.require();
       const input = z.strictObject({ source: z.string().max(4096) }).parse(params);
       return pluginInstaller!.inspect(input.source);
     },
     'plugin/install': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, pluginInstaller } = identity.require();
       const input = z
         .strictObject({
           source: z.string().max(4096),
@@ -44,8 +38,7 @@ export function pluginsRoutes(
       return { ...result, restartRequired: true };
     },
     'plugin/set-enabled': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, pluginInstaller } = identity.require();
       const input = z
         .strictObject({
           id: z.string().max(100),

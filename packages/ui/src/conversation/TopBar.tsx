@@ -7,7 +7,6 @@ export function TopBar({
   client,
   kind,
   setKind,
-  selected,
   snapshot,
   sidebar,
   setSidebar,
@@ -21,7 +20,6 @@ export function TopBar({
   | 'client'
   | 'kind'
   | 'setKind'
-  | 'selected'
   | 'snapshot'
   | 'sidebar'
   | 'setSidebar'

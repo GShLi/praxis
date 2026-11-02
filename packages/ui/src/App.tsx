@@ -137,11 +137,8 @@ export function App({ client: injected }: { client?: PraxisClient }) {
               kind={kind}
               selected={selected}
               setSearching={setSearching}
-              sidebar={sidebar}
               setSidebar={setSidebar}
-              running={running}
               newSession={newSession}
-              empty={empty}
               chooseSession={chooseSession}
             />
           </>
@@ -151,7 +148,6 @@ export function App({ client: injected }: { client?: PraxisClient }) {
             client={client}
             kind={kind}
             setKind={setKind}
-            selected={selected}
             snapshot={snapshot}
             sidebar={sidebar}
             setSidebar={setSidebar}
@@ -225,9 +221,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
             empty={empty}
           />
         </main>
-        {panel && kind === 'agent' && (
-          <ChangePanel panel={panel} setPanel={setPanel} change={change} empty={empty} />
-        )}
+        {panel && kind === 'agent' && <ChangePanel setPanel={setPanel} change={change} />}
       </div>
       {searching && (
         <SessionSearch

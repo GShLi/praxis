@@ -7,24 +7,12 @@ export function Sidebar({
   kind,
   selected,
   setSearching,
-  sidebar,
   setSidebar,
-  running,
   newSession,
-  empty,
   chooseSession,
 }: Pick<
   AppController,
-  | 'sessions'
-  | 'kind'
-  | 'selected'
-  | 'setSearching'
-  | 'sidebar'
-  | 'setSidebar'
-  | 'running'
-  | 'newSession'
-  | 'empty'
-  | 'chooseSession'
+  'sessions' | 'kind' | 'selected' | 'setSearching' | 'setSidebar' | 'newSession' | 'chooseSession'
 >) {
   return (
     <aside className="sidebar" aria-label="会话侧栏">

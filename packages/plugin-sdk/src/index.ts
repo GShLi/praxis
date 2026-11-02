@@ -12,6 +12,12 @@ export interface PluginTool {
   parameters: JsonSchema;
   execute(input: unknown, services: PluginServices): Promise<unknown>;
 }
+export interface PluginHookContext {
+  readonly signal: AbortSignal;
+  readonly sessionId: string;
+  readonly kind: 'chat' | 'agent';
+  readonly workspace?: string;
+}
 export interface PluginContext {
   readonly pluginId: string;
   readonly mode: 'chat' | 'agent';
@@ -21,9 +27,14 @@ export interface PluginContext {
     name: string,
     command: (input: unknown, services: PluginServices) => Promise<unknown>,
   ): void;
-  contributeContext(contributor: () => Promise<string>): void;
+  contributeContext(contributor: (context: PluginHookContext) => Promise<string>): void;
   beforeExecute(check: (tool: string, input: unknown) => Promise<'deny' | 'ask' | 'pass'>): void;
-  onTurnFinished(callback: (sessionId: string) => Promise<void>): void;
+  onTurnFinished(
+    callback: (
+      sessionId: string,
+      context: { readonly signal: AbortSignal; readonly status: string },
+    ) => Promise<void>,
+  ): void;
   onDispose(cleanup: () => void | Promise<void>): void;
 }
 export interface PraxisPlugin {

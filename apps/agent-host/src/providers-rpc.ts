@@ -5,28 +5,22 @@ import { z } from 'zod';
 import type { HostIdentity } from './identity.ts';
 import type { RpcRoutes } from './rpc-schema.ts';
 import { noArgs } from './rpc-schema.ts';
-export function providersRoutes(
-  identity: HostIdentity,
-  clientKind: () => 'cli' | 'desktop',
-): RpcRoutes {
+export function providersRoutes(identity: HostIdentity): RpcRoutes {
   return {
     'auth/me': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { auth } = identity.require();
       noArgs.parse(params);
       return auth.profile(AbortSignal.timeout(15000));
     },
     'provider/delete': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { auth } = identity.require();
       const input = z
         .strictObject({ id: idSchema, expectedRevision: z.number().int().positive() })
         .parse(params);
       return auth.deleteProvider(input.id, input.expectedRevision, AbortSignal.timeout(15000));
     },
     'provider/models': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { auth } = identity.require();
       const input = modelDiscoverySchema.parse(params);
       return auth.discoverModels(
         input,
@@ -34,21 +28,18 @@ export function providersRoutes(
       );
     },
     'provider/list': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { auth } = identity.require();
       noArgs.parse(params);
       return auth.providers(AbortSignal.timeout(15_000));
     },
     'provider/select': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      identity.require();
       const input = z.strictObject({ providerId: idSchema }).parse(params);
       identity.selectedProvider = input.providerId;
       return { ok: true };
     },
     'provider/save': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { auth } = identity.require();
       const input = z
         .strictObject({
           config: providerInputSchema,

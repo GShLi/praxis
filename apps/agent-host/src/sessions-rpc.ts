@@ -12,8 +12,7 @@ export function sessionsRoutes(
 ): RpcRoutes {
   return {
     'workspace/open': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      identity.require();
       const input = z.strictObject({ path: z.string().min(1).max(4096) }).parse(params);
       const root = await realpath(input.path);
       assert((await stat(root)).isDirectory(), 'INVALID_WORKSPACE', '工作区必须是目录。');
@@ -22,8 +21,7 @@ export function sessionsRoutes(
       return { id, canonicalRoot: root };
     },
     'session/create': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, owner } = identity.require();
       const input = z
         .strictObject({ kind: z.enum(['agent', 'chat']), workspaceId: idSchema.optional() })
         .parse(params);
@@ -36,14 +34,12 @@ export function sessionsRoutes(
       return store.create(owner, input.kind, workspace);
     },
     'session/list': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, owner } = identity.require();
       noArgs.parse(params);
       return store.list(owner);
     },
     'session/read': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, runtime, owner } = identity.require();
       const input = sessionArg.parse(params);
       const session = store.get(input.sessionId, owner);
       return {
@@ -58,8 +54,7 @@ export function sessionsRoutes(
       };
     },
     'session/prompt': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, owner } = identity.require();
       assert(
         !identity.pluginsChanged,
         'HOST_RESTART_REQUIRED',
@@ -68,8 +63,7 @@ export function sessionsRoutes(
       return runtime.prompt(owner, params);
     },
     'session/continue': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, owner } = identity.require();
       assert(
         !identity.pluginsChanged,
         'HOST_RESTART_REQUIRED',
@@ -78,8 +72,7 @@ export function sessionsRoutes(
       return runtime.prompt(owner, params);
     },
     'session/cancel': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, owner } = identity.require();
       const input = z
         .strictObject({
           sessionId: idSchema,
@@ -95,8 +88,7 @@ export function sessionsRoutes(
       );
     },
     'session/subscribe': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, owner } = identity.require();
       const input = z
         .strictObject({ sessionId: idSchema, afterSeq: z.number().int().nonnegative().default(0) })
         .parse(params);
@@ -106,16 +98,14 @@ export function sessionsRoutes(
       return { subscribed: true };
     },
     'session/unsubscribe': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, owner } = identity.require();
       const input = sessionArg.parse(params);
       store.get(input.sessionId, owner);
       identity.subscriptions.delete(input.sessionId);
       return { ok: true };
     },
     'session/set-permissions': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, runtime, owner } = identity.require();
       const input = z
         .strictObject({
           sessionId: idSchema,
@@ -139,8 +129,7 @@ export function sessionsRoutes(
       return result;
     },
     'question/respond': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, owner } = identity.require();
       const input = z
         .strictObject({
           sessionId: idSchema,
@@ -152,21 +141,18 @@ export function sessionsRoutes(
       return runtime.answer(owner, { ...input, answers: input.answers });
     },
     'approval/respond': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { runtime, owner } = identity.require();
       return runtime.approvals.respond(owner, approvalResponseSchema.parse(params));
     },
     'session/archive': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, runtime, owner } = identity.require();
       const input = sessionArg.parse(params);
       store.get(input.sessionId, owner);
       assert(!runtime.getTurn(input.sessionId), 'SESSION_BUSY', '请先停止当前任务。');
       return store.update(input.sessionId, { archived: true });
     },
     'session/delete': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, runtime, owner } = identity.require();
       const input = sessionArg.parse(params);
       store.get(input.sessionId, owner);
       runtime.cancel(owner, input.sessionId);
@@ -176,8 +162,7 @@ export function sessionsRoutes(
       return { ok: true };
     },
     'artifact/read': async (params: unknown) => {
-      const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner } =
-        identity.require();
+      const { store, owner } = identity.require();
       const input = z.strictObject({ sessionId: idSchema, artifactId: idSchema }).parse(params);
       store.get(input.sessionId, owner);
       return store.readArtifact(input.sessionId, input.artifactId);

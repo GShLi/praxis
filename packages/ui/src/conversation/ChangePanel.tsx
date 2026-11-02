@@ -3,12 +3,7 @@ import { Icon } from '../Navigation.tsx';
 
 import type { AppController } from '../app/useAppController.ts';
 
-export function ChangePanel({
-  panel,
-  setPanel,
-  change,
-  empty,
-}: Pick<AppController, 'panel' | 'setPanel' | 'change' | 'empty'>) {
+export function ChangePanel({ setPanel, change }: Pick<AppController, 'setPanel' | 'change'>) {
   return (
     <aside className="detail-panel">
       <header>

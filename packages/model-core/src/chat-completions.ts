@@ -34,7 +34,6 @@ export class DeepSeekClient implements ModelClient {
     endpoint: URL,
     fetcher: typeof fetch,
   ): Promise<Completion> {
-    const { config, signal } = request;
     const body = serializeRequest(request);
     const response = await requestCompletion(fetcher, endpoint, request, body);
     return readCompletion(response, request);

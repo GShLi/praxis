@@ -25,9 +25,9 @@
     "validation": "auth-http 测试、Server 构建"
   },
   "packages/agent-runtime/src/turn-executor.ts#run:1": {
-    "maxLines": 112,
-    "reason": "单个 turn 的资源获取、输入领取、运行、失败记录和 finally 回收需要在同一生命周期闭包；实际步骤在 TurnSteps。",
-    "validation": "runtime 的取消、恢复、独占执行测试"
+    "maxLines": 118,
+    "reason": "单个 turn 的资源获取、输入领取、运行、失败记录和 finally 回收需要在同一生命周期闭包；实际步骤在 TurnSteps。 本轮新增的插件上下文和结束钩子委托 plugin-host，前者固定于 turn，后者只在终态提交后运行。",
+    "validation": "runtime 的取消、恢复、独占执行测试；plugin-hooks 的跨 step 固定快照与提交后回调验证"
   },
   "packages/agent-runtime/src/turn-steps.ts#run:1": {
     "maxLines": 64,
@@ -328,5 +328,10 @@
     "maxLines": 66,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
+  },
+  "tests/plugin-hooks.test.ts#test(runtime freezes plugin context for every step and invokes finish hook after terminal commit):1": {
+    "maxLines": 73,
+    "reason": "完整两步运行时用例将插件激活、上下文计数、工具 step、终态提交检查和临时资源释放保持在同一测试场景。",
+    "validation": "实际 AgentRuntime 与 SQLite 内存存储运行；断言上下文不进入原始消息且两次模型请求相同。"
   }
 }

@@ -1,4 +1,4 @@
-import type { ModelConfig, Session } from '@praxis/contracts';
+import type { Message, ModelConfig, Session } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
 import type { ActivePlugin } from '@praxis/plugin-host';
 import { SessionStore } from '@praxis/storage-local';
@@ -31,6 +31,7 @@ export interface Active {
   tools: number;
   deadline: number;
   executor?: ToolExecutor;
+  pluginContext?: Message[];
   finishing?: boolean;
 }
 

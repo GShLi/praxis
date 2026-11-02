@@ -7,7 +7,7 @@ export class JsonLines extends EventEmitter {
   private buffer = Buffer.alloc(0);
   private closed = false;
   constructor(
-    private input: Readable,
+    input: Readable,
     private output: Writable,
   ) {
     super();
