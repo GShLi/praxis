@@ -1,0 +1,40 @@
+# Dependencies and build output
+node_modules/
+dist/
+out/
+build/
+coverage/
+.cache/
+.turbo/
+.vite/
+
+# Local secrets and configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Runtime state and generated output
+.praxis/
+.runtime/
+logs/
+outputs/
+*.log
+*.pid
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# OS/editor state
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
