@@ -1,0 +1,29 @@
+{
+  "name": "praxis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.15.0 <23 || >=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "pnpm typecheck && pnpm test",
+    "cli": "node --import tsx apps/cli/src/main.ts",
+    "host": "node --import tsx apps/agent-host/src/main.ts",
+    "format": "prettier --write apps packages tests scripts *.json *.yaml"
+  },
+  "dependencies": {
+    "ignore": "7.0.5",
+    "minimatch": "10.2.4",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.35",
+    "prettier": "3.6.2",
+    "tsx": "4.22.3",
+    "typescript": "5.9.3"
+  }
+}
