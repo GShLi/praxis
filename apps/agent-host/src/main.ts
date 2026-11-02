@@ -184,6 +184,9 @@ serveRpc(channel, async (method, params) => {
         void shutdown();
       });
       return { userId: candidate.userId };
+    } catch (error) {
+      await clearIdentity();
+      throw error;
     } finally {
       binding = false;
     }
@@ -257,6 +260,7 @@ serveRpc(channel, async (method, params) => {
       contextVersion: store.context(session.id).version,
       throughSeq: session.latestSeq,
       turnId: runtime.getTurn(session.id) ?? null,
+      question: runtime.pendingQuestion(session.id),
     };
   }
   if (method === 'session/prompt' || method === 'session/continue')

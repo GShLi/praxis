@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import { randomBytes } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
@@ -79,6 +80,11 @@ async function main() {
   const origin = process.env.PRAXIS_PUBLIC_ORIGIN ?? 'http://127.0.0.1:4310';
   const parsed = new URL(origin);
   assert(
+    parsed.origin === origin && !parsed.username && !parsed.password,
+    'INVALID_ORIGIN',
+    '公共来源只能包含协议、主机和端口。',
+  );
+  assert(
     parsed.protocol === 'https:' || ['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname),
     'TLS_REQUIRED',
     '非本机部署必须使用 HTTPS 来源。',
@@ -114,7 +120,10 @@ async function main() {
     },
   );
   await chat.recover();
-  const app = createApp(auth, chat, origin);
+  const webRoot = fileURLToPath(
+    new URL(import.meta.url.endsWith('.mjs') ? '../web' : '../../../dist/web', import.meta.url),
+  );
+  const app = createApp(auth, chat, origin, webRoot);
   const port = Number(process.env.PRAXIS_PORT ?? 4310);
   const server = serve(
     { fetch: app.fetch, port, hostname: process.env.PRAXIS_BIND ?? '127.0.0.1' },

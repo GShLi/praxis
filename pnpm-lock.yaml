@@ -77,7 +77,11 @@ importers:
 
   apps/cli: {}
 
+  apps/desktop: {}
+
   apps/server: {}
+
+  apps/web: {}
 
   packages/agent-runtime: {}
 
@@ -102,6 +106,8 @@ importers:
   packages/tools: {}
 
   packages/transport: {}
+
+  packages/ui: {}
 
   packages/workspace: {}
 

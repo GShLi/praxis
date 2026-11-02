@@ -1,21 +1,35 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { once } from 'node:events';
 import { PROTOCOL, assert } from '../../contracts/src/index.ts';
 import { JsonLines, RpcClient } from '../../transport/src/index.ts';
 
-export async function startHost(kind: 'cli' | 'desktop', env: NodeJS.ProcessEnv = {}) {
+export async function startHost(
+  kind: 'cli' | 'desktop',
+  env: NodeJS.ProcessEnv = {},
+  entry?: string,
+) {
+  entry ??= process.argv[1]?.endsWith('cli.mjs')
+    ? path.join(path.dirname(process.argv[1]), 'host.mjs')
+    : undefined;
   const child = spawn(
     process.execPath,
-    [
-      '--import',
-      'tsx',
-      fileURLToPath(new URL('../../../apps/agent-host/src/main.ts', import.meta.url)),
-    ],
+    entry
+      ? [entry]
+      : [
+          '--import',
+          'tsx',
+          fileURLToPath(new URL('../../../apps/agent-host/src/main.ts', import.meta.url)),
+        ],
     {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
+      env: {
+        ...process.env,
+        ...env,
+        ...(process.versions.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+      },
       windowsHide: true,
     },
   );

@@ -72,6 +72,12 @@ export class AgentRuntime extends EventEmitter {
   ) {
     super();
   }
+  pendingQuestion(sessionId: string) {
+    for (const [questionId, q] of this.questions)
+      if (q.sessionId === sessionId)
+        return { questionId, turnId: q.turnId, questions: q.questions };
+    return null;
+  }
   getTurn(id: string) {
     return this.active.get(id)?.id;
   }

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
@@ -20,7 +21,12 @@ const loginSchema = z.strictObject({
   password: z.string().max(1024),
   kind: z.enum(['web', 'client']).default('web'),
 });
-export function createApp(auth: AuthService, chat: ChatRuntime, publicOrigin: string) {
+export function createApp(
+  auth: AuthService,
+  chat: ChatRuntime,
+  publicOrigin: string,
+  webRoot?: string,
+) {
   const origin = new URL(publicOrigin).origin;
   const secure = origin.startsWith('https://');
   const app = new Hono<{ Variables: { identity: Identity } }>();
@@ -64,8 +70,14 @@ export function createApp(auth: AuthService, chat: ChatRuntime, publicOrigin: st
     assert(value === origin, 'CSRF_FAILED', '请求来源不匹配。');
   const cookies = (
     c: Parameters<typeof setCookie>[0],
-    result: { accessToken: string; refreshToken: string },
+    result: { accessToken: string; refreshToken: string; csrfToken: string },
   ) => {
+    setCookie(c, 'praxis_csrf', result.csrfToken, {
+      secure,
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: 30 * 86400,
+    });
     setCookie(c, 'praxis_session', result.accessToken, {
       httpOnly: true,
       secure,
@@ -90,6 +102,10 @@ export function createApp(auth: AuthService, chat: ChatRuntime, publicOrigin: st
     const input = loginSchema.parse(await c.req.json());
     if (input.kind === 'web') checkOrigin(c.req.header('origin'));
     const key = input.username.toLowerCase();
+    if (rate.size >= 5000) {
+      for (const [k, v] of rate) if (v.until < Date.now()) rate.delete(k);
+      assert(rate.has(key) || rate.size < 5000, 'RATE_LIMITED', '登录服务繁忙，请稍后重试。');
+    }
     const previous = rate.get(key);
     const now = Date.now();
     const bucket = previous && previous.until > now ? previous : { count: 0, until: now + 60_000 };
@@ -137,6 +153,7 @@ export function createApp(auth: AuthService, chat: ChatRuntime, publicOrigin: st
   app.post('/v1/auth/token', async (c) => c.json(await auth.exchange(c.get('identity'))));
   app.post('/v1/auth/logout', async (c) => {
     await auth.logout(c.get('identity'));
+    deleteCookie(c, 'praxis_csrf', { path: '/' });
     deleteCookie(c, 'praxis_session', { path: '/' });
     deleteCookie(c, 'praxis_refresh', { path: '/v1/auth' });
     return c.json({ ok: true });
@@ -146,11 +163,20 @@ export function createApp(auth: AuthService, chat: ChatRuntime, publicOrigin: st
     auth.require(identity, 'profile:read');
     let csrfToken: string | undefined;
     if (identity.kind === 'web') {
-      csrfToken = randomBytes(32).toString('base64url');
-      await auth.database.query('UPDATE auth_sessions SET csrf_hash=$1 WHERE id=$2', [
-        digest(csrfToken),
-        identity.sessionId,
-      ]);
+      csrfToken = getCookie(c, 'praxis_csrf');
+      if (!csrfToken || digest(csrfToken) !== identity.csrfHash) {
+        csrfToken = randomBytes(32).toString('base64url');
+        await auth.database.query('UPDATE auth_sessions SET csrf_hash=$1 WHERE id=$2', [
+          digest(csrfToken),
+          identity.sessionId,
+        ]);
+        setCookie(c, 'praxis_csrf', csrfToken, {
+          secure,
+          sameSite: 'Strict',
+          path: '/',
+          maxAge: 30 * 86400,
+        });
+      }
     }
     return c.json({
       id: identity.userId,
@@ -355,5 +381,17 @@ export function createApp(auth: AuthService, chat: ChatRuntime, publicOrigin: st
       }
     });
   });
+  if (webRoot) {
+    app.get('/v1/*', (c) => c.json({ code: 'NOT_FOUND', safeMessage: '接口不存在。' }, 404));
+    app.use('*', async (c, next) => {
+      c.header(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+      );
+      await next();
+    });
+    app.get('*', serveStatic({ root: webRoot }));
+    app.get('*', serveStatic({ path: `${webRoot}/index.html` }));
+  }
   return app;
 }

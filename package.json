@@ -18,7 +18,11 @@
     "db:migrate": "node --import tsx --env-file-if-exists=.env apps/server/src/main.ts migrate",
     "server:create-user": "node --import tsx --env-file-if-exists=.env apps/server/src/main.ts create-user",
     "server:keygen": "node --import tsx apps/server/src/main.ts keygen",
-    "native:build": "node --import tsx scripts/build-native.ts"
+    "native:build": "node --import tsx scripts/build-native.ts",
+    "build": "pnpm native:build && node --import tsx scripts/build.ts",
+    "web": "vite --config apps/web/vite.config.ts",
+    "desktop": "electron dist/desktop/main.mjs",
+    "ui:preview": "node --import tsx scripts/preview-ui.ts"
   },
   "dependencies": {
     "ignore": "7.0.5",

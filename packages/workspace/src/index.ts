@@ -11,7 +11,7 @@ export const defaultLeaseExecutable = process.env.PRAXIS_NATIVE_DIR
     )
   : fileURLToPath(
       new URL(
-        `../../../build/native/praxis-lease${process.platform === 'win32' ? '.exe' : ''}`,
+        `${import.meta.url.endsWith('.mjs') ? '../../' : '../../../'}build/native/praxis-lease${process.platform === 'win32' ? '.exe' : ''}`,
         import.meta.url,
       ),
     );

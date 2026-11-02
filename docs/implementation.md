@@ -21,3 +21,9 @@
 服务端接入阶段：已增加 PostgreSQL 迁移、账号/Argon2id、短期凭据与刷新轮换、Praxis API Key、AES-GCM 厂商 Key 加密及统一配置接口；Web Chat 使用独立的 PostgreSQL 运行时和 SSE，不挂载 Agent 工具。CLI/Host 已接入平台认证、统一配置、真实 DeepSeek、多轮任务、历史继续和用户问题。进程内 HTTP 测试覆盖登录前拦截、Origin/CSRF、Web 禁止读取厂商 Key；18 项本机检查通过。PostgreSQL 查询和迁移尚未联调：执行环境禁止本地端口监听，Docker socket 访问也被拒绝。不能据此宣称服务端已完成部署验收。
 
 执行/会话/压缩/文件工具、模型与身份、平台沙箱与进程回收、Web/桌面 UI、服务端存储、插件/MCP 及发布交付仍按开发计划继续实现。当前不开放未验证的命令执行后端。
+
+## Web 与桌面客户端
+
+2026-11-03：React/Vite 共享界面连接 Web HTTP/SSE 或 Electron 私有 preload RPC；支持身份登录、统一模型设置、历史、多轮流式回答、停止、工作区选择、问题回答和文件变更快照。Web 会话刷新使用同源互斥与会话绑定 CSRF，兼容多标签页；Electron renderer 禁止 Node、远程连接和任意 IPC。生产 Web 文件由同一服务端提供。
+
+本机 19 项测试、TypeScript 与 Web/Host/CLI/桌面构建通过。通过 Chrome 打开独立开发样例，检查了对话代码块、Chat/Agent 切换和工具记录；样例明确标注无模型调用，不能替代真实登录/服务端/模型端到端验收。Electron 安装包、三平台沙箱、插件/MCP 与发布仍未完成。

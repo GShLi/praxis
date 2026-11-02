@@ -84,9 +84,23 @@ export class AuthClient {
         `Praxis 请求失败（HTTP ${response.status}）。`,
       );
     }
-    const text = await response.text();
-    assert(Buffer.byteLength(text) <= 1024 * 1024, 'SERVER_RESPONSE_LIMIT', '服务响应超限。');
-    return JSON.parse(text) as T;
+    const reader = response.body?.getReader();
+    assert(reader, 'SERVER_RESPONSE_INVALID', '服务响应为空。');
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      for (;;) {
+        const next = await reader.read();
+        if (next.done) break;
+        size += next.value.byteLength;
+        assert(size <= 1024 * 1024, 'SERVER_RESPONSE_LIMIT', '服务响应超限。');
+        chunks.push(next.value);
+      }
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
+    return JSON.parse(Buffer.concat(chunks).toString('utf8')) as T;
   }
   async beginUse(providerId: string | undefined, signal: AbortSignal): Promise<ModelConfig> {
     assert(this.apiKey, 'UNAUTHENTICATED', '请先登录 Praxis。');
@@ -106,6 +120,8 @@ export class AuthClient {
     return this.request('/v1/providers', 'GET', undefined, signal);
   }
   async clear() {
+    if (this.accessToken)
+      await this.request('/v1/auth/logout', 'POST', {}, AbortSignal.timeout(1000)).catch(() => {});
     this.apiKey = '';
     this.accessToken = '';
     this.userId = '';
