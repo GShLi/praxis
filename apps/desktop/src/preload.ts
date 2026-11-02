@@ -1,5 +1,5 @@
+import type { DesktopBridge, HostMethod } from '@praxis/ui/client';
 import { contextBridge, ipcRenderer } from 'electron';
-import type { DesktopBridge, HostMethod } from '../../../packages/ui/src/client.ts';
 
 const bridge: DesktopBridge = {
   call<T>(method: HostMethod, params: unknown = {}): Promise<T> {

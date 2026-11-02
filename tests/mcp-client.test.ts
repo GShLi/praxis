@@ -1,19 +1,19 @@
-import test from 'node:test';
+import type { FetchLike } from '@modelcontextprotocol/client';
+import { McpConnection } from '@praxis/mcp-client';
+import { controlledHttp, isPublicAddress } from '@praxis/mcp-client/http';
+import { McpMaintenance } from '@praxis/mcp-client/maintenance';
+import type { McpConfig } from '@praxis/mcp-core';
+import { McpConfigService } from '@praxis/mcp-core';
+import { SessionStore } from '@praxis/storage-local';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { PassThrough } from 'node:stream';
 import { mkdtemp, rm } from 'node:fs/promises';
+import type { ClientRequest, IncomingMessage, RequestOptions } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { ClientRequest, IncomingMessage, RequestOptions } from 'node:http';
-import type { FetchLike } from '@modelcontextprotocol/client';
-import { McpConnection } from '../packages/mcp-client/src/index.ts';
-import { McpMaintenance } from '../packages/mcp-client/src/maintenance.ts';
-import { McpConfigService } from '../packages/mcp-core/src/index.ts';
-import { SessionStore } from '../packages/storage-local/src/index.ts';
-import { controlledHttp, isPublicAddress } from '../packages/mcp-client/src/http.ts';
-import type { McpConfig } from '../packages/mcp-core/src/index.ts';
+import { PassThrough } from 'node:stream';
+import test from 'node:test';
 
 const config = (protocol: McpConfig['protocol'] = 'auto'): McpConfig => ({
   id: randomUUID(),

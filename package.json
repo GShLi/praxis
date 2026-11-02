@@ -48,6 +48,27 @@
     "@types/react-dom": "19.0.6",
     "vite": "8.3.5",
     "electron": "42.3.3",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "@praxis/auth": "workspace:*",
+    "@praxis/auth-client": "workspace:*",
+    "@praxis/storage-server": "workspace:*",
+    "@praxis/chat-runtime": "workspace:*",
+    "@praxis/server": "workspace:*",
+    "@praxis/storage-local": "workspace:*",
+    "@praxis/context": "workspace:*",
+    "@praxis/model-core": "workspace:*",
+    "@praxis/contracts": "workspace:*",
+    "@praxis/ui": "workspace:*",
+    "@praxis/workspace": "workspace:*",
+    "@praxis/mcp-client": "workspace:*",
+    "@praxis/mcp-core": "workspace:*",
+    "@praxis/permissions": "workspace:*",
+    "@praxis/agent-runtime": "workspace:*",
+    "@praxis/plugin-host": "workspace:*",
+    "@praxis/tools": "workspace:*",
+    "@praxis/config": "workspace:*",
+    "@praxis/schema": "workspace:*",
+    "@praxis/transport": "workspace:*",
+    "@praxis/client-host": "workspace:*"
   }
 }

@@ -1,0 +1,43 @@
+import type { ModelConfig, Session } from '@praxis/contracts';
+import type { ModelClient } from '@praxis/model-core';
+import type { ActivePlugin } from '@praxis/plugin-host';
+import { SessionStore } from '@praxis/storage-local';
+import type { Ask, ProcessService } from '@praxis/tools';
+import { ToolExecutor } from '@praxis/tools';
+
+export interface RuntimeOptions {
+  model: ModelClient;
+  beginUse: (owner: string, signal: AbortSignal) => Promise<ModelConfig>;
+  interactive?: boolean;
+  protectedPaths?: string[];
+  plugins?: (kind: 'chat' | 'agent') => readonly ActivePlugin[];
+  processes?: (session: Session, store: SessionStore) => ProcessService;
+  maxSteps?: number;
+  maxTools?: number;
+  maxAttempts?: number;
+  timeoutMs?: number;
+  acquireWorkspace?: (
+    root: string,
+    signal: AbortSignal,
+  ) => Promise<{ release(): Promise<void>; onLost(callback: () => void): void }>;
+}
+
+export interface Active {
+  id: string;
+  controller: AbortController;
+  done: Promise<void>;
+  steps: number;
+  attempts: number;
+  tools: number;
+  deadline: number;
+  executor?: ToolExecutor;
+  finishing?: boolean;
+}
+
+export interface PendingQuestion {
+  sessionId: string;
+  turnId: string;
+  questions: Parameters<Ask>[0];
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+}

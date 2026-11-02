@@ -1,0 +1,142 @@
+import { AgentRuntime } from '@praxis/agent-runtime';
+import { AuthClient } from '@praxis/auth-client';
+import { PraxisError, assert, idSchema } from '@praxis/contracts';
+import { McpMaintenance } from '@praxis/mcp-client/maintenance';
+import { McpConfigService } from '@praxis/mcp-core';
+import { DeepSeekClient } from '@praxis/model-core';
+import { PluginHost, PluginInstaller } from '@praxis/plugin-host';
+import { SessionStore, hash } from '@praxis/storage-local';
+import { schemas } from '@praxis/tools';
+import { acquireLease, acquireWorkspaceLease } from '@praxis/workspace';
+import path from 'node:path';
+import { z } from 'zod';
+import { baseData, commonData } from './paths.ts';
+export class HostIdentity {
+  binding = false;
+  discoveryScope = new AbortController();
+  auth: AuthClient | undefined;
+  store: SessionStore | undefined;
+  runtime: AgentRuntime | undefined;
+  dataLease: Awaited<ReturnType<typeof acquireLease>> | undefined;
+  selectedProvider: string | undefined;
+  mcpConfig: McpConfigService | undefined;
+  mcpMaintenance: McpMaintenance | undefined;
+  pluginInstaller: PluginInstaller | undefined;
+  pluginHosts: Record<'chat' | 'agent', PluginHost> | undefined;
+  pluginsChanged = false;
+  pluginFailures: Array<{ id: string; mode: string; code: string }> = [];
+  readonly workspaces = new Map<string, string>();
+  readonly subscriptions = new Map<string, number>();
+  constructor(
+    private clientKind: () => 'cli' | 'desktop',
+    private isClosing: () => boolean,
+    private shutdown: () => void,
+    private notify: (method: string, params: unknown) => void,
+  ) {}
+  async clear() {
+    this.discoveryScope.abort();
+    this.discoveryScope = new AbortController();
+    this.subscriptions.clear();
+    await this.mcpMaintenance?.close();
+    this.mcpMaintenance = undefined;
+    await this.runtime?.close();
+    this.runtime = undefined;
+    if (this.pluginHosts)
+      await Promise.all(Object.values(this.pluginHosts).map((host) => host.dispose()));
+    this.mcpConfig = undefined;
+    this.pluginHosts = undefined;
+    this.pluginInstaller = undefined;
+    this.pluginsChanged = false;
+    this.pluginFailures = [];
+    this.store?.close();
+    this.store = undefined;
+    await this.dataLease?.release();
+    this.dataLease = undefined;
+    await this.auth?.clear();
+    this.auth = undefined;
+    this.workspaces.clear();
+  }
+  async bind(params: unknown) {
+    assert(!this.binding, 'AUTH_BUSY', '身份切换正在进行。');
+    const input = z
+      .strictObject({
+        serverUrl: z.string().url(),
+        praxisApiKey: z.string().max(1024),
+        providerId: idSchema.optional(),
+        interactive: z.boolean().default(false),
+      })
+      .parse(params);
+    this.binding = true;
+    try {
+      await this.clear();
+      const candidate = new AuthClient(input.serverUrl);
+      await candidate.bind(input.praxisApiKey, AbortSignal.timeout(15_000));
+      assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
+      const directory = path.join(baseData, this.clientKind(), hash(candidate.userId));
+      this.dataLease = await acquireLease(path.join(directory, 'writer.lock'));
+      this.dataLease.onLost(() => {
+        void this.shutdown();
+      });
+      this.auth = candidate;
+      this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
+      this.store.recover();
+      this.selectedProvider = input.providerId;
+      this.mcpConfig = new McpConfigService(directory, (id) => this.mcpMaintenance?.cancel(id));
+      this.mcpMaintenance = new McpMaintenance(
+        this.mcpConfig,
+        this.store,
+        candidate.userId,
+        this.clientKind(),
+      );
+      this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
+      this.pluginHosts = {
+        chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
+        agent: new PluginHost(new Set(Object.keys(schemas)), 'agent'),
+      };
+      for (const record of (await this.pluginInstaller.records.read()).value.filter(
+        (r) => r.enabled,
+      )) {
+        for (const mode of record.manifest.modes) {
+          try {
+            await this.pluginHosts[mode].load(this.pluginInstaller, record);
+          } catch (error) {
+            this.pluginFailures.push({
+              id: record.manifest.id,
+              mode,
+              code: error instanceof PraxisError ? error.code : 'PLUGIN_ACTIVATION_FAILED',
+            });
+          }
+        }
+      }
+
+      this.runtime = new AgentRuntime(this.store, {
+        model: new DeepSeekClient(),
+        interactive: input.interactive,
+        beginUse: (_owner, signal) => candidate.beginUse(this.selectedProvider, signal),
+        protectedPaths: [baseData, commonData],
+        plugins: (kind) => this.pluginHosts?.[kind].snapshot() ?? [],
+        acquireWorkspace: (root, signal) =>
+          acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),
+      });
+      this.runtime.on('delta', (delta) => this.notify('session/delta', delta));
+      this.runtime.on('fatal', () => {
+        void this.shutdown();
+      });
+      return { userId: candidate.userId };
+    } catch (error) {
+      await this.clear();
+      throw error;
+    } finally {
+      this.binding = false;
+    }
+  }
+  require() {
+    const { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller } = this;
+    assert(
+      auth && store && runtime && mcpConfig && mcpMaintenance && pluginInstaller && !this.binding,
+      'UNAUTHENTICATED',
+      '请先使用 Praxis 身份登录。',
+    );
+    return { auth, store, runtime, mcpConfig, mcpMaintenance, pluginInstaller, owner: auth.userId };
+  }
+}

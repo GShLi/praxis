@@ -1,10 +1,10 @@
-import { assert } from '../../contracts/src/index.ts';
-import { validateConfig } from '../../mcp-core/src/index.ts';
-import type { McpConfig } from '../../mcp-core/src/index.ts';
-import { fixedEndpointHttp } from '../../transport/src/http.ts';
-import type { HttpDependencies } from '../../transport/src/http.ts';
-export { isPublicAddress } from '../../transport/src/http.ts';
-export type { HttpDependencies } from '../../transport/src/http.ts';
+import { assert } from '@praxis/contracts';
+import type { McpConfig } from '@praxis/mcp-core';
+import { validateConfig } from '@praxis/mcp-core';
+import type { HttpDependencies } from '@praxis/transport/http';
+import { fixedEndpointHttp } from '@praxis/transport/http';
+export { isPublicAddress } from '@praxis/transport/http';
+export type { HttpDependencies } from '@praxis/transport/http';
 
 /** MCP uses the shared fixed-endpoint transport with its explicit private-destination policy. */
 export function controlledHttp(

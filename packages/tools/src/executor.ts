@@ -1,0 +1,200 @@
+import type { ToolCall, ToolDefinition, ToolResult } from '@praxis/contracts';
+import { assert, safeError } from '@praxis/contracts';
+import type { Approve } from '@praxis/permissions';
+import type { ActivePlugin } from '@praxis/plugin-host';
+import { compileSchema } from '@praxis/schema';
+import { SessionStore, uuid } from '@praxis/storage-local';
+import { z } from 'zod';
+import { descriptions, ids } from './definitions.ts';
+import { executeFilesTool } from './files-tools.ts';
+import { WorkspaceFiles } from './files.ts';
+import { readPlan } from './plan.ts';
+import { checkPluginPolicies } from './plugin-policy.ts';
+import { executeProcessesTool } from './processes-tools.ts';
+import { schemas } from './schemas.ts';
+import { executeSessionTool } from './session-tools.ts';
+import type { Ask, ProcessService } from './types.ts';
+
+export class ToolExecutor {
+  readonly definitions: ToolDefinition[];
+  constructor(
+    private sessionId: string,
+    private store: SessionStore,
+    readonly files: WorkspaceFiles,
+    private ask: Ask,
+    readonly processes?: ProcessService,
+    readonly plugins: readonly ActivePlugin[] = [],
+    readonly approve?: Approve,
+    private consumeDelegatedTool?: () => void,
+  ) {
+    this.definitions = (Object.keys(schemas) as Array<keyof typeof schemas>).map((name) => ({
+      id: ids[name],
+      modelName: name,
+      description: descriptions[name],
+      parameters: z.toJSONSchema(schemas[name], { io: 'input' }),
+    }));
+    for (const plugin of plugins)
+      for (const [name, tool] of plugin.tools)
+        this.definitions.push({
+          id: `${plugin.manifest.id}:${name}`,
+          modelName: name,
+          description: tool.description,
+          parameters: tool.parameters,
+        });
+  }
+  async execute(call: ToolCall, callId: string, signal: AbortSignal): Promise<ToolResult> {
+    const started = performance.now();
+    let effect = false;
+    const result: ToolResult = {
+      callId,
+      toolId: call.name,
+      toolVersion: 1,
+      status: 'succeeded',
+      effectState: 'none',
+      artifactIds: [],
+      truncated: false,
+      durationMs: 0,
+    };
+    try {
+      signal.throwIfAborted();
+      const plugin = this.plugins.find((p) => p.tools.has(call.name));
+      assert(Object.hasOwn(schemas, call.name) || plugin, 'TOOL_NOT_AVAILABLE', '此工具未注册。');
+      assert(
+        Buffer.byteLength(call.arguments) <= 2 * 1024 * 1024,
+        'INVALID_ARGUMENT',
+        '工具参数超限。',
+      );
+      const name = call.name as keyof typeof schemas;
+      result.toolId = plugin ? `${plugin.manifest.id}:${call.name}` : ids[name];
+      const raw: unknown = JSON.parse(call.arguments);
+      if (plugin) compileSchema(plugin.tools.get(call.name)!.parameters).validate(raw);
+      const writing = ['fs_write', 'fs_apply_patch', 'process_exec'].includes(name);
+      if (!plugin) {
+        const parsed = schemas[name].parse(raw);
+        assert(
+          !writing || this.store.get(this.sessionId).permission.mode === 'workspace-write',
+          'ACCESS_DENIED',
+          '会话当前是只读模式。',
+        );
+        if (name === 'process_exec')
+          assert(this.processes, 'SANDBOX_UNAVAILABLE', '此平台命令隔离尚未通过验证。');
+        if ('path' in parsed) await this.files.resolve(parsed.path, writing);
+      }
+      const reasons = await checkPluginPolicies(this.plugins, call, raw, signal);
+      signal.throwIfAborted();
+      if (reasons.length) {
+        assert(this.approve, 'APPROVAL_UNAVAILABLE', '当前调用没有审批通道。');
+        const grant = await this.approve(
+          {
+            callId,
+            toolId: result.toolId,
+            parameters: raw,
+            reason: `以下插件要求额外审批：${reasons.join('、')}`,
+            resources: { workspace: this.files.root },
+          },
+          signal,
+        );
+        grant();
+      }
+      if (plugin) {
+        result.toolId = `${plugin.manifest.id}:${call.name}`;
+        effect = true;
+        result.data = await plugin.tools.get(call.name)!.execute(raw, {
+          signal,
+          invokeCore: async (name, args) => {
+            assert(
+              Object.hasOwn(schemas, name),
+              'TOOL_NOT_AVAILABLE',
+              '插件只能通过此服务调用核心工具。',
+            );
+            this.consumeDelegatedTool?.();
+            const delegatedId = uuid();
+            this.store.append(this.sessionId, 'plugin/tool-intent', {
+              pluginId: plugin.manifest.id,
+              parentCallId: callId,
+              delegatedId,
+              name,
+            });
+            const value = await this.execute(
+              { id: delegatedId, name, arguments: JSON.stringify(args) },
+              delegatedId,
+              signal,
+            );
+            this.store.append(
+              this.sessionId,
+              'plugin/tool-result',
+              { pluginId: plugin.manifest.id, parentCallId: callId, result: value },
+              'tool',
+            );
+            return value;
+          },
+        });
+        result.effectState = 'unknown';
+        result.durationMs = Math.round(performance.now() - started);
+        return result;
+      }
+      schemas[name].parse(raw);
+      const permission = this.store.get(this.sessionId).permission;
+      assert(!writing || !this.processes?.active, 'WORKSPACE_BUSY', '活动命令占用工作区修改位置。');
+      assert(
+        !writing || permission.mode === 'workspace-write',
+        'ACCESS_DENIED',
+        '会话当前是只读模式。',
+      );
+      effect = writing;
+      if (name.startsWith('fs_')) await executeFilesTool(this.files, name, raw, signal, result);
+      else if (name.startsWith('process_'))
+        await executeProcessesTool(this.processes, permission, name, raw, signal, result);
+      else
+        await executeSessionTool(this.store, this.sessionId, this.ask, name, raw, signal, result);
+      const diff = (result.data as { diffArtifactId?: string } | undefined)?.diffArtifactId;
+      if (diff) result.artifactIds.push(diff);
+    } catch (error) {
+      const safe =
+        error instanceof SyntaxError
+          ? { code: 'INVALID_ARGUMENT', safeMessage: '工具参数 JSON 无效。' }
+          : safeError(error);
+      result.status = signal.aborted
+        ? 'cancelled'
+        : ['ACCESS_DENIED', 'APPROVAL_REJECTED'].includes(safe.code)
+          ? 'denied'
+          : 'failed';
+      result.error = { code: safe.code, message: safe.safeMessage };
+      // Unknown errors after dispatch may follow a write; never claim a rollback.
+      if (
+        effect &&
+        ![
+          'FILE_NOT_OBSERVED',
+          'FILE_VERSION_CONFLICT',
+          'FILE_ALREADY_EXISTS',
+          'PATCH_OVERLAP',
+          'PATCH_MATCH_COUNT_MISMATCH',
+          'SANDBOX_UNAVAILABLE',
+          'ACCESS_DENIED',
+          'INVALID_ARGUMENT',
+          'FILE_TOO_LARGE',
+        ].includes(safe.code)
+      )
+        result.effectState = 'unknown';
+    }
+    result.durationMs = Math.round(performance.now() - started);
+    return result;
+  }
+  project(result: ToolResult): string {
+    const full = JSON.stringify(result);
+    if (Buffer.byteLength(full) <= 16 * 1024) return full;
+    const artifactId = this.store.artifact(this.sessionId, 'tool-output', full);
+    return JSON.stringify({
+      ...result,
+      data: { preview: full.slice(0, 3000), note: '输出已截断，使用 artifact_read 读取完整产物。' },
+      artifactIds: [...result.artifactIds, artifactId],
+      truncated: true,
+    });
+  }
+  plan() {
+    return readPlan(this.store, this.sessionId);
+  }
+  async close() {
+    await this.processes?.close();
+  }
+}

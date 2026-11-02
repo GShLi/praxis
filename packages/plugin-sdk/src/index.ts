@@ -1,5 +1,5 @@
-import type { JsonSchema } from '../../schema/src/index.ts';
-import type { ModelClient } from '../../model-core/src/index.ts';
+import type { ModelClient } from '@praxis/model-core';
+import type { JsonSchema } from '@praxis/schema';
 
 export interface PluginServices {
   readonly signal: AbortSignal;

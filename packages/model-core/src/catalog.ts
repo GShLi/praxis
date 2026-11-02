@@ -1,7 +1,7 @@
-import { assert, PraxisError } from '../../contracts/src/index.ts';
-import { fixedEndpointHttp } from '../../transport/src/http.ts';
-import { modelIdSchema, providerEndpoint, providerKeySchema } from './provider.ts';
+import { assert, PraxisError } from '@praxis/contracts';
+import { fixedEndpointHttp } from '@praxis/transport/http';
 import type { AvailableModel } from './provider.ts';
+import { modelIdSchema, providerEndpoint, providerKeySchema } from './provider.ts';
 
 /** A read-only catalog request. No configuration is saved and no completion is generated. */
 export async function discoverModels(

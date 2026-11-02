@@ -1,10 +1,10 @@
+import { startHost } from '@praxis/client-host';
+import type { Event, Session } from '@praxis/contracts';
+import { assert, safeError } from '@praxis/contracts';
+import type { ApprovalRequest } from '@praxis/permissions';
+import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
-import { randomUUID } from 'node:crypto';
-import { startHost } from '../../../packages/client-host/src/index.ts';
-import { assert, safeError } from '../../../packages/contracts/src/index.ts';
-import type { Event, Session } from '../../../packages/contracts/src/index.ts';
-import type { ApprovalRequest } from '../../../packages/permissions/src/index.ts';
 
 async function main() {
   const { values, positionals } = parseArgs({

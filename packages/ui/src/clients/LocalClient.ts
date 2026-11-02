@@ -1,0 +1,189 @@
+import type { Event, Message, Session } from '@praxis/contracts';
+import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
+import type {
+  DesktopBridge,
+  McpState,
+  McpTestResult,
+  PluginReview,
+  PluginState,
+  PraxisClient,
+  Profile,
+  Provider,
+  Snapshot,
+} from '../client.ts';
+
+export class LocalClient implements PraxisClient {
+  desktop = true;
+  constructor(private bridge: DesktopBridge) {}
+  async current() {
+    return false;
+  }
+  async login(input: { serverUrl: string; apiKey: string }) {
+    await this.bridge.call('auth/bind', {
+      serverUrl: input.serverUrl,
+      praxisApiKey: input.apiKey,
+      interactive: true,
+    });
+  }
+  async logout() {
+    await this.bridge.call('auth/clear');
+  }
+  providers() {
+    return this.bridge.call<Provider[]>('provider/list');
+  }
+  discoverModels(input: ModelDiscoveryInput) {
+    return this.bridge.call<AvailableModel[]>('provider/models', input);
+  }
+  async saveProvider(input: unknown) {
+    await this.bridge.call('provider/save', input);
+  }
+  async list() {
+    return (await this.bridge.call<Session[]>('session/list'))
+      .filter((s) => !s.archived)
+      .map((s) => ({
+        ...s,
+        permissionRevision: s.permission.revision,
+        permissionMode: s.permission.mode,
+      }));
+  }
+  async create(kind: 'chat' | 'agent', workspace?: string) {
+    const opened = workspace
+      ? await this.bridge.call<{ id: string }>('workspace/open', { path: workspace })
+      : undefined;
+    const s = await this.bridge.call<Session>('session/create', {
+      kind,
+      ...(opened ? { workspaceId: opened.id } : {}),
+    });
+    if (kind === 'agent' && localStorage.getItem('praxis-default-permission') === 'read-only') {
+      await this.setPermissions(s.id, s.permission.revision, 'read-only');
+      return (await this.read(s.id)).session;
+    }
+    return { ...s, permissionRevision: s.permission.revision, permissionMode: s.permission.mode };
+  }
+  async read(id: string): Promise<Snapshot> {
+    const result = await this.bridge.call<{
+      session: Session;
+      messages: Message[];
+      throughSeq: number;
+      turnId: string | null;
+    }>('session/read', { sessionId: id });
+    return {
+      ...result,
+      session: {
+        ...result.session,
+        permissionRevision: result.session.permission.revision,
+        permissionMode: result.session.permission.mode,
+      },
+    };
+  }
+  async send(
+    id: string,
+    text: string,
+    providerId: string,
+    mode: 'queue' | 'steer',
+    turnId: string | null,
+  ) {
+    await this.bridge.call('provider/select', { providerId });
+    await this.bridge.call('session/prompt', {
+      sessionId: id,
+      requestId: crypto.randomUUID(),
+      text,
+      mode,
+      ...(mode === 'steer' && turnId ? { expectedTurnId: turnId } : {}),
+    });
+  }
+  async cancel(id: string) {
+    await this.bridge.call('session/cancel', { sessionId: id });
+  }
+  listen(
+    id: string,
+    after: number,
+    event: (event: Event) => void,
+    delta: (text: string) => void,
+    failure: (error: Error) => void,
+  ) {
+    const off = this.bridge.subscribe((method, raw) => {
+      const value = raw as Event & { text: string };
+      if (value.sessionId !== id) return;
+      if (method === 'session/event') event(value);
+      if (method === 'session/delta') delta(value.text);
+    });
+    void this.bridge.call('session/subscribe', { sessionId: id, afterSeq: after }).catch(failure);
+    return () => {
+      off();
+      void this.bridge.call('session/unsubscribe', { sessionId: id }).catch(() => {});
+    };
+  }
+  profile() {
+    return this.bridge.call<Profile>('auth/me');
+  }
+  diagnostics() {
+    return this.bridge.call<Record<string, unknown>>('host/diagnostics');
+  }
+  plugins() {
+    return this.bridge.call<PluginState>('plugin/list');
+  }
+  inspectPlugin(source: string) {
+    return this.bridge.call<PluginReview>('plugin/inspect', { source });
+  }
+  async installPlugin(source: string, digest: string, revision: number) {
+    await this.bridge.call('plugin/install', {
+      source,
+      expectedDigest: digest,
+      expectedRevision: revision,
+    });
+  }
+  async enablePlugin(id: string, enabled: boolean, revision: number) {
+    await this.bridge.call('plugin/set-enabled', { id, enabled, expectedRevision: revision });
+  }
+  mcpServers() {
+    return this.bridge.call<McpState>('mcp/server-list');
+  }
+  async saveMcp(config: unknown, storeRevision: number, configRevision: number | null) {
+    await this.bridge.call('mcp/server-upsert', {
+      config,
+      expectedStoreRevision: storeRevision,
+      expectedRevision: configRevision,
+    });
+  }
+  async disableMcp(id: string, revision: number) {
+    await this.bridge.call('mcp/server-disable', { serverId: id, expectedStoreRevision: revision });
+  }
+  async testMcp(id: string, revision: number) {
+    return this.bridge.call<McpTestResult>('mcp/test', {
+      serverId: id,
+      expectedRevision: revision,
+    });
+  }
+  async respondApproval(input: {
+    sessionId: string;
+    turnId: string;
+    approvalId: string;
+    requestHash: string;
+    decision: 'approve-once' | 'deny';
+  }) {
+    await this.bridge.call('approval/respond', input);
+  }
+  async deleteProvider(id: string, revision: number) {
+    await this.bridge.call('provider/delete', { id, expectedRevision: revision });
+  }
+  selectWorkspace() {
+    return this.bridge.selectWorkspace();
+  }
+  async answer(input: unknown) {
+    await this.bridge.call('question/respond', input);
+  }
+  readArtifact(id: string, artifactId: string) {
+    return this.bridge.call<{ kind: string; content: string }>('artifact/read', {
+      sessionId: id,
+      artifactId,
+    });
+  }
+  async setPermissions(id: string, revision: number, mode: 'read-only' | 'workspace-write') {
+    await this.bridge.call('session/set-permissions', {
+      sessionId: id,
+      expectedRevision: revision,
+      permission: { mode, approval: 'ask', revision },
+    });
+  }
+}

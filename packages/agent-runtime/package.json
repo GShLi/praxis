@@ -3,5 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts"
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@praxis/context": "workspace:*",
+    "@praxis/contracts": "workspace:*",
+    "@praxis/model-core": "workspace:*",
+    "@praxis/permissions": "workspace:*",
+    "@praxis/plugin-host": "workspace:*",
+    "@praxis/storage-local": "workspace:*",
+    "@praxis/tools": "workspace:*",
+    "zod": "4.3.6"
+  }
 }

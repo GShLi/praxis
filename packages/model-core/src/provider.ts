@@ -1,5 +1,5 @@
+import { assert, idSchema } from '@praxis/contracts';
 import { z } from 'zod';
-import { assert, idSchema } from '../../contracts/src/index.ts';
 
 export function normalizeProviderBaseUrl(value: string): string {
   let url: URL;

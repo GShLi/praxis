@@ -2,5 +2,18 @@
   "name": "@praxis/server",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "exports": {
+    "./app": "./src/app.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "1.19.17",
+    "@praxis/auth": "workspace:*",
+    "@praxis/chat-runtime": "workspace:*",
+    "@praxis/contracts": "workspace:*",
+    "@praxis/model-core": "workspace:*",
+    "@praxis/storage-server": "workspace:*",
+    "hono": "4.13.14",
+    "zod": "4.3.6"
+  }
 }

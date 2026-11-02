@@ -2,6 +2,14 @@
 
 设计目标见 [开发计划](superpowers/plans/2026-11-03-praxis-development-plan.md)。此文件只记录已有实现及验证，不用设计文档的存在代替功能完成。
 
+## 进行中的结构整理
+
+按项目 `AGENTS.md` 整理已有实现。第一批已拆分设置分类、会话组件、UI 客户端、包公共入口、Agent 调度/问题/turn/step、文件读写/路径/搜索、SQLite 输入/历史/恢复以及 Host RPC、服务端 HTTP 路由。所有运行时状态仍归原有 Host、Session 或操作实例管理，SQLite 仓储共用同一连接与事务所有者。
+
+跨包导入改为 `@praxis/*` 与明确的公开子路径；补齐 workspace 依赖和锁文件。构建显式打包本地 workspace 包，第三方依赖仍作为外部依赖，避免发行文件意外依赖 TS 源码。现有 npm 布局的安装目录只增加了本地 workspace 链接用于验证；冻结锁文件的离线校验通过，尚未据此声称干净安装已验证。
+
+本批 TypeScript、58 项行为测试、全部入口构建及 CLI doctor 通过。继续进行文件/函数职责与生命周期审查、CSS 和 CLI 整理及结构检查，当前不宣称全部文件已符合规范。工作清单见 [结构整理进度](refactoring-progress.md)。
+
 ## 工程与协议
 
 2026-11-03：建立 pnpm workspace、TypeScript strict、版本锁、共享 Zod 合同、JSON 行 RPC、独立 Host 和 CLI doctor。Host 支持主版本校验、实例 nonce 回传、心跳失效退出、管道断开退出及显式关闭；帧和发送缓冲有 8 MiB 上限，控制请求不等待慢业务请求完成。

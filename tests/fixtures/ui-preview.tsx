@@ -1,8 +1,8 @@
 // Development-only fixture. It never contacts a model or mutates a workspace.
 import { createRoot } from 'react-dom/client';
-import { App } from '../../packages/ui/src/App.tsx';
-import type { PraxisClient, Provider } from '../../packages/ui/src/client.ts';
-import type { Event } from '../../packages/contracts/src/index.ts';
+import { App } from '@praxis/ui';
+import type { PraxisClient, Provider } from '@praxis/ui/client';
+import type { Event } from '@praxis/contracts';
 
 let approvalPending = true;
 const approvalListeners = new Set<(event: Event) => void>();

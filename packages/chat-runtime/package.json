@@ -3,5 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts"
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@praxis/auth": "workspace:*",
+    "@praxis/context": "workspace:*",
+    "@praxis/contracts": "workspace:*",
+    "@praxis/model-core": "workspace:*",
+    "@praxis/storage-server": "workspace:*"
+  }
 }

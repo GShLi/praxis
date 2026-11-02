@@ -1,10 +1,10 @@
-import test from 'node:test';
+import { ContextBuilder, protocolGroups } from '@praxis/context';
+import type { Message, ModelConfig } from '@praxis/contracts';
+import type { ModelClient } from '@praxis/model-core';
+import { DeepSeekClient } from '@praxis/model-core';
+import { SessionStore, uuid } from '@praxis/storage-local';
 import assert from 'node:assert/strict';
-import { SessionStore, uuid } from '../packages/storage-local/src/index.ts';
-import { ContextBuilder, protocolGroups } from '../packages/context/src/index.ts';
-import { DeepSeekClient } from '../packages/model-core/src/index.ts';
-import type { ModelClient } from '../packages/model-core/src/index.ts';
-import type { Message, ModelConfig } from '../packages/contracts/src/index.ts';
+import test from 'node:test';
 
 const config: ModelConfig = {
   id: 'fixture',

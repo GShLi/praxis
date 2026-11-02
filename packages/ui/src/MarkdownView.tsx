@@ -1,5 +1,5 @@
-import { isValidElement, useState } from 'react';
 import type { ReactNode } from 'react';
+import { isValidElement, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Icon } from './Navigation.tsx';

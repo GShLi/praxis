@@ -2,5 +2,21 @@
   "name": "@praxis/agent-host",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@praxis/agent-runtime": "workspace:*",
+    "@praxis/auth": "workspace:*",
+    "@praxis/auth-client": "workspace:*",
+    "@praxis/contracts": "workspace:*",
+    "@praxis/mcp-client": "workspace:*",
+    "@praxis/mcp-core": "workspace:*",
+    "@praxis/model-core": "workspace:*",
+    "@praxis/permissions": "workspace:*",
+    "@praxis/plugin-host": "workspace:*",
+    "@praxis/storage-local": "workspace:*",
+    "@praxis/tools": "workspace:*",
+    "@praxis/transport": "workspace:*",
+    "@praxis/workspace": "workspace:*",
+    "zod": "4.3.6"
+  }
 }

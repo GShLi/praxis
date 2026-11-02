@@ -1,9 +1,9 @@
+import { assert, PraxisError } from '@praxis/contracts';
 import { lookup } from 'node:dns/promises';
-import { BlockList, isIP } from 'node:net';
+import type { ClientRequest, IncomingMessage, RequestOptions } from 'node:http';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
-import type { ClientRequest, IncomingMessage, RequestOptions } from 'node:http';
-import { assert, PraxisError } from '../../contracts/src/index.ts';
+import { BlockList, isIP } from 'node:net';
 
 type Address = { address: string; family: number };
 export interface HttpDependencies {

@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import type { FetchLike } from '@modelcontextprotocol/client';
-import { assert, PraxisError } from '../../contracts/src/index.ts';
-import type { McpConfigService } from '../../mcp-core/src/index.ts';
-import type { SessionStore } from '../../storage-local/src/index.ts';
+import { assert, PraxisError } from '@praxis/contracts';
+import type { McpConfigService } from '@praxis/mcp-core';
+import type { SessionStore } from '@praxis/storage-local';
+import { randomUUID } from 'node:crypto';
 import { McpConnection, mcpError } from './index.ts';
 
 export interface McpTestResult {

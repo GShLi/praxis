@@ -1,12 +1,12 @@
-import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
+import { AuthService, SecretCipher, scopes } from '@praxis/auth';
+import { ChatRuntime } from '@praxis/chat-runtime';
+import { assert, safeError } from '@praxis/contracts';
+import { DeepSeekClient } from '@praxis/model-core';
+import { PostgresDatabase, migrate } from '@praxis/storage-server';
 import { randomBytes } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
-import { PostgresDatabase, migrate } from '../../../packages/storage-server/src/index.ts';
-import { AuthService, SecretCipher, scopes } from '../../../packages/auth/src/index.ts';
-import { DeepSeekClient } from '../../../packages/model-core/src/index.ts';
-import { ChatRuntime } from '../../../packages/chat-runtime/src/index.ts';
-import { assert, safeError } from '../../../packages/contracts/src/index.ts';
+import { fileURLToPath } from 'node:url';
 import { createApp } from './app.ts';
 
 async function secretPrompt(prompt: string): Promise<string> {

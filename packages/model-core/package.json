@@ -3,5 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts"
+  "exports": {
+    ".": "./src/index.ts",
+    "./provider": "./src/provider.ts",
+    "./catalog": "./src/catalog.ts"
+  },
+  "dependencies": {
+    "@praxis/contracts": "workspace:*",
+    "@praxis/transport": "workspace:*",
+    "zod": "4.3.6"
+  }
 }

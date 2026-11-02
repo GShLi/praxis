@@ -1,8 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, session } from 'electron';
+import { startHost } from '@praxis/client-host';
+import { assert, safeError } from '@praxis/contracts';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startHost } from '../../../packages/client-host/src/index.ts';
-import { assert, safeError } from '../../../packages/contracts/src/index.ts';
 
 const allowed = new Set([
   'auth/bind',

@@ -1,8 +1,8 @@
+import { MarkdownView } from '@praxis/ui/MarkdownView';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MarkdownView } from '../packages/ui/src/MarkdownView.tsx';
 
 test('model HTML is displayed as source code and never executed in the conversation', () => {
   const html = renderToStaticMarkup(

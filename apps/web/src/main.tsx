@@ -1,5 +1,5 @@
+import { App } from '@praxis/ui';
 import { createRoot } from 'react-dom/client';
-import { App } from '../../../packages/ui/src/App.tsx';
 document.documentElement.dataset.theme = localStorage.getItem('praxis-theme') ?? 'system';
 document.documentElement.style.setProperty(
   '--message-font',

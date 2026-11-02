@@ -1,14 +1,14 @@
-import test from 'node:test';
+import { AgentRuntime } from '@praxis/agent-runtime';
+import { protocolGroups } from '@praxis/context';
+import type { ModelConfig, ToolCall } from '@praxis/contracts';
+import type { Completion, ModelClient, ModelRequest } from '@praxis/model-core';
+import { SessionStore, uuid } from '@praxis/storage-local';
+import { WorkspaceFiles } from '@praxis/tools/files';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile, writeFile, symlink } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { SessionStore, uuid } from '../packages/storage-local/src/index.ts';
-import { AgentRuntime } from '../packages/agent-runtime/src/index.ts';
-import { WorkspaceFiles } from '../packages/tools/src/files.ts';
-import { protocolGroups } from '../packages/context/src/index.ts';
-import type { ModelClient, ModelRequest, Completion } from '../packages/model-core/src/index.ts';
-import type { ModelConfig, ToolCall } from '../packages/contracts/src/index.ts';
+import test from 'node:test';
 
 const config: ModelConfig = {
   id: 'test',

@@ -1,13 +1,13 @@
-import test from 'node:test';
+import { AgentRuntime } from '@praxis/agent-runtime';
+import type { ModelConfig } from '@praxis/contracts';
+import { ApprovalGate } from '@praxis/permissions';
+import type { ActivePlugin } from '@praxis/plugin-host';
+import { SessionStore, uuid } from '@praxis/storage-local';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { SessionStore, uuid } from '../packages/storage-local/src/index.ts';
-import { ApprovalGate } from '../packages/permissions/src/index.ts';
-import { AgentRuntime } from '../packages/agent-runtime/src/index.ts';
-import type { ActivePlugin } from '../packages/plugin-host/src/index.ts';
-import type { ModelConfig } from '../packages/contracts/src/index.ts';
+import path from 'node:path';
+import test from 'node:test';
 
 const details = {
   callId: 'call-1',

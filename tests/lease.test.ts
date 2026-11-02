@@ -1,9 +1,9 @@
-import test from 'node:test';
+import { acquireLease } from '@praxis/workspace';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { acquireLease } from '../packages/workspace/src/index.ts';
+import test from 'node:test';
 
 test('OS lease excludes a second process and becomes available after pipe closes', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'praxis-lock-'));

@@ -1,24 +1,19 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
-import { discoverModels } from '../packages/model-core/src/catalog.ts';
-import { DeepSeekClient } from '../packages/model-core/src/index.ts';
+import type { Identity } from '@praxis/auth';
+import { AuthService, SecretCipher, digest, providerInputSchema } from '@praxis/auth';
+import { AuthClient } from '@praxis/auth-client';
+import type { ChatRuntime } from '@praxis/chat-runtime';
+import { DeepSeekClient } from '@praxis/model-core';
+import { discoverModels } from '@praxis/model-core/catalog';
 import {
   modelDiscoverySchema,
   normalizeProviderBaseUrl,
   providerEndpoint,
-} from '../packages/model-core/src/provider.ts';
-import {
-  AuthService,
-  SecretCipher,
-  digest,
-  providerInputSchema,
-} from '../packages/auth/src/index.ts';
-import type { Identity } from '../packages/auth/src/index.ts';
-import { AuthClient } from '../packages/auth-client/src/index.ts';
-import { createApp } from '../apps/server/src/app.ts';
-import type { ServerDatabase } from '../packages/storage-server/src/index.ts';
-import type { ChatRuntime } from '../packages/chat-runtime/src/index.ts';
+} from '@praxis/model-core/provider';
+import { createApp } from '@praxis/server/app';
+import type { ServerDatabase } from '@praxis/storage-server';
+import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import test from 'node:test';
 
 const baseUrl = 'https://models.example/gateway/v1';
 const apiKey = 'fixture-provider-key-not-real';

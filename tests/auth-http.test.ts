@@ -1,18 +1,12 @@
-import test from 'node:test';
+import type { Identity } from '@praxis/auth';
+import { AuthService, SecretCipher, digest, hashPassword, verifyPassword } from '@praxis/auth';
+import { AuthClient } from '@praxis/auth-client';
+import type { ChatRuntime } from '@praxis/chat-runtime';
+import { createApp } from '@praxis/server/app';
+import type { ServerDatabase } from '@praxis/storage-server';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import {
-  AuthService,
-  SecretCipher,
-  hashPassword,
-  verifyPassword,
-  digest,
-} from '../packages/auth/src/index.ts';
-import type { Identity } from '../packages/auth/src/index.ts';
-import { AuthClient } from '../packages/auth-client/src/index.ts';
-import type { ServerDatabase } from '../packages/storage-server/src/index.ts';
-import type { ChatRuntime } from '../packages/chat-runtime/src/index.ts';
-import { createApp } from '../apps/server/src/app.ts';
+import test from 'node:test';
 
 test('vendor credential encryption binds owner, provider and revision', () => {
   const cipher = new SecretCipher(new Map([['1', randomBytes(32)]]), '1');

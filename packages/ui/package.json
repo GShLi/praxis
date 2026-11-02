@@ -3,5 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/App.tsx"
+  "exports": {
+    ".": "./src/App.tsx",
+    "./client": "./src/client.ts",
+    "./MarkdownView": "./src/MarkdownView.tsx"
+  },
+  "dependencies": {
+    "@praxis/contracts": "workspace:*",
+    "@praxis/model-core": "workspace:*",
+    "@praxis/permissions": "workspace:*",
+    "react": "19.2.6",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
+  }
 }

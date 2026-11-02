@@ -1,10 +1,10 @@
-import test from 'node:test';
+import { startHost } from '@praxis/client-host';
+import { MAX_FRAME_BYTES } from '@praxis/contracts';
+import { JsonLines, RpcClient, serveRpc } from '@praxis/transport';
 import assert from 'node:assert/strict';
-import { PassThrough } from 'node:stream';
 import { once } from 'node:events';
-import { JsonLines, RpcClient, serveRpc } from '../packages/transport/src/index.ts';
-import { MAX_FRAME_BYTES } from '../packages/contracts/src/index.ts';
-import { startHost } from '../packages/client-host/src/index.ts';
+import { PassThrough } from 'node:stream';
+import test from 'node:test';
 
 test('RPC accepts split UTF-8 frames and control requests while another request is pending', async () => {
   const up = new PassThrough(),

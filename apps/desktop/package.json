@@ -3,5 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "../../dist/desktop/main.mjs"
+  "main": "../../dist/desktop/main.mjs",
+  "dependencies": {
+    "@praxis/client-host": "workspace:*",
+    "@praxis/contracts": "workspace:*",
+    "@praxis/ui": "workspace:*",
+    "electron": "42.3.3"
+  }
 }

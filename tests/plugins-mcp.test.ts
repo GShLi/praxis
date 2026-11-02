@@ -1,28 +1,28 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { PluginHost, PluginInstaller, inspectPackage } from '../packages/plugin-host/src/index.ts';
-import type { InstalledPlugin } from '../packages/plugin-host/src/index.ts';
-import { SessionStore } from '../packages/storage-local/src/index.ts';
-import { ToolExecutor } from '../packages/tools/src/index.ts';
-import { WorkspaceFiles } from '../packages/tools/src/files.ts';
-import { ConfigFile } from '../packages/config/src/index.ts';
-import { compileSchema } from '../packages/schema/src/index.ts';
+import { ConfigFile } from '@praxis/config';
 import {
   McpCatalog,
   McpConfigService,
-  ToolSelector,
   ScopedReferences,
+  ToolSelector,
   argumentHeaders,
   encodeHeader,
   modelToolName,
   normalizeResult,
   prepareSchema,
   validateConfig,
-} from '../packages/mcp-core/src/index.ts';
+} from '@praxis/mcp-core';
+import type { InstalledPlugin } from '@praxis/plugin-host';
+import { PluginHost, PluginInstaller, inspectPackage } from '@praxis/plugin-host';
+import { compileSchema } from '@praxis/schema';
+import { SessionStore } from '@praxis/storage-local';
+import { ToolExecutor } from '@praxis/tools';
+import { WorkspaceFiles } from '@praxis/tools/files';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
 
 const manifest: InstalledPlugin['manifest'] = {
   id: 'example.fixture',

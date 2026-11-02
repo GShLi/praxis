@@ -1,0 +1,269 @@
+import type { FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { SettingsTab } from '../Navigation.tsx';
+import { settingsFromHash } from '../Navigation.tsx';
+import type { PraxisClient, Profile, Provider, Snapshot, ViewSession } from '../client.ts';
+import { LocalClient, WebClient } from '../client.ts';
+import { useConversationSubscription } from './useConversationSubscription.ts';
+
+import type { Question } from '../conversation/types.ts';
+export function useAppController(injected?: PraxisClient) {
+  const [client] = useState<PraxisClient>(
+    () => injected ?? (window.praxis ? new LocalClient(window.praxis) : new WebClient()),
+  );
+  const [authenticated, setAuthenticated] = useState(false),
+    [checking, setChecking] = useState(true);
+  const [sessions, setSessions] = useState<ViewSession[]>([]),
+    [providers, setProviders] = useState<Provider[]>([]),
+    [providerId, setProviderId] = useState('');
+  const [kind, setKind] = useState<'chat' | 'agent'>('chat'),
+    [selected, setSelected] = useState<string | null>(null),
+    [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [draft, setDraft] = useState(''),
+    [partial, setPartial] = useState(''),
+    [sending, setSending] = useState(false),
+    [error, setError] = useState('');
+  const [settings, setSettings] = useState<SettingsTab | null>(settingsFromHash),
+    [profile, setProfile] = useState<Profile | null>(null),
+    [searching, setSearching] = useState(false),
+    [loadAttempt, setLoadAttempt] = useState(0),
+    [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
+    [panel, setPanel] = useState(false),
+    [workspace, setWorkspace] = useState('');
+  const [question, setQuestion] = useState<Question | null>(null),
+    [change, setChange] = useState<{ path: string; before: string | null; after: string } | null>(
+      null,
+    );
+  const [inputMode, setInputMode] = useState<'queue' | 'steer'>('queue'),
+    [follow, setFollow] = useState(true);
+  const scroll = useRef<HTMLDivElement>(null),
+    input = useRef<HTMLTextAreaElement>(null);
+  const fail = (e: unknown) => setError(e instanceof Error ? e.message : '操作失败，请重试。');
+  const openSettings = (tab: SettingsTab) => {
+    location.hash = `settings/${tab}`;
+    setSettings(tab);
+  };
+  const closeSettings = () => {
+    location.hash = '';
+    setSettings(null);
+  };
+  useEffect(() => {
+    const changed = () => setSettings(settingsFromHash());
+    window.addEventListener('hashchange', changed);
+    return () => window.removeEventListener('hashchange', changed);
+  }, []);
+  useEffect(() => {
+    if (!authenticated) return;
+    let cancelled = false;
+    void client
+      .profile?.()
+      .then((value) => {
+        if (!cancelled) setProfile(value);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, client]);
+  useEffect(() => {
+    const field = input.current;
+    if (field) {
+      field.style.height = 'auto';
+      field.style.height = `${Math.min(field.scrollHeight, 200)}px`;
+    }
+  }, [draft, settings, selected]);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (!authenticated || settings) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearching(true);
+      }
+      if (event.key === 'Escape' && !searching && window.innerWidth <= 760) setSidebar(false);
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [authenticated, settings, searching]);
+  const reloadLists = async () => {
+    const [all, models] = await Promise.all([client.list(), client.providers()]);
+    setSessions(all);
+    setProviders(models);
+    setProviderId((previous) =>
+      models.some((p) => p.id === previous && p.enabled)
+        ? previous
+        : (models.find((p) => p.enabled && p.id === localStorage.getItem('praxis-default-provider'))
+            ?.id ??
+          models.find((p) => p.enabled)?.id ??
+          ''),
+    );
+  };
+  useEffect(() => {
+    void client
+      .current()
+      .then(async (ok) => {
+        setAuthenticated(ok);
+        if (ok) await reloadLists();
+      })
+      .catch(fail)
+      .finally(() => setChecking(false));
+  }, [client]);
+  useConversationSubscription({
+    client,
+    selected,
+    authenticated,
+    loadAttempt,
+    setSnapshot,
+    setPartial,
+    setQuestion,
+    setError,
+    onKind: setKind,
+    onReset: () => {
+      setChange(null);
+      setFollow(true);
+    },
+    reloadLists,
+    fail,
+  });
+  useEffect(() => {
+    if (follow) scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'auto' });
+  }, [snapshot?.messages.length, partial, follow, question]);
+  const running = Boolean(
+    snapshot &&
+      ['running', 'waiting_input', 'waiting_approval', 'cancelling'].includes(
+        snapshot.session.status,
+      ),
+  );
+  const newSession = () => {
+    setSelected(null);
+    setSnapshot(null);
+    setFollow(true);
+    if (window.innerWidth <= 760) setSidebar(false);
+    const preferred = localStorage.getItem('praxis-default-provider');
+    if (providers.some((p) => p.id === preferred && p.enabled)) setProviderId(preferred!);
+    setDraft('');
+    setPartial('');
+    setError('');
+    setChange(null);
+    input.current?.focus();
+  };
+  async function send(event?: FormEvent) {
+    event?.preventDefault();
+    if (!draft.trim() || sending) return;
+    if (!providerId) {
+      openSettings('models');
+      setError('请先配置模型提供商。');
+      return;
+    }
+    if (kind === 'agent' && !selected && !workspace) {
+      setError('请先选择任务工作区。');
+      return;
+    }
+    const text = draft.trim();
+    setSending(true);
+    setError('');
+    try {
+      let id = selected;
+      if (!id) {
+        const created = await client.create(kind, workspace || undefined);
+        id = created.id;
+        setSelected(id);
+      }
+      await client.send(id, text, providerId, inputMode, snapshot?.turnId ?? null);
+      setDraft('');
+      setFollow(true);
+      await reloadLists();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setSending(false);
+      input.current?.focus();
+    }
+  }
+  const showChange = async (id: string) => {
+    if (!selected || !client.readArtifact) return;
+    try {
+      const value = await client.readArtifact(selected, id);
+      if (value.kind === 'file-change') {
+        setChange(JSON.parse(value.content) as typeof change);
+        setPanel(true);
+      }
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const logout = async () => {
+    await client.logout();
+    setAuthenticated(false);
+    setSelected(null);
+    setSessions([]);
+    setProviders([]);
+    setProfile(null);
+    setDraft('');
+    closeSettings();
+  };
+  const loadingSession = Boolean(selected && (!snapshot || snapshot.session.id !== selected));
+  const empty =
+    (!selected && !partial) ||
+    Boolean(snapshot?.session.id === selected && !snapshot?.messages.length && !partial);
+  const chooseSession = (session: ViewSession) => {
+    setSelected(session.id);
+    setKind(session.kind);
+    setError('');
+    setSearching(false);
+    if (window.innerWidth <= 760) setSidebar(false);
+  };
+  return {
+    client,
+    authenticated,
+    setAuthenticated,
+    checking,
+    sessions,
+    providers,
+    providerId,
+    setProviderId,
+    kind,
+    setKind,
+    selected,
+    snapshot,
+    draft,
+    setDraft,
+    partial,
+    sending,
+    error,
+    setError,
+    settings,
+    profile,
+    setProfile,
+    searching,
+    setSearching,
+    setLoadAttempt,
+    sidebar,
+    setSidebar,
+    panel,
+    setPanel,
+    workspace,
+    setWorkspace,
+    question,
+    setQuestion,
+    change,
+    inputMode,
+    setInputMode,
+    follow,
+    setFollow,
+    scroll,
+    input,
+    fail,
+    openSettings,
+    closeSettings,
+    reloadLists,
+    running,
+    newSession,
+    send,
+    showChange,
+    logout,
+    loadingSession,
+    empty,
+    chooseSession,
+  };
+}
+export type AppController = ReturnType<typeof useAppController>;
