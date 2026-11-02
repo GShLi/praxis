@@ -2,6 +2,10 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '../../packages/ui/src/App.tsx';
 import type { PraxisClient, Provider } from '../../packages/ui/src/client.ts';
+import type { Event } from '../../packages/contracts/src/index.ts';
+
+let approvalPending = true;
+const approvalListeners = new Set<(event: Event) => void>();
 
 const provider: Provider = {
   id: 'fixture',
@@ -34,6 +38,22 @@ const client: PraxisClient = {
   async saveMcp() {
     throw new Error('开发样例不会保存真实连接配置。');
   },
+  async respondApproval(input) {
+    if (input.sessionId !== 'approval-preview' || !approvalPending)
+      throw new Error('该样例审批已结束。');
+    approvalPending = false;
+    for (const listener of approvalListeners)
+      listener({
+        eventId: 'fixture-event',
+        sessionId: 'approval-preview',
+        seq: 1,
+        schemaVersion: 1,
+        type: 'approval/resolved',
+        source: 'user',
+        timestamp: new Date().toISOString(),
+        payload: { approvalId: input.approvalId, decision: input.decision },
+      });
+  },
   async current() {
     return true;
   },
@@ -60,6 +80,13 @@ const client: PraxisClient = {
         status: 'completed',
         workspace: '/demo/hello-world',
       },
+      {
+        id: 'approval-preview',
+        title: '执行审批 · 界面样例',
+        kind: 'agent',
+        status: approvalPending ? 'waiting_approval' : 'completed',
+        workspace: '/demo/hello-world',
+      },
     ];
   },
   async create() {
@@ -69,10 +96,55 @@ const client: PraxisClient = {
     throw new Error('开发样例不会调用模型。');
   },
   async cancel() {},
-  listen() {
+  listen(id, _after, listener) {
+    if (id === 'approval-preview') {
+      approvalListeners.add(listener);
+      return () => {
+        approvalListeners.delete(listener);
+      };
+    }
     return () => {};
   },
   async read(id) {
+    if (id === 'approval-preview')
+      return {
+        session: {
+          id,
+          title: '执行审批 · 界面样例',
+          kind: 'agent',
+          status: approvalPending ? 'waiting_approval' : 'completed',
+          workspace: '/demo/hello-world',
+        },
+        throughSeq: approvalPending ? 0 : 1,
+        turnId: approvalPending ? 'fixture-turn' : null,
+        messages: [
+          {
+            id: 'fixture-user',
+            role: 'user',
+            content: '这是审批界面样例，没有连接 Host，不会写入文件或授予真实权限。',
+          },
+        ],
+        approval: approvalPending
+          ? {
+              approvalId: '00000000-0000-4000-8000-000000000001',
+              sessionId: id,
+              turnId: 'fixture-turn',
+              callId: 'fixture-call',
+              toolId: 'fs.write',
+              parameters: {
+                path: 'index.html',
+                mode: 'create',
+                content: '<h1>Hello World！！！</h1>',
+              },
+              reason: '界面样例：项目策略要求在创建文件前确认内容。',
+              resources: { workspace: '/demo/hello-world' },
+              permissionRevision: 0,
+              argumentsHash: '0'.repeat(64),
+              expiresAt: Date.now() + 300000,
+              requestHash: '0'.repeat(64),
+            }
+          : null,
+      };
     return {
       session: {
         id,

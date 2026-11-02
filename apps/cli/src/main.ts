@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { startHost } from '../../../packages/client-host/src/index.ts';
 import { assert, safeError } from '../../../packages/contracts/src/index.ts';
 import type { Event, Session } from '../../../packages/contracts/src/index.ts';
+import type { ApprovalRequest } from '../../../packages/permissions/src/index.ts';
 
 async function main() {
   const { values, positionals } = parseArgs({
@@ -39,6 +40,7 @@ async function main() {
   let active = false;
   const finishWaiters: Array<() => void> = [];
   let finished = false;
+  let approval: ApprovalRequest | undefined;
   let question:
     | {
         questionId: string;
@@ -190,6 +192,19 @@ async function main() {
         };
         printQuestion();
       }
+      if (event.type === 'approval/requested') {
+        approval = event.payload as unknown as ApprovalRequest;
+        if (!values.json)
+          console.log(
+            `\n执行审批：${approval.toolId}\n${approval.reason}\n${JSON.stringify(approval.resources ?? {}, null, 2)}\n参数：\n${JSON.stringify(approval.parameters, null, 2)}\n批准此次：/approve ${approval.approvalId}\n拒绝：/deny ${approval.approvalId}`,
+          );
+        terminal?.prompt();
+      }
+      if (
+        ['approval/resolved', 'approval/closed'].includes(event.type) &&
+        event.payload.approvalId === approval?.approvalId
+      )
+        approval = undefined;
       if (event.type === 'turn/error' && !values.json)
         console.error(`\n${String(event.payload.code)}: ${String(event.payload.safeMessage)}`);
       if (event.type === 'turn/finished') {
@@ -197,6 +212,7 @@ async function main() {
         finished = true;
         interrupted = false;
         question = undefined;
+        approval = undefined;
         if (!values.json) console.log(`\n任务状态：${String(event.payload.status)}`);
         if (event.payload.status !== 'completed') process.exitCode = 1;
         for (const resolve of finishWaiters.splice(0)) resolve();
@@ -239,6 +255,23 @@ async function main() {
         if (line === '/exit') break;
         if (line === '/cancel') {
           await host.rpc.request('session/cancel', { sessionId });
+          continue;
+        }
+        if (line.startsWith('/approve ') || line.startsWith('/deny ')) {
+          assert(
+            approval && line.split(/\s+/)[1] === approval.approvalId,
+            'APPROVAL_EXPIRED',
+            '请使用当前审批的完整 ID。',
+          );
+          await host.rpc.request('approval/respond', {
+            sessionId,
+            turnId: approval.turnId,
+            approvalId: approval.approvalId,
+            requestHash: approval.requestHash,
+            decision: line.startsWith('/approve ') ? 'approve-once' : 'deny',
+          });
+          approval = undefined;
+          terminal.prompt();
           continue;
         }
         if (question) {

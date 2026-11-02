@@ -54,6 +54,70 @@
 * {
   box-sizing: border-box;
 }
+.approval-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid #a98241;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  background: var(--sidebar);
+}
+.approval-heading,
+.approval-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.approval-heading {
+  justify-content: space-between;
+  font-size: 13px;
+}
+.approval-heading small,
+.approval-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+.approval-card h3 {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.approval-card p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.approval-card dl {
+  font-size: 12px;
+}
+.approval-card dl > div {
+  display: flex;
+  gap: 12px;
+  margin: 6px 0;
+}
+.approval-card dt {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.approval-card dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.approval-card summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+.approval-card pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  background: var(--code);
+  font-size: 12px;
+}
+.approval-actions {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
 body {
   margin: 0;
   color: var(--text);

@@ -9,6 +9,8 @@ import type {
 import { SessionStore, uuid } from '../../storage-local/src/index.ts';
 import type { ActivePlugin } from '../../plugin-host/src/index.ts';
 import { WorkspaceFiles } from './files.ts';
+import type { Approve } from '../../permissions/src/index.ts';
+import { compileSchema } from '../../schema/src/index.ts';
 
 const shortText = z.string().min(1).max(4096);
 const scan = {
@@ -192,6 +194,8 @@ export class ToolExecutor {
     private ask: Ask,
     readonly processes?: ProcessService,
     readonly plugins: readonly ActivePlugin[] = [],
+    readonly approve?: Approve,
+    private consumeDelegatedTool?: () => void,
   ) {
     this.definitions = (Object.keys(schemas) as Array<keyof typeof schemas>).map((name) => ({
       id: ids[name],
@@ -213,7 +217,7 @@ export class ToolExecutor {
     let effect = false;
     const result: ToolResult = {
       callId,
-      toolId: '',
+      toolId: call.name,
       toolVersion: 1,
       status: 'succeeded',
       effectState: 'none',
@@ -231,10 +235,25 @@ export class ToolExecutor {
         '工具参数超限。',
       );
       const name = call.name as keyof typeof schemas;
-      result.toolId = ids[name];
+      result.toolId = plugin ? `${plugin.manifest.id}:${call.name}` : ids[name];
       const raw: unknown = JSON.parse(call.arguments);
+      if (plugin) compileSchema(plugin.tools.get(call.name)!.parameters).validate(raw);
+      const writing = ['fs_write', 'fs_apply_patch', 'process_exec'].includes(name);
+      if (!plugin) {
+        const parsed = schemas[name].parse(raw);
+        assert(
+          !writing || this.store.get(this.sessionId).permission.mode === 'workspace-write',
+          'ACCESS_DENIED',
+          '会话当前是只读模式。',
+        );
+        if (name === 'process_exec')
+          assert(this.processes, 'SANDBOX_UNAVAILABLE', '此平台命令隔离尚未通过验证。');
+        if ('path' in parsed) await this.files.resolve(parsed.path, writing);
+      }
+      const reasons: string[] = [];
       for (const current of this.plugins)
         for (const check of current.checks) {
+          signal.throwIfAborted();
           let timer: ReturnType<typeof setTimeout> | undefined;
           try {
             const verdict = await Promise.race([
@@ -252,16 +271,26 @@ export class ToolExecutor {
               '插件策略结果无效。',
             );
             assert(verdict !== 'deny', 'ACCESS_DENIED', '插件策略拒绝此操作。');
-            assert(
-              verdict !== 'ask',
-              'APPROVAL_REQUIRED',
-              '插件要求额外授权；当前调用未获得授权。',
-            );
+            if (verdict === 'ask') reasons.push(current.manifest.id);
           } finally {
             clearTimeout(timer);
           }
         }
       signal.throwIfAborted();
+      if (reasons.length) {
+        assert(this.approve, 'APPROVAL_UNAVAILABLE', '当前调用没有审批通道。');
+        const grant = await this.approve(
+          {
+            callId,
+            toolId: result.toolId,
+            parameters: raw,
+            reason: `以下插件要求额外审批：${reasons.join('、')}`,
+            resources: { workspace: this.files.root },
+          },
+          signal,
+        );
+        grant();
+      }
       if (plugin) {
         result.toolId = `${plugin.manifest.id}:${call.name}`;
         effect = true;
@@ -273,6 +302,7 @@ export class ToolExecutor {
               'TOOL_NOT_AVAILABLE',
               '插件只能通过此服务调用核心工具。',
             );
+            this.consumeDelegatedTool?.();
             const delegatedId = uuid();
             this.store.append(this.sessionId, 'plugin/tool-intent', {
               pluginId: plugin.manifest.id,
@@ -300,7 +330,6 @@ export class ToolExecutor {
       }
       schemas[name].parse(raw);
       const permission = this.store.get(this.sessionId).permission;
-      const writing = ['fs_write', 'fs_apply_patch', 'process_exec'].includes(name);
       assert(!writing || !this.processes?.active, 'WORKSPACE_BUSY', '活动命令占用工作区修改位置。');
       assert(
         !writing || permission.mode === 'workspace-write',

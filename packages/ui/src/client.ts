@@ -1,4 +1,5 @@
 import type { Event, Message, Session } from '../../contracts/src/index.ts';
+import type { ApprovalRequest } from '../../permissions/src/index.ts';
 
 export interface Provider {
   id: string;
@@ -32,6 +33,7 @@ export interface PendingQuestion {
   questions: Array<{ id: string; prompt: string; options?: Array<{ id: string; label: string }> }>;
 }
 export interface Snapshot {
+  approval?: ApprovalRequest | null;
   question?: PendingQuestion | null;
   session: ViewSession;
   messages: ViewMessage[];
@@ -67,6 +69,7 @@ export type HostMethod =
   | 'session/archive'
   | 'session/delete'
   | 'question/respond'
+  | 'approval/respond'
   | 'artifact/read';
 export interface DesktopBridge {
   call<T = unknown>(method: HostMethod, params?: unknown): Promise<T>;
@@ -128,6 +131,13 @@ export interface McpTestResult {
   capabilities: { tools: boolean; resources: boolean; prompts: boolean };
 }
 export interface PraxisClient {
+  respondApproval?(input: {
+    sessionId: string;
+    turnId: string;
+    approvalId: string;
+    requestHash: string;
+    decision: 'approve-once' | 'deny';
+  }): Promise<void>;
   desktop: boolean;
   login(input: {
     username: string;
@@ -552,6 +562,15 @@ export class LocalClient implements PraxisClient {
       serverId: id,
       expectedRevision: revision,
     });
+  }
+  async respondApproval(input: {
+    sessionId: string;
+    turnId: string;
+    approvalId: string;
+    requestHash: string;
+    decision: 'approve-once' | 'deny';
+  }) {
+    await this.bridge.call('approval/respond', input);
   }
   async deleteProvider(id: string, revision: number) {
     await this.bridge.call('provider/delete', { id, expectedRevision: revision });

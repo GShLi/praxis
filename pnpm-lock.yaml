@@ -107,6 +107,8 @@ importers:
 
   packages/model-core: {}
 
+  packages/permissions: {}
+
   packages/plugin-host: {}
 
   packages/plugin-sdk: {}

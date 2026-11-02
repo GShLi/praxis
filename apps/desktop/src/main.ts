@@ -33,6 +33,7 @@ const allowed = new Set([
   'session/archive',
   'session/delete',
   'question/respond',
+  'approval/respond',
   'artifact/read',
 ]);
 let window: BrowserWindow | undefined;

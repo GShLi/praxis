@@ -23,6 +23,7 @@ import { McpMaintenance } from '../../../packages/mcp-client/src/maintenance.ts'
 import { PluginHost, PluginInstaller } from '../../../packages/plugin-host/src/index.ts';
 import { schemas } from '../../../packages/tools/src/index.ts';
 import { providerInputSchema } from '../../../packages/auth/src/index.ts';
+import { approvalResponseSchema } from '../../../packages/permissions/src/index.ts';
 
 const channel = new JsonLines(process.stdin, process.stdout);
 const instanceId = randomUUID();
@@ -380,6 +381,7 @@ serveRpc(channel, async (method, params) => {
       throughSeq: session.latestSeq,
       turnId: runtime.getTurn(session.id) ?? null,
       question: runtime.pendingQuestion(session.id),
+      approval: runtime.approvals.snapshot(session.id),
     };
   }
   if (method === 'session/prompt' || method === 'session/continue') {
@@ -434,12 +436,14 @@ serveRpc(channel, async (method, params) => {
       'POLICY_CONFLICT',
       '权限版本冲突或会话类型不支持。',
     );
-    return store.transaction(() => {
+    const result = store.transaction(() => {
       const value = { ...input.permission, revision: input.expectedRevision + 1 };
       store!.update(session.id, { permission: value });
       store!.append(session.id, 'permission/changed', { permission: value }, 'user');
       return value;
     });
+    runtime.approvals.invalidate(session.id);
+    return result;
   }
   if (method === 'question/respond') {
     const input = z
@@ -452,6 +456,8 @@ serveRpc(channel, async (method, params) => {
       .parse(params);
     return runtime.answer(owner, { ...input, answers: input.answers });
   }
+  if (method === 'approval/respond')
+    return runtime.approvals.respond(owner, approvalResponseSchema.parse(params));
   if (method === 'session/archive') {
     const input = sessionArg.parse(params);
     store.get(input.sessionId, owner);

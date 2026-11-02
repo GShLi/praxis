@@ -17,6 +17,7 @@ import { ToolExecutor } from '../../tools/src/index.ts';
 import type { Ask, ProcessService } from '../../tools/src/index.ts';
 import type { ActivePlugin } from '../../plugin-host/src/index.ts';
 import { WorkspaceFiles } from '../../tools/src/files.ts';
+import { ApprovalGate } from '../../permissions/src/index.ts';
 
 export interface RuntimeOptions {
   model: ModelClient;
@@ -43,6 +44,7 @@ interface Active {
   tools: number;
   deadline: number;
   executor?: ToolExecutor;
+  finishing?: boolean;
 }
 interface PendingQuestion {
   sessionId: string;
@@ -65,6 +67,7 @@ const answersSchema = z
 
 /** One coordinator per Host. Control methods never wait for model/tool/user completion. */
 export class AgentRuntime extends EventEmitter {
+  readonly approvals: ApprovalGate;
   private active = new Map<string, Active>();
   private workspaceOwners = new Map<string, string>();
   private questions = new Map<string, PendingQuestion>();
@@ -74,6 +77,9 @@ export class AgentRuntime extends EventEmitter {
     readonly options: RuntimeOptions,
   ) {
     super();
+    this.approvals = new ApprovalGate(store, options.interactive ?? false, (id) =>
+      this.getTurn(id),
+    );
   }
   get busy() {
     return this.active.size > 0;
@@ -85,7 +91,8 @@ export class AgentRuntime extends EventEmitter {
     return null;
   }
   getTurn(id: string) {
-    return this.active.get(id)?.id;
+    const turn = this.active.get(id);
+    return turn?.finishing ? undefined : turn?.id;
   }
   prompt(owner: string, raw: unknown) {
     const input = promptSchema.parse(raw);
@@ -311,6 +318,15 @@ export class AgentRuntime extends EventEmitter {
           this.ask(id, turn),
           this.options.processes?.(session, this.store),
           plugins,
+          this.approvals.forTurn(id, turn.id),
+          () => {
+            signal.throwIfAborted();
+            assert(
+              ++turn.tools <= (this.options.maxTools ?? 200),
+              'BUDGET_EXHAUSTED',
+              '工具预算已用完。',
+            );
+          },
         );
       }
       signal.throwIfAborted();
@@ -487,6 +503,7 @@ export class AgentRuntime extends EventEmitter {
       // Do not spin indefinitely on failed begin-use/configuration or poisoned pending tasks.
       this.store.suspend(id);
     } finally {
+      turn.finishing = true;
       clearTimeout(timer);
       try {
         await turn.executor?.close();

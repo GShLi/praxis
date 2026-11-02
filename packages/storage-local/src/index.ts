@@ -189,6 +189,11 @@ export class SessionStore extends EventEmitter {
         'TURN_CONFLICT',
         '追加指导目标已结束。',
       );
+      assert(
+        prompt.mode !== 'steer' || (activeTurn && prompt.expectedTurnId === activeTurn),
+        'TURN_CONFLICT',
+        '追加指导必须绑定当前活动任务。',
+      );
       assert(session.kind !== 'chat' || !activeTurn, 'SESSION_BUSY', '此对话正在生成。');
       assert(
         this.inputs(prompt.sessionId, 'pending').length < 100,
@@ -398,19 +403,17 @@ export class SessionStore extends EventEmitter {
           "DELETE FROM maintenance_operations WHERE id IN (SELECT id FROM maintenance_operations WHERE state<>'running' ORDER BY rowid DESC LIMIT -1 OFFSET 999)",
         )
         .run();
-      this.db
-        .prepare('INSERT INTO maintenance_operations VALUES(?,?,?,?)')
-        .run(
-          id,
-          owner,
-          'running',
-          JSON.stringify({
-            operation: 'mcp/test',
-            serverId,
-            configRevision,
-            startedAt: new Date().toISOString(),
-          }),
-        );
+      this.db.prepare('INSERT INTO maintenance_operations VALUES(?,?,?,?)').run(
+        id,
+        owner,
+        'running',
+        JSON.stringify({
+          operation: 'mcp/test',
+          serverId,
+          configRevision,
+          startedAt: new Date().toISOString(),
+        }),
+      );
     });
   }
   finishMaintenance(id: string, state: 'succeeded' | 'failed' | 'cancelled', code?: string) {
