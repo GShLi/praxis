@@ -15,6 +15,7 @@ export class ChatRuntime extends EventEmitter {
   private repository: ChatRepository;
   private running = new Map<string, Running>();
   private stopped = false;
+  private submissions = new Set<Promise<unknown>>();
   private streams = new Map<string, number>();
   private watchdog: NodeJS.Timeout;
   constructor(
@@ -68,6 +69,15 @@ export class ChatRuntime extends EventEmitter {
   }
   async submit(owner: string, id: string, input: ChatSubmission, regenerate = false) {
     assert(!this.stopped, 'SERVER_CLOSING', '服务正在关闭。');
+    const operation = this.accept(owner, id, input, regenerate);
+    this.submissions.add(operation);
+    try {
+      return await operation;
+    } finally {
+      this.submissions.delete(operation);
+    }
+  }
+  private async accept(owner: string, id: string, input: ChatSubmission, regenerate: boolean) {
     const lease = randomBytes(32).toString('base64url');
     const accepted = await acceptSubmission(
       this.database,
@@ -98,6 +108,7 @@ export class ChatRuntime extends EventEmitter {
       content: '',
       done: Promise.resolve(),
     };
+    if (this.stopped) run.controller.abort();
     this.running.set(run.id, run);
     run.done = this.generate(run, input.providerId, accepted.inputId).finally(() =>
       this.running.delete(run.id),
@@ -159,6 +170,8 @@ export class ChatRuntime extends EventEmitter {
     this.stopped = true;
     clearInterval(this.watchdog);
     for (const run of this.running.values()) run.controller.abort();
+    // An accepted transaction may still be awaiting its continuation. Drain it before releasing DB resources.
+    await Promise.allSettled([...this.submissions]);
     await Promise.allSettled([...this.running.values()].map((r) => r.done));
   }
 }

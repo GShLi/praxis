@@ -23,7 +23,8 @@
     "web": "vite --config apps/web/vite.config.ts",
     "desktop": "electron dist/desktop/main.mjs",
     "ui:preview": "node --import tsx scripts/preview-ui.ts",
-    "structure": "node --import tsx scripts/check-structure.ts"
+    "structure": "node --import tsx scripts/check-structure.ts",
+    "test:postgres": "node --import tsx scripts/test-postgres.ts"
   },
   "dependencies": {
     "ignore": "7.0.5",

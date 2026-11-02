@@ -37,22 +37,22 @@
   "packages/chat-runtime/src/context.ts#buildChatContext:1": {
     "maxLines": 119,
     "reason": "服务端上下文压缩算法：读取已有版本、选择协议前缀、生成/验证摘要并提交；连续版本与摘要失败必须保持同一候选状态。",
-    "validation": "context-model 共享协议与摘要测试；真实 PostgreSQL 端到端仍待补充"
+    "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
   },
   "packages/chat-runtime/src/generation.ts#generateChat:1": {
-    "maxLines": 94,
+    "maxLines": 96,
     "reason": "一次流式生成的开始、增量、最终事务、取消和错误结算；content 与终态共享同一操作生命周期。",
-    "validation": "auth-http 边界测试及 Server 构建；真实 PostgreSQL 联调待补充"
+    "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
   },
   "packages/chat-runtime/src/submission.ts#acceptSubmission:1": {
     "maxLines": 74,
     "reason": "一个数据库事务同时完成请求去重、原输入/重生成选择、generation 预留和事件接纳，禁止拆成多个事务。",
-    "validation": "类型检查、Server 构建；真实 PostgreSQL 事务联调待补充"
+    "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
   },
   "packages/chat-runtime/src/submission.ts#database.transaction callback:1": {
     "maxLines": 63,
     "reason": "一个数据库事务同时完成请求去重、原输入/重生成选择、generation 预留和事件接纳，禁止拆成多个事务。",
-    "validation": "类型检查、Server 构建；真实 PostgreSQL 事务联调待补充"
+    "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
   },
   "packages/client-host/src/start-host.ts#startHost:1": {
     "maxLines": 91,

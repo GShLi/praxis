@@ -33,7 +33,9 @@ export async function generateChat(
     }
   }, 500);
   try {
+    run.controller.signal.throwIfAborted();
     const config = await services.beginUse(run.owner, providerId, run.controller.signal);
+    run.controller.signal.throwIfAborted();
     const messages = await buildChatContext(services, run, config, inputId);
     await services.append(run.chatId, 'request/snapshot', {
       generationId: run.id,

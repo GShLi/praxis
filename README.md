@@ -50,3 +50,13 @@ CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置�
 不要提交密钥、真实用户会话、数据库、日志、生成产物或本机配置。示例只保存无秘密的配置模板。跨平台沙箱和进程清理必须逐平台验证。
 
 界面开发预览：运行 `pnpm ui:preview` 后打开 `.cache/ui-preview/index.html`，默认展示 Web ChatBot；在地址末尾添加 `?client=desktop` 查看桌面 Agent 样例。预览使用明确标注的测试数据，不连接模型、认证服务或工作区。
+
+## PostgreSQL 集成测试
+
+`pnpm test:postgres` 使用真实数据库和 HTTP，只调用测试模型，不使用模型厂商 Key。每个用例创建独立的 `praxis_test_<随机 ID>` 数据库并在结束后删除；请使用专用测试实例及具备创建数据库权限的测试账号。
+
+- 本机安装了 PostgreSQL：设置 `PRAXIS_TEST_PG_BIN` 为其 `bin` 目录，脚本创建临时 Unix socket 实例，结束后停止并删除；不注册系统服务。便携构建可另设 `PRAXIS_TEST_PG_SHARE` 指定其共享数据目录。
+- 已有独立测试服务或 CI：设置 `PRAXIS_TEST_DATABASE_URL` 后执行，不连接项目 `.env` 中的生产地址。
+- CI 的 `postgres` job 已配置 PostgreSQL 18 服务；该配置仍需在远端实际运行。
+
+示例：`PRAXIS_TEST_PG_BIN=/path/to/postgresql/bin pnpm test:postgres`。普通 `pnpm check` 保持无需数据库服务，包含结构检查、类型检查和核心回归。

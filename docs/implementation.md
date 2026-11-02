@@ -10,6 +10,14 @@
 
 本轮结构检查、TypeScript、63 项测试、全部应用入口构建、CLI doctor 通过。UI 样例构建成功且最终 CSS 哈希与拆分前一致。本轮浏览器访问主机不可用，Firefox 访问被工具拒绝，未完成新的视觉点击验收。冻结锁文件离线校验已通过；当前 node_modules 使用已有离线安装加 workspace 链接，尚不声称干净联网安装与真实三平台发布验证通过。
 
+## 真实 PostgreSQL 与 HTTP 联调
+
+2026-11-03：当前环境已允许本地监听，使用专用临时 PostgreSQL 18.6 实例完成 8 项集成测试：迁移幂等、刷新凭据重用撤销、Provider 加密/版本/所有权、API Key scope、重复消息与重生成、checkpoint、连续压缩保留原始历史、关闭取消、真实 HTTP 登录/CSRF/退出和 AuthClient 配置交付。
+
+额外竞态测试先复现“接纳事务提交后、运行登记前关闭，仍继续生成”的失败，再修复 ChatRuntime：跟踪在途接纳，关闭时等待其完成并取消晚到 generation；开始模型调用前检查取消。该测试在修复后通过。数据库、账号和厂商 Key 全为独立测试数据，模型注入可控实现，不表示真实厂商模型端到端已验收。
+
+新增 `pnpm test:postgres`，可以管理临时本机数据库或连接显式指定的专用测试服务。CI 增加 PostgreSQL job，尚未远端执行。macOS Seatbelt 的最小启动探测已成功（此前环境限制已解除），但这只证明可启动，文件/网络/进程清理的完整验证与命令工具仍待实现。
+
 ## 工程与协议
 
 2026-11-03：建立 pnpm workspace、TypeScript strict、版本锁、共享 Zod 合同、JSON 行 RPC、独立 Host 和 CLI doctor。Host 支持主版本校验、实例 nonce 回传、心跳失效退出、管道断开退出及显式关闭；帧和发送缓冲有 8 MiB 上限，控制请求不等待慢业务请求完成。
