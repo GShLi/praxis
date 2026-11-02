@@ -63,7 +63,7 @@ CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置�
 
 ### MCP 远程工具
 
-桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证 Streamable HTTP；每次业务调用展示实际参数与目标地址并等待单次审批。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
+桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证 Streamable HTTP 工具与文本资源；每次业务调用或资源读取展示实际参数与目标地址并等待单次审批。添加时勾选资源能力（或配置 `capabilities.resources: true`）后才开放资源目录与读取。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
 
 CLI 与桌面使用独立 profile，可通过以下命令管理 CLI 的服务器：
 
@@ -95,4 +95,4 @@ pnpm cli mcp disable SERVER_ID
 }
 ```
 
-使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。stdio、Bearer/OAuth、资源/提示词及 MRTR 表单续交尚未接入。详见 [实现记录](docs/implementation.md)。
+使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、Bearer/OAuth、提示词及 MRTR 表单续交尚未接入。详见 [实现记录](docs/implementation.md)。

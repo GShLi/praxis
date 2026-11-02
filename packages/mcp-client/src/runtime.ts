@@ -24,7 +24,7 @@ export class McpRuntime {
   ) {
     assert(!this.closed && session.kind === 'agent', 'MCP_UNAVAILABLE', '此执行范围不能使用 MCP。');
     const configs = (await this.configs.file.read()).value.filter(
-      (c) => c.enabled && c.capabilities.tools,
+      (c) => c.enabled && (c.capabilities.tools || c.capabilities.resources),
     );
     signal.throwIfAborted();
     assert(!this.closed, 'MCP_UNAVAILABLE', 'MCP 已关闭。');

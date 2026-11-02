@@ -225,9 +225,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/settings/McpEditor.tsx#McpEditor:1": {
-    "reason": "单一 MCP 配置表单的连续 JSX 与局部输入状态；网络、异步结果和启停由 useMcpSettings 管理。",
+    "reason": "单一 MCP 配置表单的连续 JSX 与局部输入状态，新增文本资源能力选择；网络、异步结果和启停由 useMcpSettings 管理。",
     "validation": "TypeScript、Web/桌面构建；本轮无浏览器访问，不声称视觉点击已验证。",
-    "maxLines": 93
+    "maxLines": 102
   },
   "packages/ui/src/settings/McpSettings.tsx#McpSettings:1": {
     "maxLines": 79,
@@ -333,5 +333,10 @@
     "maxLines": 66,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
+  },
+  "tests/fixtures/mcp-http.ts#handle:1": {
+    "maxLines": 62,
+    "reason": "真实 HTTP fixture 的协议路由：初始化、工具与资源端点共用请求和响应；资源内容与工具内容的构造已分别提取。",
+    "validation": "mcp-runtime、mcp-business-failures 和 mcp-resources 验证官方 SDK 的新旧协议、请求次数、取消及不重放。"
   }
 }

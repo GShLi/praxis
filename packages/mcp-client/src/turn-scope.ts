@@ -24,6 +24,10 @@ export interface RemoteOperation {
   signal: AbortSignal;
   authorize(): Promise<void>;
 }
+interface OperationPolicy {
+  capability: 'tools' | 'resources';
+  metadataOnly: boolean;
+}
 /** Connections and tickets belong to a turn, never a global/shared SDK session. */
 export class McpTurnScope {
   private lifetime = new AbortController();
@@ -63,10 +67,10 @@ export class McpTurnScope {
     toolId: string,
     parameters: unknown,
     action: (operation: RemoteOperation) => Promise<T>,
-    metadataOnly = false,
+    policy: OperationPolicy = { capability: 'tools', metadataOnly: false },
   ): Promise<T> {
-    const task = this.perform(serverId, callId, toolId, parameters, action, metadataOnly).finally(
-      () => this.operations.delete(task),
+    const task = this.perform(serverId, callId, toolId, parameters, action, policy).finally(() =>
+      this.operations.delete(task),
     );
     this.operations.add(task);
     return task;
@@ -77,9 +81,9 @@ export class McpTurnScope {
     toolId: string,
     parameters: unknown,
     action: (operation: RemoteOperation) => Promise<T>,
-    metadataOnly: boolean,
+    policy: OperationPolicy,
   ): Promise<T> {
-    const { config, signal } = await this.prepare(serverId);
+    const { config, signal } = await this.prepare(serverId, policy.capability);
     const operationId = randomUUID();
     const details = { operationId, callId, serverId, configRevision: config.revision, toolId };
     const connection = new McpConnection(
@@ -96,7 +100,7 @@ export class McpTurnScope {
     this.record('mcp/operation-started', details);
     try {
       // Explicit enable authorizes bounded metadata only. Business parameters always need a new ticket.
-      const grant = metadataOnly
+      const grant = policy.metadataOnly
         ? undefined
         : await this.approval(config, callId, toolId, parameters, signal);
       await this.current(config, signal);
@@ -125,12 +129,15 @@ export class McpTurnScope {
       await connection.close();
     }
   }
-  private async prepare(serverId: string) {
+  async check(serverId: string, capability: OperationPolicy['capability']) {
+    await this.prepare(serverId, capability);
+  }
+  private async prepare(serverId: string, capability: OperationPolicy['capability']) {
     const config = this.configs.find((c) => c.id === serverId);
     assert(
-      config?.enabled && config.capabilities.tools,
+      config?.enabled && config.capabilities[capability],
       'MCP_NOT_ENABLED',
-      '此服务器未启用工具能力。',
+      '此服务器未启用所需能力。',
     );
     assert(
       config.transport.type === 'streamable-http' && config.transport.auth.type === 'none',

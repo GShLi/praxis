@@ -13,6 +13,7 @@ export function McpEditor({
     [namespace, setNamespace] = useState('');
   const [endpoint, setEndpoint] = useState(''),
     [privateHost, setPrivateHost] = useState(false);
+  const [resources, setResources] = useState(false);
   return (
     <form
       className="settings-editor"
@@ -31,7 +32,7 @@ export function McpEditor({
             allowPrivateDestination: privateHost,
             auth: { type: 'none' },
           },
-          capabilities: { tools: true, resources: false, prompts: false },
+          capabilities: { tools: true, resources, prompts: false },
         }).then((saved) => {
           if (saved) cancel();
         });
@@ -81,6 +82,14 @@ export function McpEditor({
           onChange={(e) => setPrivateHost(e.target.checked)}
         />
         允许此固定地址位于本机或内网
+      </label>
+      <label className="settings-checkbox">
+        <input
+          type="checkbox"
+          checked={resources}
+          onChange={(e) => setResources(e.target.checked)}
+        />
+        允许 Agent 读取文本资源（每次读取需要确认）
       </label>
       <div className="settings-form-footer">
         <button type="button" className="secondary-button" onClick={cancel}>

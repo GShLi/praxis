@@ -2,55 +2,38 @@ import { fingerprint } from '@praxis/config';
 import { assert, type ToolDefinition, type ToolResult } from '@praxis/contracts';
 import { ToolSelector, type Catalog } from '@praxis/mcp-core';
 import type { ToolExtension } from '@praxis/tools';
-import { z } from 'zod';
+import { McpResourceTools } from './resource-tools.ts';
+import { discovery, discoveryDefinition } from './tool-discovery-schema.ts';
 import { callRemoteTool } from './tool-call.ts';
 import type { McpTurnScope } from './turn-scope.ts';
-
-const discovery = z.strictObject({
-  serverId: z.uuid(),
-  query: z.string().max(256).default(''),
-  limit: z.number().int().min(1).max(8).default(5),
-});
 
 export class McpTurnTools implements ToolExtension {
   private catalogs = new Map<string, Catalog>();
   private selector: ToolSelector;
-  private bridge: ToolDefinition;
+  private bridge: ToolDefinition | undefined;
+  private bridges: ToolDefinition[];
+  private resources: McpResourceTools;
   private bridgeFits: boolean;
   constructor(
     private scope: McpTurnScope,
     contextWindow: number,
     private dispose: () => void,
   ) {
-    this.bridge = {
-      id: 'mcp.discover_tools',
-      modelName: 'mcp_discover_tools',
-      description:
-        'Discover enabled MCP tools; selected tools become available in the next step. Servers: ' +
-        JSON.stringify(scope.configs.map((c) => ({ id: c.id, name: c.displayName.slice(0, 120) }))),
-      parameters: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['serverId'],
-        properties: {
-          serverId: { type: 'string', enum: scope.configs.map((c) => c.id) },
-          query: { type: 'string', maxLength: 256 },
-          limit: { type: 'integer', minimum: 1, maximum: 8 },
-        },
-      },
-    };
+    this.bridge = discoveryDefinition(scope.configs);
+    this.resources = new McpResourceTools(scope);
+    this.bridges = [...(this.bridge ? [this.bridge] : []), ...this.resources.definitions];
     const budget = Math.min(4000, Math.floor(contextWindow * 0.1));
-    const bridgeTokens = Math.ceil(Buffer.byteLength(JSON.stringify(this.bridge)) / 2);
+    const bridgeTokens = Math.ceil(Buffer.byteLength(JSON.stringify(this.bridges)) / 2);
     this.bridgeFits = bridgeTokens <= budget;
     this.selector = new ToolSelector(Math.max(0, budget - bridgeTokens));
   }
   boundary() {
-    if (!this.scope.configs.length) return [];
+    if (!this.bridges.length) return [];
     if (!this.bridgeFits) {
       this.scope.record('mcp/toolset-snapshot', {
         servers: [],
         tools: [],
-        excluded: [this.bridge.modelName],
+        excluded: this.bridges.map((b) => b.modelName),
         reason: 'MCP_SCHEMA_BUDGET',
       });
       return [];
@@ -62,7 +45,7 @@ export class McpTurnTools implements ToolExtension {
       excluded,
     });
     return [
-      this.bridge,
+      ...this.bridges,
       ...tools.map(({ id, modelName, description, parameters }) => ({
         id,
         modelName,
@@ -73,13 +56,18 @@ export class McpTurnTools implements ToolExtension {
   }
   async execute(name: string, input: unknown, signal: AbortSignal, result: ToolResult) {
     signal.throwIfAborted();
-    if (name === this.bridge.modelName) {
+    if (name === this.bridge?.modelName) {
       await this.discover(input, result);
+      return;
+    }
+    if (this.resources.handles(name)) {
+      await this.resources.execute(name, input, signal, result);
       return;
     }
     await this.invoke(name, input, result);
   }
   private async discover(input: unknown, result: ToolResult) {
+    assert(this.bridge, 'TOOL_NOT_AVAILABLE', '未启用工具发现能力。');
     const args = discovery.parse(input);
     result.data = await this.scope.run(
       args.serverId,
@@ -117,7 +105,7 @@ export class McpTurnTools implements ToolExtension {
           rejectedTools: catalog.rejected,
         };
       },
-      true,
+      { capability: 'tools', metadataOnly: true },
     );
   }
   private async invoke(name: string, input: unknown, result: ToolResult) {

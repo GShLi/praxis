@@ -76,8 +76,8 @@ export function McpSettings({ client }: { client: PraxisClient }) {
         <SettingsIcon name="info" />
         <p>
           保存配置不会连接服务器。检查连接会访问地址并读取目录，检查后可明确启用工具。 启用后，Agent
-          可按需读取目录；每次业务调用均需确认参数和目标地址。当前支持无认证 HTTP 工具，暂不支持
-          stdio、OAuth、资源与提示词。
+          可按需读取目录；每次业务调用和资源读取均需确认参数和目标地址。当前支持无认证 HTTP
+          工具与文本资源，暂不支持 stdio、OAuth 与提示词。
         </p>
       </div>
     </>

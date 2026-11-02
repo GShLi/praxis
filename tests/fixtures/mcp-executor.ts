@@ -5,8 +5,8 @@ import { ToolExecutor } from '@praxis/tools';
 import { WorkspaceFiles } from '@praxis/tools/files';
 import { mcpFixture } from './mcp-server.ts';
 
-export async function mcpExecutor(legacy = false) {
-  const env = await mcpFixture(legacy);
+export async function mcpExecutor(legacy = false, resources = false) {
+  const env = await mcpFixture(legacy, resources);
   const cancel = new AbortController();
   const approval = new ApprovalGate(env.store, true, () => 'turn-fixture');
   const decisions = { autoApprove: true, deny: false };

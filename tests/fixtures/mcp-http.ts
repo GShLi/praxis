@@ -1,6 +1,8 @@
 import { createServer } from 'node:http';
+import { resourceReply, resourcesFixture, type ResourceFixture } from './mcp-resources.ts';
 interface RemoteFixture {
   legacy: boolean;
+  resources: ResourceFixture | undefined;
   description: string;
   isError: boolean;
   invalidOutput: boolean;
@@ -9,7 +11,7 @@ interface RemoteFixture {
   beforeList?: (() => Promise<void>) | undefined;
   beforeCall?: (() => Promise<void>) | undefined;
 }
-export async function mcpHttpFixture(legacy = false) {
+export async function mcpHttpFixture(legacy = false, resources = false) {
   const requests: Array<{
     method: string;
     headers: Record<string, unknown>;
@@ -17,6 +19,7 @@ export async function mcpHttpFixture(legacy = false) {
   }> = [];
   const remote = {
     legacy,
+    resources: resources ? resourcesFixture() : undefined,
     description: 'Echo fixture',
     isError: false,
     invalidOutput: false,
@@ -72,14 +75,20 @@ async function handle(
     return;
   }
   let result: object;
+  const capabilities = { tools: {}, ...(remote.resources ? { resources: {} } : {}) };
   if (rpc.method === 'initialize')
     result = {
       protocolVersion: '2025-11-25',
-      capabilities: { tools: {} },
+      capabilities,
       serverInfo: { name: 'legacy-fixture', version: '1.0' },
     };
   else if (rpc.method === 'server/discover')
-    result = { supportedVersions: ['2026-07-28'], capabilities: { tools: {} } };
+    result = {
+      supportedVersions: ['2026-07-28'],
+      capabilities,
+    };
+  else if (remote.resources && rpc.method.startsWith('resources/'))
+    result = await resourceReply(remote.resources, rpc.method, rpc.params);
   else if (rpc.method === 'tools/list') {
     await remote.beforeList?.();
     result = { tools: [echoDefinition(remote)] };
