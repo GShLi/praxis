@@ -19,6 +19,7 @@ import { DeepSeekClient } from '../../../packages/model-core/src/index.ts';
 import { AuthClient } from '../../../packages/auth-client/src/index.ts';
 import { acquireLease, acquireWorkspaceLease } from '../../../packages/workspace/src/index.ts';
 import { McpConfigService } from '../../../packages/mcp-core/src/index.ts';
+import { McpMaintenance } from '../../../packages/mcp-client/src/maintenance.ts';
 import { PluginHost, PluginInstaller } from '../../../packages/plugin-host/src/index.ts';
 import { schemas } from '../../../packages/tools/src/index.ts';
 import { providerInputSchema } from '../../../packages/auth/src/index.ts';
@@ -36,6 +37,7 @@ let auth: AuthClient | undefined,
 let dataLease: Awaited<ReturnType<typeof acquireLease>> | undefined;
 let selectedProvider: string | undefined;
 let mcpConfig: McpConfigService | undefined;
+let mcpMaintenance: McpMaintenance | undefined;
 let pluginInstaller: PluginInstaller | undefined;
 let pluginHosts: Record<'chat' | 'agent', PluginHost> | undefined;
 let pluginsChanged = false;
@@ -60,6 +62,8 @@ function notify(method: string, params: unknown) {
 }
 async function clearIdentity() {
   subscriptions.clear();
+  await mcpMaintenance?.close();
+  mcpMaintenance = undefined;
   await runtime?.close();
   runtime = undefined;
   if (pluginHosts) await Promise.all(Object.values(pluginHosts).map((host) => host.dispose()));
@@ -122,7 +126,7 @@ serveRpc(channel, async (method, params) => {
       hostInstanceId: instanceId,
       nonce: input.nonce,
       capabilities: ['sessions', 'files', 'context', 'questions', 'chat'],
-      storageVersion: 1,
+      storageVersion: 2,
     };
   }
   assert(initialized && !closing, 'NOT_INITIALIZED', 'Host 尚未初始化或正在退出。');
@@ -175,7 +179,8 @@ serveRpc(channel, async (method, params) => {
       store = new SessionStore(path.join(directory, 'sessions.sqlite'));
       store.recover();
       selectedProvider = input.providerId;
-      mcpConfig = new McpConfigService(directory, () => {});
+      mcpConfig = new McpConfigService(directory, (id) => mcpMaintenance?.cancel(id));
+      mcpMaintenance = new McpMaintenance(mcpConfig, store, candidate.userId, clientKind);
       pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
       pluginHosts = {
         chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
@@ -301,11 +306,17 @@ serveRpc(channel, async (method, params) => {
       .parse(params);
     return mcpConfig!.disable(input.serverId, input.expectedStoreRevision);
   }
-  if (method === 'mcp/test' || method === 'mcp/server-enable') {
+  if (method === 'mcp/test') {
+    const input = z
+      .strictObject({ serverId: z.uuid(), expectedRevision: z.number().int().positive() })
+      .parse(params);
+    return mcpMaintenance!.test(input.serverId, input.expectedRevision);
+  }
+  if (method === 'mcp/server-enable') {
     z.strictObject({ serverId: z.uuid() }).parse(params);
     throw new PraxisError(
       'MCP_TRANSPORT_UNAVAILABLE',
-      'MCP 协议传输与原生执行边界尚未完成验收；当前只可保存禁用配置。',
+      'MCP 工具审批与执行集成尚未完成；当前可检查远程连接，不能启用 Agent 工具。',
     );
   }
   if (method === 'plugin/list') {

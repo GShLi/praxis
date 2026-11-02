@@ -771,11 +771,19 @@ function McpSettings({ client }: { client: PraxisClient }) {
           </div>
           <button
             className="secondary-button"
+            disabled={busy || !client.testMcp}
             onClick={() => {
+              setBusy(true);
+              setMessage('正在连接服务器并读取能力目录…');
               void client
-                .testMcp?.(server.id)
-                .then(() => setMessage('连接检查完成。'))
-                .catch((e) => setMessage(errorText(e)));
+                .testMcp?.(server.id, server.revision)
+                .then((result) =>
+                  setMessage(
+                    `连接成功 · 协议 ${result.protocol} · ${result.toolCount} 个兼容工具${result.rejectedTools ? ` · ${result.rejectedTools} 个不兼容工具` : ''}。未执行业务工具。`,
+                  ),
+                )
+                .catch((e) => setMessage(errorText(e)))
+                .finally(() => setBusy(false));
             }}
           >
             检查连接
@@ -892,8 +900,8 @@ function McpSettings({ client }: { client: PraxisClient }) {
       <div className="settings-info-note">
         <SettingsIcon name="info" />
         <p>
-          保存配置不会启动程序或连接服务器。MCP
-          执行接入仍在开发，本版配置保持停用，接入验收后才能启用。
+          保存配置不会连接服务器。检查连接会访问所配置的地址并读取能力目录，不执行业务工具。 Agent
+          工具审批与执行接入仍在开发，配置保持停用。
         </p>
       </div>
     </>

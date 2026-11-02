@@ -101,6 +101,8 @@ importers:
 
   packages/contracts: {}
 
+  packages/mcp-client: {}
+
   packages/mcp-core: {}
 
   packages/model-core: {}

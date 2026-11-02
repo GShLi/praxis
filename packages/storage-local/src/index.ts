@@ -45,7 +45,7 @@ export class SessionStore extends EventEmitter {
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     const version = (this.db.prepare('PRAGMA user_version').get() as Row).user_version;
     assert(
-      version === 0 || version === 1,
+      version === 0 || version === 1 || version === 2,
       'STORAGE_VERSION_UNSUPPORTED',
       '数据库版本比程序新，请升级程序。',
     );
@@ -58,7 +58,8 @@ export class SessionStore extends EventEmitter {
       CREATE TABLE IF NOT EXISTS checkpoints(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, seq INTEGER NOT NULL, document TEXT NOT NULL, PRIMARY KEY(session_id,seq));
       CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY, session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, kind TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS requests(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, request_id TEXT NOT NULL, digest TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(session_id,request_id));
-      PRAGMA user_version=1;
+      CREATE TABLE IF NOT EXISTS maintenance_operations(id TEXT PRIMARY KEY, owner TEXT NOT NULL, state TEXT NOT NULL, document TEXT NOT NULL);
+      PRAGMA user_version=2;
     `);
   }
   transaction<T>(body: () => T): T {
@@ -342,6 +343,9 @@ export class SessionStore extends EventEmitter {
     });
   }
   recover() {
+    this.db
+      .prepare("UPDATE maintenance_operations SET state='interrupted' WHERE state='running'")
+      .run();
     const sessions = (this.db.prepare('SELECT document FROM sessions').all() as Row[]).map(
       (r) => JSON.parse(String(r.document)) as Session,
     );
@@ -386,6 +390,42 @@ export class SessionStore extends EventEmitter {
   }
   delete(id: string) {
     this.db.prepare('DELETE FROM sessions WHERE id=?').run(id);
+  }
+  startMaintenance(id: string, owner: string, serverId: string, configRevision: number) {
+    this.transaction(() => {
+      this.db
+        .prepare(
+          "DELETE FROM maintenance_operations WHERE id IN (SELECT id FROM maintenance_operations WHERE state<>'running' ORDER BY rowid DESC LIMIT -1 OFFSET 999)",
+        )
+        .run();
+      this.db
+        .prepare('INSERT INTO maintenance_operations VALUES(?,?,?,?)')
+        .run(
+          id,
+          owner,
+          'running',
+          JSON.stringify({
+            operation: 'mcp/test',
+            serverId,
+            configRevision,
+            startedAt: new Date().toISOString(),
+          }),
+        );
+    });
+  }
+  finishMaintenance(id: string, state: 'succeeded' | 'failed' | 'cancelled', code?: string) {
+    const row = this.db
+      .prepare('SELECT document FROM maintenance_operations WHERE id=? AND state=?')
+      .get(id, 'running') as Row | undefined;
+    assert(row, 'MCP_OPERATION_NOT_FOUND', 'MCP 维护操作已结束或不存在。');
+    const document = {
+      ...JSON.parse(String(row.document)),
+      endedAt: new Date().toISOString(),
+      ...(code ? { code } : {}),
+    };
+    this.db
+      .prepare('UPDATE maintenance_operations SET state=?,document=? WHERE id=?')
+      .run(state, JSON.stringify(document), id);
   }
   close() {
     this.db.close();

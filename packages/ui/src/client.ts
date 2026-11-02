@@ -119,6 +119,14 @@ export interface McpState {
     transport: { type: string; endpoint?: string; executable?: string };
   }>;
 }
+export interface McpTestResult {
+  operationId: string;
+  protocol: string;
+  toolCount: number;
+  rejectedTools: number;
+  generation: string;
+  capabilities: { tools: boolean; resources: boolean; prompts: boolean };
+}
 export interface PraxisClient {
   desktop: boolean;
   login(input: {
@@ -176,7 +184,7 @@ export interface PraxisClient {
   mcpServers?(): Promise<McpState>;
   saveMcp?(config: unknown, storeRevision: number, configRevision: number | null): Promise<void>;
   disableMcp?(id: string, revision: number): Promise<void>;
-  testMcp?(id: string): Promise<void>;
+  testMcp?(id: string, revision: number): Promise<McpTestResult>;
 }
 export class WebClient implements PraxisClient {
   desktop = false;
@@ -539,8 +547,11 @@ export class LocalClient implements PraxisClient {
   async disableMcp(id: string, revision: number) {
     await this.bridge.call('mcp/server-disable', { serverId: id, expectedStoreRevision: revision });
   }
-  async testMcp(id: string) {
-    await this.bridge.call('mcp/test', { serverId: id });
+  async testMcp(id: string, revision: number) {
+    return this.bridge.call<McpTestResult>('mcp/test', {
+      serverId: id,
+      expectedRevision: revision,
+    });
   }
   async deleteProvider(id: string, revision: number) {
     await this.bridge.call('provider/delete', { id, expectedRevision: revision });
