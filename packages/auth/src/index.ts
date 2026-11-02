@@ -8,6 +8,14 @@ import {
 } from 'node:crypto';
 import { argon2idAsync } from '@noble/hashes/argon2.js';
 import { z } from 'zod';
+import {
+  modelIdSchema,
+  modelDiscoverySchema,
+  normalizeProviderBaseUrl,
+  providerBaseUrlSchema,
+  providerKeySchema,
+} from '../../model-core/src/provider.ts';
+import type { ModelDiscoveryInput } from '../../model-core/src/provider.ts';
 import { assert, PraxisError } from '../../contracts/src/index.ts';
 import type { ModelConfig } from '../../contracts/src/index.ts';
 import type { ServerDatabase, SqlConnection } from '../../storage-server/src/index.ts';
@@ -107,8 +115,8 @@ export interface Identity {
 export const providerInputSchema = z
   .strictObject({
     name: z.string().min(1).max(100),
-    model: z.string().min(1).max(128),
-    baseUrl: z.literal('https://api.deepseek.com').default('https://api.deepseek.com'),
+    model: modelIdSchema,
+    baseUrl: providerBaseUrlSchema.default('https://api.deepseek.com'),
     contextWindow: z.number().int().min(8192).max(2_000_000),
     maxOutputTokens: z.number().int().min(256).max(393216),
     enabled: z.boolean().default(true),
@@ -398,9 +406,8 @@ export class AuthService {
     expectedRevision?: number,
   ) {
     this.require(identity, 'providers:write');
-    providerInputSchema.parse(input);
-    if (key !== undefined)
-      assert(key.length >= 1 && key.length <= 4096, 'INVALID_ARGUMENT', '厂商 Key 长度无效。');
+    input = providerInputSchema.parse(input);
+    if (key !== undefined) key = providerKeySchema.parse(key);
     return this.database.transaction(async (sql) => {
       let revision = 1;
       const resource = id ?? randomUUID();
@@ -417,6 +424,11 @@ export class AuthService {
           previous.revision === expectedRevision,
           'CONFIG_CONFLICT',
           '配置已被修改，请重新加载。',
+        );
+        assert(
+          key || input.baseUrl === normalizeProviderBaseUrl(previous.config.baseUrl),
+          'KEY_REQUIRED',
+          'Base URL 已改变，请重新填写此地址对应的 API Key。',
         );
         revision = previous.revision + 1;
         secret ??= this.cipher.decrypt(
@@ -442,6 +454,41 @@ export class AuthService {
       await this.audit(sql, identity.userId, 'provider/save', resource);
       return { id: resource, revision, ...input, keyConfigured: true };
     });
+  }
+  async providerDiscoveryCredentials(
+    identity: Identity,
+    raw: ModelDiscoveryInput,
+    direct = false,
+  ): Promise<{ baseUrl: string; apiKey: string }> {
+    this.require(identity, 'providers:write');
+    if (direct) {
+      assert(identity.kind !== 'web', 'FORBIDDEN', 'Web 页面不能读取厂商 Key。');
+      this.require(identity, 'client:direct');
+    }
+    const input = modelDiscoverySchema.parse(raw);
+    let key = input.apiKey;
+    if (input.id) {
+      const row = (
+        await this.database.query<ProviderRow>(
+          'SELECT * FROM provider_configs WHERE id=$1 AND user_id=$2',
+          [input.id, identity.userId],
+        )
+      ).rows[0];
+      assert(row, 'PROVIDER_NOT_FOUND', '模型配置不存在。');
+      assert(
+        row.revision === input.expectedRevision,
+        'CONFIG_CONFLICT',
+        '配置已被修改，请重新加载。',
+      );
+      assert(
+        key || input.baseUrl === normalizeProviderBaseUrl(row.config.baseUrl),
+        'KEY_REQUIRED',
+        'Base URL 已改变，请重新填写此地址对应的 API Key。',
+      );
+      key ??= this.cipher.decrypt(row.encrypted_key, identity.userId, input.id, row.revision);
+    }
+    assert(key, 'KEY_REQUIRED', '请填写 API Key 后获取模型列表。');
+    return { baseUrl: input.baseUrl, apiKey: key };
   }
   async beginUse(identity: Identity, id: string, direct: boolean): Promise<ModelConfig> {
     this.require(identity, direct ? 'client:direct' : 'chats:write');

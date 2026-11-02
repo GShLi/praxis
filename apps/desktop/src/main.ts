@@ -20,6 +20,7 @@ const allowed = new Set([
   'auth/clear',
   'workspace/open',
   'provider/list',
+  'provider/models',
   'provider/save',
   'provider/select',
   'session/create',

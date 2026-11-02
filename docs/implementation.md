@@ -65,3 +65,13 @@ SQLite 升级到版本 2，保存检查开始/终态的审计记录。配置编�
 代码块显示语言，支持复制和自动换行，模型 HTML 仍按代码显示；加载会话时禁用发送并提供失败重试。抽出共享导航及 Markdown 组件。预览默认模拟 Web，URL 加 `?client=desktop` 可检查本地 Agent 界面。预览不调用模型，不修改工作区或真实配置。
 
 本机 `pnpm_config_verify_deps_before_run=false pnpm check` 通过：TypeScript 和 48 项测试，其中新增两项验证代码/HTML 展示与危险 Markdown 链接隔离。`node --import tsx scripts/build.ts` 的 Web、Host、CLI、Server、桌面构建通过。Chrome 实测宽屏首页/设置、400px 窄屏正文和设置、主题切换、分类返回、账户菜单、搜索 Enter 打开、代码复制与换行，以及桌面样例的 Chat/Agent 切换、工具记录、文件变更面板和执行审批卡片；修复了搜索 Enter 后因默认键盘行为再次打开弹层的问题。这些是界面与现有回归验证，未使用真实模型或 PostgreSQL 端到端联调。
+
+## 模型供应商列表发现
+
+2026-11-03：模型表单开放 Base URL，支持填写地址和 Key 后通过 `GET /models` 获取模型 ID、去重并从下拉列表选择。保留手动输入，展示加载、错误和空列表反馈；修改地址或 Key 会清除旧列表并使未完成的旧查询失效。容量与输出上限放在高级设置。列表不提供容量保证，也不自动判定模型是否支持工具调用。
+
+Web 使用服务端查询接口，桌面由 Host 直连厂商。新填写的桌面 Key 仅在本地查询，保存时才提交配置；已有 Key 可通过带用户、配置 ID 和版本校验的客户端接口取回后直连。Web 身份不能调用凭据读取接口。修改 Base URL 必须显式提供对应 Key，保存和查询都不会将旧加密 Key 自动转发到新地址。查询不持久化草稿或生成对话。
+
+当前兼容公网 HTTPS 的 OpenAI Chat Completions 协议，保留 API 根路径；不包含 HTTP/私网模型端点或其他厂商原生协议适配。将 MCP 已有的固定端点 HTTP 传输抽为共享模块，模型查询和对话请求同时使用 DNS 校验及连接固定、禁止跳转和代理继承、有界响应与超时。列表查询最多一次请求、10 秒和 1 MiB，不自动重试，不展示远端原始错误正文。身份清理和 Host 退出取消未完成的查询。
+
+本机 `pnpm_config_verify_deps_before_run=false pnpm check` 的 TypeScript 与 58 项测试，以及 `node --import tsx scripts/build.ts` 全部入口构建通过。新增 10 项测试覆盖查询格式、前缀路径、鉴权失败、大小/数量限制、取消、私网拒绝、Key/地址/用户/版本绑定、Web CSRF 和客户端直连；原有 MCP 传输测试保持通过。Chrome 开发样例验证了空 Key 复用、下拉选择、修改地址后清空旧模型、查询失败及手动输入回退。网络与数据库使用受控测试响应，未使用真实厂商 Key 或 PostgreSQL 联调。

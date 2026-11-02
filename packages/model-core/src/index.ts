@@ -1,4 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
+import { fixedEndpointHttp } from '../../transport/src/http.ts';
+import { providerEndpoint } from './provider.ts';
 import { assert, PraxisError } from '../../contracts/src/index.ts';
 import type { Message, ModelConfig, ToolCall, ToolDefinition } from '../../contracts/src/index.ts';
 
@@ -19,22 +21,36 @@ export interface ModelClient {
   complete(request: ModelRequest): Promise<Completion>;
 }
 
-/** An OpenAI-compatible DeepSeek adapter; no Agent framework or execution authority. */
+/** OpenAI-compatible chat completions, including DeepSeek reasoning/tool messages. */
 export class DeepSeekClient implements ModelClient {
-  constructor(private fetcher: typeof fetch = fetch) {}
+  constructor(private fetcher?: typeof fetch) {}
   async complete(request: ModelRequest): Promise<Completion> {
+    const endpoint = providerEndpoint(request.config.baseUrl, 'chat/completions');
+    const http = this.fetcher
+      ? undefined
+      : fixedEndpointHttp(
+          {
+            endpoint: endpoint.href,
+            errorPrefix: 'MODEL',
+            label: '模型',
+            requestTimeoutMs: 300_000,
+            idleTimeoutMs: 60_000,
+            maxRequests: 3,
+          },
+          request.signal,
+        );
+    try {
+      return await this.completeAt(request, endpoint, this.fetcher ?? http!.fetch);
+    } finally {
+      http?.close();
+    }
+  }
+  private async completeAt(
+    request: ModelRequest,
+    endpoint: URL,
+    fetcher: typeof fetch,
+  ): Promise<Completion> {
     const { config, signal } = request;
-    const endpoint = new URL(config.baseUrl);
-    assert(
-      endpoint.protocol === 'https:' &&
-        !endpoint.username &&
-        !endpoint.password &&
-        !endpoint.hash &&
-        !endpoint.search,
-      'INVALID_PROVIDER_URL',
-      '模型地址必须是无凭据的 HTTPS URL。',
-    );
-    endpoint.pathname = endpoint.pathname.replace(/\/$/, '') + '/chat/completions';
     const messages = request.messages.map((message) => ({
       role: message.role,
       content: message.content || (message.toolCalls?.length ? null : ''),
@@ -73,7 +89,7 @@ export class DeepSeekClient implements ModelClient {
     for (let attempt = 0; attempt < 3; attempt++) {
       signal.throwIfAborted();
       try {
-        response = await this.fetcher(endpoint, {
+        response = await fetcher(endpoint, {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${config.apiKey}` },
           body,
@@ -81,7 +97,7 @@ export class DeepSeekClient implements ModelClient {
           redirect: 'error',
         });
       } catch (error) {
-        if (signal.aborted) throw error;
+        if (signal.aborted || error instanceof PraxisError) throw error;
         throw new PraxisError(
           'MODEL_CONNECTION_FAILED',
           '模型连接失败，请检查网络、代理及厂商地址。',

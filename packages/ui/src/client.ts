@@ -1,3 +1,4 @@
+import type { AvailableModel, ModelDiscoveryInput } from '../../model-core/src/provider.ts';
 import type { Event, Message, Session } from '../../contracts/src/index.ts';
 import type { ApprovalRequest } from '../../permissions/src/index.ts';
 
@@ -56,6 +57,7 @@ export type HostMethod =
   | 'auth/clear'
   | 'workspace/open'
   | 'provider/list'
+  | 'provider/models'
   | 'provider/save'
   | 'provider/select'
   | 'session/create'
@@ -148,6 +150,7 @@ export interface PraxisClient {
   current(): Promise<boolean>;
   logout(): Promise<void>;
   providers(): Promise<Provider[]>;
+  discoverModels(input: ModelDiscoveryInput): Promise<AvailableModel[]>;
   saveProvider(input: {
     config: Omit<Provider, 'id' | 'revision' | 'keyConfigured'>;
     apiKey?: string;
@@ -268,6 +271,9 @@ export class WebClient implements PraxisClient {
   }
   providers() {
     return this.request<Provider[]>('/v1/providers');
+  }
+  discoverModels(input: ModelDiscoveryInput) {
+    return this.request<AvailableModel[]>('/v1/providers/discover-models', 'POST', input);
   }
   async saveProvider(input: {
     config: Omit<Provider, 'id' | 'revision' | 'keyConfigured'>;
@@ -441,6 +447,9 @@ export class LocalClient implements PraxisClient {
   }
   providers() {
     return this.bridge.call<Provider[]>('provider/list');
+  }
+  discoverModels(input: ModelDiscoveryInput) {
+    return this.bridge.call<AvailableModel[]>('provider/models', input);
   }
   async saveProvider(input: unknown) {
     await this.bridge.call('provider/save', input);

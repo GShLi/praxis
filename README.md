@@ -41,6 +41,8 @@ pnpm server
 
 `pnpm ui:preview` 生成 `.cache/ui-preview/index.html`，可以直接打开检查界面。该入口只有明确标注的测试数据，没有模型调用或文件执行能力，也不属于生产构建。
 
+在“设置 → 模型提供商”填写 Base URL 和 API Key，点击“获取模型列表”，选择模型后保存。当前支持公网 HTTPS 的 OpenAI 兼容 Chat Completions 接口；Base URL 应包含厂商要求的 `/v1` 等前缀，列表通过其下的 `GET /models` 获取。查询不会保存配置；接口不支持或列表为空时，可手动输入模型 ID。上下文窗口和输出上限在“高级设置”中调整。编辑时可复用同一地址已保存的 Key；修改地址须重新填写对应的 Key。Web 由服务端查询，桌面端由本地 Host 直连厂商。
+
 CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置中保存。配置 `PRAXIS_SERVER_URL` 和 `PRAXIS_API_KEY` 后运行 `pnpm cli run --workspace /path/to/project`，或追加 `--prompt "创建 HelloWorld 页面"` 执行单次任务。`--resume SESSION_ID` 继续历史会话；`pnpm cli sessions` 查看 ID。退出会停止本客户端任务。当前命令沙箱尚不可用，Agent 只能使用已实现的文件和会话工具。
 
 在本目录维护独立 Git 仓库。使用开发者本机已有 Git 身份，不在项目配置中覆写作者或提交者。完成一个可验证的功能、修复或文档阶段后及时提交；提交说明包含具体变更及必要验证，未完成的能力保持明确状态。

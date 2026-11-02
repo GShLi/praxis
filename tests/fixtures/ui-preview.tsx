@@ -62,6 +62,11 @@ const client: PraxisClient = {
   async providers() {
     return [provider];
   },
+  async discoverModels(input) {
+    if (input.baseUrl.endsWith('/unsupported')) throw new Error('界面样例：供应商不支持模型列表。');
+    if (input.baseUrl.endsWith('/empty')) return [];
+    return [{ id: 'fixture-chat' }, { id: 'fixture-reasoner' }, { id: 'fixture-code' }];
+  },
   async saveProvider() {
     throw new Error('开发样例不能保存模型配置。');
   },

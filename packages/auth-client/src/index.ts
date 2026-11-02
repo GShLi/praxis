@@ -1,11 +1,18 @@
 import { z } from 'zod';
+import {
+  modelDiscoverySchema,
+  providerBaseUrlSchema,
+  providerKeySchema,
+} from '../../model-core/src/provider.ts';
+import { discoverModels } from '../../model-core/src/catalog.ts';
+import type { ModelDiscoveryInput } from '../../model-core/src/provider.ts';
 import { assert, PraxisError } from '../../contracts/src/index.ts';
 import type { ModelConfig } from '../../contracts/src/index.ts';
 
 const modelSchema = z.strictObject({
   id: z.string(),
   revision: z.number().int(),
-  baseUrl: z.literal('https://api.deepseek.com'),
+  baseUrl: providerBaseUrlSchema,
   model: z.string(),
   apiKey: z.string(),
   contextWindow: z.number().int().positive(),
@@ -144,6 +151,24 @@ export class AuthClient {
     this.accessToken = '';
     this.userId = '';
     this.expiresAt = 0;
+  }
+  async discoverModels(raw: ModelDiscoveryInput, signal: AbortSignal, fetcher?: typeof fetch) {
+    assert(this.apiKey, 'UNAUTHENTICATED', '请先登录 Praxis。');
+    const input = modelDiscoverySchema.parse(raw);
+    let credentials = { baseUrl: input.baseUrl, apiKey: input.apiKey ?? '' };
+    if (!input.apiKey) {
+      if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);
+      credentials = z
+        .strictObject({ baseUrl: providerBaseUrlSchema, apiKey: providerKeySchema })
+        .parse(await this.request('/v1/client/provider-discovery', 'POST', input, signal));
+      assert(
+        credentials.baseUrl === input.baseUrl,
+        'CONFIG_CONFLICT',
+        '配置地址已变化，请重新加载。',
+      );
+    }
+    signal.throwIfAborted();
+    return discoverModels(credentials, signal, fetcher);
   }
   async saveProvider(
     input: { config: unknown; apiKey?: string; id?: string; expectedRevision?: number },

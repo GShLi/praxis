@@ -6,6 +6,8 @@ import { secureHeaders } from 'hono/secure-headers';
 import { streamSSE } from 'hono/streaming';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
+import { discoverModels } from '../../../packages/model-core/src/catalog.ts';
+import { modelDiscoverySchema } from '../../../packages/model-core/src/provider.ts';
 import { assert, idSchema, safeError, textSchema } from '../../../packages/contracts/src/index.ts';
 import {
   AuthService,
@@ -26,6 +28,7 @@ export function createApp(
   chat: ChatRuntime,
   publicOrigin: string,
   webRoot?: string,
+  catalog: typeof discoverModels = discoverModels,
 ) {
   const origin = new URL(publicOrigin).origin;
   const secure = origin.startsWith('https://');
@@ -220,6 +223,15 @@ export function createApp(
     return c.json({ ok: true });
   });
   app.get('/v1/providers', async (c) => c.json(await auth.listProviders(c.get('identity'))));
+  app.post('/v1/providers/discover-models', async (c) => {
+    const input = modelDiscoverySchema.parse(await c.req.json());
+    const credentials = await auth.providerDiscoveryCredentials(c.get('identity'), input);
+    return c.json(await catalog(credentials, c.req.raw.signal));
+  });
+  app.post('/v1/client/provider-discovery', async (c) => {
+    const input = modelDiscoverySchema.parse(await c.req.json());
+    return c.json(await auth.providerDiscoveryCredentials(c.get('identity'), input, true));
+  });
   app.post('/v1/providers', async (c) => {
     const input = z
       .strictObject({ config: providerInputSchema, apiKey: z.string().min(1).max(4096) })

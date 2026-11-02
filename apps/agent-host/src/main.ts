@@ -16,6 +16,7 @@ import { JsonLines, serveRpc } from '../../../packages/transport/src/index.ts';
 import { SessionStore, hash } from '../../../packages/storage-local/src/index.ts';
 import { AgentRuntime } from '../../../packages/agent-runtime/src/index.ts';
 import { DeepSeekClient } from '../../../packages/model-core/src/index.ts';
+import { modelDiscoverySchema } from '../../../packages/model-core/src/provider.ts';
 import { AuthClient } from '../../../packages/auth-client/src/index.ts';
 import { acquireLease, acquireWorkspaceLease } from '../../../packages/workspace/src/index.ts';
 import { McpConfigService } from '../../../packages/mcp-core/src/index.ts';
@@ -32,6 +33,7 @@ let initialized = false,
   lastHeartbeat = performance.now(),
   closing = false,
   binding = false;
+let discoveryScope = new AbortController();
 let auth: AuthClient | undefined,
   store: SessionStore | undefined,
   runtime: AgentRuntime | undefined;
@@ -62,6 +64,8 @@ function notify(method: string, params: unknown) {
   }
 }
 async function clearIdentity() {
+  discoveryScope.abort();
+  discoveryScope = new AbortController();
   subscriptions.clear();
   await mcpMaintenance?.close();
   mcpMaintenance = undefined;
@@ -239,6 +243,13 @@ serveRpc(channel, async (method, params) => {
       .strictObject({ id: idSchema, expectedRevision: z.number().int().positive() })
       .parse(params);
     return auth.deleteProvider(input.id, input.expectedRevision, AbortSignal.timeout(15000));
+  }
+  if (method === 'provider/models') {
+    const input = modelDiscoverySchema.parse(params);
+    return auth.discoverModels(
+      input,
+      AbortSignal.any([discoveryScope.signal, AbortSignal.timeout(25_000)]),
+    );
   }
   if (method === 'provider/list') {
     noArgs.parse(params);
