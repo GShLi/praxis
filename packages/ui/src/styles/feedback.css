@@ -1,0 +1,26 @@
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--error);
+  font-size: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.error-banner .icon-button {
+  padding: 2px;
+}
+.recovery-note {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 10px;
+}
+.incomplete {
+  font-size: 11px;
+  color: var(--error);
+  display: block;
+  margin-top: 8px;
+}

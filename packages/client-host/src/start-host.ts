@@ -2,7 +2,6 @@ import { PROTOCOL, assert } from '@praxis/contracts';
 import { JsonLines, RpcClient } from '@praxis/transport';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { once } from 'node:events';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,8 +35,16 @@ export async function startHost(
   // Diagnostics are intentionally not blindly copied: stderr may contain private paths.
   child.stderr.resume();
   const rpc = new RpcClient(new JsonLines(child.stdout, child.stdin));
-  child.on('error', () => rpc.channel.close());
-  child.on('exit', () => rpc.channel.close());
+  const closed = new Promise<void>((resolve) => {
+    child.once('error', () => {
+      rpc.channel.close();
+      resolve();
+    });
+    child.once('exit', () => {
+      rpc.channel.close();
+      resolve();
+    });
+  });
   const nonce = randomUUID();
   try {
     const reply = await rpc.request<{ major: number; nonce: string }>('host/initialize', {
@@ -53,7 +60,9 @@ export async function startHost(
       'Host 握手失败。',
     );
   } catch (error) {
-    child.kill();
+    child.kill('SIGKILL');
+    await closed;
+    rpc.channel.close();
     throw error;
   }
   const heartbeat = setInterval(() => {
@@ -64,22 +73,26 @@ export async function startHost(
     child.stdin.end();
   };
   process.once('exit', stopOnExit);
-  const closed = once(child, 'exit');
-  return {
-    rpc,
-    pid: child.pid,
-    async close() {
-      clearInterval(heartbeat);
-      process.off('exit', stopOnExit);
-      if (child.exitCode !== null || child.signalCode !== null) return;
-      const kill = setTimeout(() => child.kill('SIGKILL'), 5000);
-      try {
-        await rpc.request('host/shutdown', {}, 1000).catch(() => child.stdin.end());
-        await closed;
-      } finally {
-        clearTimeout(kill);
-        rpc.channel.close();
-      }
-    },
+  const release = () => {
+    clearInterval(heartbeat);
+    process.off('exit', stopOnExit);
   };
+  void closed.then(release);
+  let closing: Promise<void> | undefined;
+  const close = async () => {
+    release();
+    if (child.exitCode !== null || child.signalCode !== null) {
+      rpc.channel.close();
+      return;
+    }
+    const kill = setTimeout(() => child.kill('SIGKILL'), 5000);
+    try {
+      await rpc.request('host/shutdown', {}, 1000).catch(() => child.stdin.end());
+      await closed;
+    } finally {
+      clearTimeout(kill);
+      rpc.channel.close();
+    }
+  };
+  return { rpc, pid: child.pid, close: () => (closing ??= close()) };
 }

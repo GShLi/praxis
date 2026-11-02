@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PraxisClient } from '../client.ts';
+import type { PraxisClient } from '../client-types.ts';
 import { CopyValue, errorText, Row, Status } from './controls.tsx';
 
 export function About({ client }: { client: PraxisClient }) {

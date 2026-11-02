@@ -1,6 +1,5 @@
-import { AuthService, digest, scopes } from '@praxis/auth';
+import { AuthService, scopes } from '@praxis/auth';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import type { HttpApp } from './http-types.ts';
 
@@ -14,44 +13,18 @@ export function registerAccount(app: HttpApp, auth: AuthService, secure: boolean
     return c.json({ ok: true });
   });
   app.get('/v1/me', async (c) => {
-    const identity = c.get('identity');
-    auth.require(identity, 'profile:read');
-    let csrfToken: string | undefined;
-    if (identity.kind === 'web') {
-      csrfToken = getCookie(c, 'praxis_csrf');
-      if (!csrfToken || digest(csrfToken) !== identity.csrfHash) {
-        csrfToken = randomBytes(32).toString('base64url');
-        await auth.database.query('UPDATE auth_sessions SET csrf_hash=$1 WHERE id=$2', [
-          digest(csrfToken),
-          identity.sessionId,
-        ]);
-        setCookie(c, 'praxis_csrf', csrfToken, {
-          secure,
-          sameSite: 'Strict',
-          path: '/',
-          maxAge: 30 * 86400,
-        });
-      }
-    }
-    return c.json({
-      id: identity.userId,
-      username: identity.username,
-      scopes: identity.scopes,
-      ...(csrfToken ? { csrfToken } : {}),
-    });
+    const cookie = getCookie(c, 'praxis_csrf');
+    const profile = await auth.profile(c.get('identity'), cookie);
+    if (profile.csrfToken && profile.csrfToken !== cookie)
+      setCookie(c, 'praxis_csrf', profile.csrfToken, {
+        secure,
+        sameSite: 'Strict',
+        path: '/',
+        maxAge: 30 * 86400,
+      });
+    return c.json(profile);
   });
-  app.get('/v1/api-keys', async (c) => {
-    const user = c.get('identity');
-    auth.require(user, 'keys:write');
-    return c.json(
-      (
-        await auth.database.query(
-          'SELECT id,name,scopes,expires_at,revoked_at,last_used_at FROM api_keys WHERE user_id=$1',
-          [user.userId],
-        )
-      ).rows,
-    );
-  });
+  app.get('/v1/api-keys', async (c) => c.json(await auth.listApiKeys(c.get('identity'))));
   app.post('/v1/api-keys', async (c) => {
     const input = z
       .strictObject({
@@ -66,12 +39,7 @@ export function registerAccount(app: HttpApp, auth: AuthService, secure: boolean
     );
   });
   app.delete('/v1/api-keys/:id', async (c) => {
-    const identity = c.get('identity');
-    auth.require(identity, 'keys:write');
-    await auth.database.query('UPDATE api_keys SET revoked_at=now() WHERE id=$1 AND user_id=$2', [
-      c.req.param('id'),
-      identity.userId,
-    ]);
+    await auth.revokeApiKey(c.get('identity'), c.req.param('id'));
     return c.json({ ok: true });
   });
 }

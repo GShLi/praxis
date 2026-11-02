@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { PraxisClient, Snapshot } from '../client.ts';
+import type { PraxisClient, Snapshot } from '../client-types.ts';
 import { errorText, Row, SettingsIcon, Status } from './controls.tsx';
 
 export function AgentSettings({

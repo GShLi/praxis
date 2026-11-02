@@ -24,7 +24,7 @@ test('OS lease excludes a second process and becomes available after pipe closes
 
 test('workspace leases exclude nested roots and aliases but allow siblings', async () => {
   const { mkdir, symlink } = await import('node:fs/promises');
-  const { acquireWorkspaceLease } = await import('../packages/workspace/src/index.ts');
+  const { acquireWorkspaceLease } = await import('@praxis/workspace');
   const root = await mkdtemp(path.join(tmpdir(), 'praxis-overlap-'));
   const work = path.join(root, 'work'),
     child = path.join(work, 'child'),

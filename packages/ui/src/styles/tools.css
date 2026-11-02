@@ -1,0 +1,52 @@
+.tool {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin: 12px 0 22px;
+  font-size: 12px;
+}
+.tool summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.tool-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: #81988a;
+}
+.tool-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.tool-status {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+}
+.tool-body {
+  padding: 14px;
+  border-top: 1px solid var(--border);
+}
+.tool-body pre {
+  max-height: 280px;
+}
+.tool-error .tool-dot {
+  background: var(--error);
+}
+.tool-error .tool-body > p {
+  color: var(--error);
+}
+.stream-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--muted);
+  animation: pulse 1.3s infinite;
+}

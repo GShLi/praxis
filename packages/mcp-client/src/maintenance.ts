@@ -3,7 +3,8 @@ import { assert, PraxisError } from '@praxis/contracts';
 import type { McpConfigService } from '@praxis/mcp-core';
 import type { SessionStore } from '@praxis/storage-local';
 import { randomUUID } from 'node:crypto';
-import { McpConnection, mcpError } from './index.ts';
+import { McpConnection } from './connection.ts';
+import { mcpError } from './errors.ts';
 
 export interface McpTestResult {
   operationId: string;

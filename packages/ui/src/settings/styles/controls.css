@@ -1,0 +1,167 @@
+.settings-section {
+  margin-bottom: 32px;
+}
+.settings-section > h2,
+.settings-section-toolbar h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+.settings-group {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0 16px;
+  overflow: hidden;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  min-height: 72px;
+}
+.settings-group .setting-row:last-child {
+  border-bottom: 0;
+}
+.setting-row-label {
+  min-width: 0;
+}
+.setting-row-label h3 {
+  font-size: 16px;
+  font-weight: 400;
+  margin: 0;
+}
+.setting-row-label p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 6px 0 0;
+  max-width: 46ch;
+  overflow-wrap: anywhere;
+}
+.setting-row-control {
+  flex: none;
+  max-width: 50%;
+}
+.setting-value {
+  font-size: 14px;
+  color: var(--muted);
+}
+.settings-page select {
+  background: var(--raised);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  padding: 8px 12px;
+  min-height: 36px;
+  font-size: 14px;
+  max-width: 100%;
+}
+.theme-segments {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--raised);
+  border-radius: 20px;
+}
+.theme-segments button {
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+}
+.theme-segments button.selected {
+  background: var(--bg);
+  box-shadow: 0 1px 4px #0001;
+}
+.appearance-preview {
+  padding: 24px;
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: var(--message-font, 16px);
+}
+.appearance-preview > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.appearance-preview p {
+  font-size: 1.3em;
+  margin: 20px 0 12px;
+}
+.appearance-preview > div {
+  line-height: 1.75;
+}
+.settings-footnote,
+.field-help {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin: 16px 0;
+}
+.settings-section-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.settings-section-toolbar h2 {
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.settings-section-toolbar p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+.settings-page .primary-button.compact,
+.settings-page .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: auto;
+  padding: 9px 14px;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+.settings-page .primary-button svg,
+.settings-page .secondary-button svg {
+  width: 16px;
+  height: 16px;
+}
+.settings-empty {
+  padding: 50px 24px 56px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  margin: 16px 0 28px;
+}
+.settings-empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  background: var(--raised);
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.settings-empty h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 10px 0;
+}
+.settings-empty p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0 auto;
+  max-width: 38ch;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PluginReview, PluginState, PraxisClient } from '../client.ts';
+import type { PluginReview, PluginState, PraxisClient } from '../client-types.ts';
 import { Empty, errorText, SettingsIcon, Status } from './controls.tsx';
 
 export function PluginSettings({ client }: { client: PraxisClient }) {

@@ -1,0 +1,106 @@
+/* Shared shell: the rail stays visible in both conversations and settings. */
+.product-shell {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--raised);
+}
+.app-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--bg) 65%, var(--raised));
+  z-index: 30;
+}
+.rail-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.rail-button svg {
+  width: 22px;
+  height: 22px;
+}
+.rail-button:hover,
+.rail-button.selected {
+  background: var(--hover);
+  color: var(--text);
+}
+.rail-button.selected:first-child svg {
+  fill: currentColor;
+}
+.rail-account {
+  margin-top: auto;
+  position: relative;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e8a13a;
+  color: #fff;
+  font-size: 12px;
+  flex: none;
+}
+.account-trigger {
+  width: 28px;
+  height: 28px;
+  margin: 4px;
+}
+.account-menu {
+  position: absolute;
+  bottom: 0;
+  left: 42px;
+  width: 272px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px #0002;
+  border-radius: 16px;
+}
+.account-menu-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 12px 18px;
+}
+.account-menu-heading strong {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.account-menu-heading small {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.account-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  width: 100%;
+  text-align: left;
+  border-radius: 9px;
+  font-size: 14px;
+}
+.account-menu > button:hover {
+  background: var(--hover);
+}
+.account-menu > p {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+.menu-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 6px;
+}

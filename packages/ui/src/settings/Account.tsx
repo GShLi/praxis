@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ApiKeyInfo, PraxisClient, Profile } from '../client.ts';
+import type { ApiKeyInfo, PraxisClient, Profile } from '../client-types.ts';
 import { CopyValue, errorText, Row, SettingsIcon, Status } from './controls.tsx';
 
 export function Account({

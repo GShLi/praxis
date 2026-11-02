@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { McpState, PraxisClient } from '../client.ts';
+import type { McpState, PraxisClient } from '../client-types.ts';
 import { Empty, errorText, SettingsIcon, Status } from './controls.tsx';
 
 export function McpSettings({ client }: { client: PraxisClient }) {

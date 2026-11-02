@@ -21,6 +21,7 @@
     "packages/**/*.tsx",
     "plugins/**/*.ts",
     "tests/**/*.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "tests/**/*.tsx"
   ]
 }

@@ -1,0 +1,126 @@
+.settings-page {
+  height: 100dvh;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 16px 0 0 16px;
+}
+.settings-layout {
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+.settings-nav {
+  padding: 8px 6px 18px;
+  background: var(--sidebar);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+}
+.settings-nav-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  padding: 0 10px;
+  margin-bottom: 12px;
+}
+.settings-nav-heading h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.settings-nav-heading button {
+  color: var(--muted);
+}
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  background: var(--raised);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  padding: 8px 12px;
+  margin: 0 10px 20px;
+  min-height: 36px;
+}
+.settings-search svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.settings-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  outline-offset: 5px;
+  font-size: 14px;
+}
+.settings-search:focus-within {
+  border-color: var(--muted);
+}
+.settings-search input:focus {
+  outline: none;
+}
+.settings-nav nav section {
+  margin-bottom: 24px;
+}
+.settings-nav nav h2 {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  margin: 8px 10px 8px;
+}
+.settings-nav nav button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 15px;
+  text-align: left;
+  margin-bottom: 2px;
+}
+.settings-nav nav button:hover,
+.settings-nav nav button.selected {
+  background: var(--hover);
+}
+.settings-nav nav button svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.settings-no-results {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 16px;
+}
+.settings-main {
+  min-width: 0;
+  overflow: auto;
+}
+.settings-main-inner {
+  max-width: 792px;
+  padding: 32px 32px 80px;
+  margin: 0 auto;
+}
+.settings-page-heading {
+  margin-bottom: 44px;
+}
+.settings-page-heading > h2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+  margin: 0;
+}

@@ -1,0 +1,123 @@
+.composer-region {
+  width: 100%;
+  max-width: 816px;
+  margin: 0 auto;
+  padding: 0 24px 10px;
+  flex-shrink: 0;
+}
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 8px 8px 8px 20px;
+  box-shadow:
+    0 2px 8px #00000006,
+    0 6px 24px #00000004;
+}
+.composer:focus-within {
+  border-color: color-mix(in srgb, var(--text) 22%, var(--border));
+}
+.composer textarea {
+  border: 0;
+  background: none;
+  resize: none;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 36px;
+  max-height: 200px;
+  padding: 6px 0;
+  font-size: 16px;
+  line-height: 24px;
+  overflow-y: auto;
+}
+.composer textarea::placeholder {
+  color: var(--muted);
+}
+.composer textarea:focus {
+  outline: none;
+}
+.composer-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 36px;
+}
+.composer-bottom select {
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  border-radius: 20px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  padding: 7px 4px;
+}
+.composer-bottom select:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.send-button,
+.stop-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-text);
+  flex-shrink: 0;
+}
+.stop-button {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.stop-button svg {
+  fill: currentColor;
+  width: 16px;
+}
+.expanded .composer {
+  display: block;
+  padding: 12px 12px 10px 20px;
+  border-radius: 24px;
+}
+.expanded .composer-bottom {
+  margin-top: 8px;
+}
+.expanded .composer-actions {
+  margin-left: auto;
+}
+.composer-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+.empty-workspace .composer-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 16px;
+  right: 16px;
+}
+.latest {
+  position: absolute;
+  bottom: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg);
+  padding: 7px 13px;
+  font-size: 12px;
+  box-shadow: 0 2px 6px #0001;
+}

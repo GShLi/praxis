@@ -33,6 +33,14 @@ export class ProviderService {
       keyConfigured: true,
     }));
   }
+  async deleteProvider(identity: Identity, id: string, expectedRevision: number) {
+    requireScope(identity, 'providers:write');
+    const result = await this.database.query(
+      'DELETE FROM provider_configs WHERE id=$1 AND user_id=$2 AND revision=$3',
+      [id, identity.userId, expectedRevision],
+    );
+    assert(result.rowCount, 'CONFIG_CONFLICT', '配置不存在或已变化。');
+  }
   async saveProvider(
     identity: Identity,
     input: ProviderInput,

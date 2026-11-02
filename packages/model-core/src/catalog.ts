@@ -65,7 +65,9 @@ export async function discoverModels(
         chunks.push(next.value);
       }
     } finally {
-      await reader.cancel().catch(() => {});
+      await reader.cancel().catch(() => {
+        /* Body failure is reported above; cancellation cannot recover it. */
+      });
       reader.releaseLock();
     }
     let value: unknown;

@@ -7,7 +7,7 @@ import type {
   Provider,
   Snapshot,
   ViewMessage,
-} from '../client.ts';
+} from '../client-types.ts';
 
 export class WebClient implements PraxisClient {
   desktop = false;

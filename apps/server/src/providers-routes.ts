@@ -46,11 +46,7 @@ export function registerProviders(app: HttpApp, auth: AuthService, catalog: type
     const input = z
       .strictObject({ expectedRevision: z.number().int().min(1) })
       .parse(await c.req.json());
-    const result = await auth.database.query(
-      'DELETE FROM provider_configs WHERE id=$1 AND user_id=$2 AND revision=$3',
-      [c.req.param('id'), identity.userId, input.expectedRevision],
-    );
-    assert(result.rowCount, 'CONFIG_CONFLICT', '配置不存在或已变化。');
+    await auth.deleteProvider(identity, c.req.param('id'), input.expectedRevision);
     return c.json({ ok: true });
   });
   app.post('/v1/client/provider-uses', async (c) => {

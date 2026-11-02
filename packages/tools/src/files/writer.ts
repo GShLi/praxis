@@ -51,7 +51,11 @@ export class FileWriter {
         }
       }
     } finally {
-      await fs.unlink(temporary).catch(() => {});
+      await fs.unlink(temporary).catch((error: NodeJS.ErrnoException) => {
+        // rename already consumed the temporary path; other cleanup failures are uncertain effects.
+        if (error.code !== 'ENOENT')
+          throw new PraxisError('FILE_CLEANUP_FAILED', '无法清理临时写入文件，请检查工作区。');
+      });
     }
     const after = await this.content.load(target, true);
     assert(after.text === content, 'FILE_PUBLISH_UNKNOWN', '发布后内容发生变化，请检查文件状态。');

@@ -94,11 +94,7 @@ export class ApprovalGate {
         try {
           this.store.transaction(() => {
             this.store.update(sessionId, { status: 'waiting_approval' });
-            this.store.append(
-              sessionId,
-              'approval/requested',
-              request as unknown as Record<string, unknown>,
-            );
+            this.store.append(sessionId, 'approval/requested', { ...request });
           });
         } catch (error) {
           settled = true;

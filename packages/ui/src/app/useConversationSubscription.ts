@@ -1,7 +1,7 @@
 import type { Event } from '@praxis/contracts';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useRef } from 'react';
-import type { PraxisClient, Snapshot } from '../client.ts';
+import type { PraxisClient, Snapshot } from '../client-types.ts';
 import type { Question } from '../conversation/types.ts';
 interface Subscription {
   client: PraxisClient;

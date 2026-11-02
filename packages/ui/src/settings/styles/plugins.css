@@ -1,0 +1,35 @@
+.plugin-review {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.plugin-review h4 {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.plugin-review h4 span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.plugin-review > p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.plugin-review dl {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 20px 0;
+}
+.plugin-review dt {
+  color: var(--muted);
+}
+.plugin-review dd {
+  margin: 0;
+}
+.settings-hash {
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}

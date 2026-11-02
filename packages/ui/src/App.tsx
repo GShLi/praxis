@@ -2,7 +2,7 @@ import { AppRail, SessionSearch } from './Navigation.tsx';
 import { Settings } from './Settings.tsx';
 import { useAppController } from './app/useAppController.ts';
 import { Login } from './auth/Login.tsx';
-import type { PraxisClient } from './client.ts';
+import type { PraxisClient } from './client-types.ts';
 import { ChangePanel } from './conversation/ChangePanel.tsx';
 import { Composer } from './conversation/Composer.tsx';
 import { Conversation } from './conversation/Conversation.tsx';

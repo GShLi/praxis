@@ -1,14 +1,14 @@
-import { Hono } from 'hono';
 import type { AuthService, Identity } from '@praxis/auth';
 import type { ChatRuntime } from '@praxis/chat-runtime';
 import { discoverModels } from '@praxis/model-core/catalog';
-import { registerMiddleware } from './middleware-routes.ts';
-import { registerPublicAuth } from './public-auth-routes.ts';
-import { registerIdentity } from './identity-routes.ts';
+import { Hono } from 'hono';
 import { registerAccount } from './account-routes.ts';
-import { registerProviders } from './providers-routes.ts';
 import { registerChat } from './chat-routes.ts';
 import { registerEvents } from './events-routes.ts';
+import { registerIdentity } from './identity-routes.ts';
+import { registerMiddleware } from './middleware-routes.ts';
+import { registerProviders } from './providers-routes.ts';
+import { registerPublicAuth } from './public-auth-routes.ts';
 import { registerWebAssets } from './web-assets.ts';
 import { webSecurity } from './web-security.ts';
 

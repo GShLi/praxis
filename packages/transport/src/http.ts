@@ -1,78 +1,12 @@
 import { assert, PraxisError } from '@praxis/contracts';
-import { lookup } from 'node:dns/promises';
-import type { ClientRequest, IncomingMessage, RequestOptions } from 'node:http';
-import { request as httpRequest } from 'node:http';
-import { request as httpsRequest } from 'node:https';
-import { BlockList, isIP } from 'node:net';
+import type { ClientRequest, IncomingMessage } from 'node:http';
+import { isIP } from 'node:net';
 
-type Address = { address: string; family: number };
-export interface HttpDependencies {
-  resolve(hostname: string): Promise<Address[]>;
-  request(
-    url: URL,
-    options: RequestOptions,
-    response: (value: IncomingMessage) => void,
-  ): ClientRequest;
-}
-const defaults: HttpDependencies = {
-  resolve: (hostname) => lookup(hostname, { all: true, verbatim: true }),
-  request: (url, options, response) =>
-    (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, options, response),
-};
-const denied = new BlockList();
-for (const [address, bits] of [
-  ['0.0.0.0', 8],
-  ['10.0.0.0', 8],
-  ['100.64.0.0', 10],
-  ['127.0.0.0', 8],
-  ['169.254.0.0', 16],
-  ['172.16.0.0', 12],
-  ['192.0.0.0', 24],
-  ['192.0.2.0', 24],
-  ['192.88.99.0', 24],
-  ['192.168.0.0', 16],
-  ['198.18.0.0', 15],
-  ['198.51.100.0', 24],
-  ['203.0.113.0', 24],
-  ['224.0.0.0', 3],
-] as const)
-  denied.addSubnet(address, bits, 'ipv4');
-for (const [address, bits] of [
-  ['2001::', 23],
-  ['2001:db8::', 32],
-  ['2002::', 16],
-  ['3fff::', 20],
-] as const)
-  denied.addSubnet(address, bits, 'ipv6');
-const globalV6 = new BlockList();
-globalV6.addSubnet('2000::', 3, 'ipv6');
-export function isPublicAddress(address: string) {
-  const family = isIP(address);
-  return family === 4
-    ? !denied.check(address, 'ipv4')
-    : family === 6 && globalV6.check(address, 'ipv6') && !denied.check(address, 'ipv6');
-}
-/** The lookup may not support cancellation; late DNS results must never open a socket. */
-async function resolveWithin(
-  resolve: Promise<Address[]>,
-  signal: AbortSignal,
-  cancelled: () => Error,
-) {
-  signal.throwIfAborted();
-  let abort: () => void = () => {};
-  try {
-    return await Promise.race([
-      resolve,
-      new Promise<never>((_, reject) => {
-        abort = () => reject(cancelled());
-        signal.addEventListener('abort', abort, { once: true });
-      }),
-    ]);
-  } finally {
-    signal.removeEventListener('abort', abort);
-  }
-}
-
+import type { Address, HttpDependencies } from './http-dns.ts';
+import { defaults, resolveWithin } from './http-dns.ts';
+import { isPublicAddress } from './public-address.ts';
+export type { HttpDependencies } from './http-dns.ts';
+export { isPublicAddress } from './public-address.ts';
 /** No global fetch, proxy inheritance, cookie jar, redirect or DNS check/connect gap. */
 export interface EndpointPolicy {
   endpoint: string;

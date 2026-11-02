@@ -1,0 +1,87 @@
+.settings-editor {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.editor-heading h3 {
+  font-weight: 500;
+  font-size: 15px;
+  margin: 0;
+}
+.settings-page label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+.settings-page input {
+  color: var(--text);
+}
+.settings-editor input:not([type='checkbox']) {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 11px 12px;
+  background: var(--bg);
+  font-size: 14px;
+  width: 100%;
+  min-width: 0;
+}
+.settings-editor input:read-only {
+  background: var(--sidebar);
+  color: var(--muted);
+}
+.settings-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+.settings-editor .field-help {
+  margin-top: -8px;
+}
+.settings-page .settings-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  line-height: 1.7;
+}
+.settings-checkbox input {
+  width: auto;
+  flex: none;
+  accent-color: var(--text);
+}
+.settings-form-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 20px;
+}
+.settings-feedback {
+  font-size: 12px;
+  padding: 13px 15px;
+  line-height: 1.7;
+  border-left: 2px solid var(--muted);
+  background: var(--raised);
+  border-radius: 0 6px 6px 0;
+  overflow-wrap: anywhere;
+}
+.settings-delete-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.settings-delete-row p {
+  font-size: 12px;
+  color: var(--muted);
+}

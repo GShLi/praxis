@@ -1,21 +1,17 @@
 import type { FormEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import type { SettingsTab } from '../Navigation.tsx';
-import { settingsFromHash } from '../Navigation.tsx';
-import type { PraxisClient, Profile, Provider, Snapshot, ViewSession } from '../client.ts';
-import { LocalClient, WebClient } from '../client.ts';
+import type { PraxisClient, Snapshot, ViewSession } from '../client-types.ts';
+import { LocalClient } from '../clients/LocalClient.ts';
+import { WebClient } from '../clients/WebClient.ts';
 import { useConversationSubscription } from './useConversationSubscription.ts';
+import { useIdentity } from './useIdentity.ts';
+import { useShell } from './useShell.ts';
 
 import type { Question } from '../conversation/types.ts';
 export function useAppController(injected?: PraxisClient) {
   const [client] = useState<PraxisClient>(
     () => injected ?? (window.praxis ? new LocalClient(window.praxis) : new WebClient()),
   );
-  const [authenticated, setAuthenticated] = useState(false),
-    [checking, setChecking] = useState(true);
-  const [sessions, setSessions] = useState<ViewSession[]>([]),
-    [providers, setProviders] = useState<Provider[]>([]),
-    [providerId, setProviderId] = useState('');
   const [kind, setKind] = useState<'chat' | 'agent'>('chat'),
     [selected, setSelected] = useState<string | null>(null),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -23,12 +19,7 @@ export function useAppController(injected?: PraxisClient) {
     [partial, setPartial] = useState(''),
     [sending, setSending] = useState(false),
     [error, setError] = useState('');
-  const [settings, setSettings] = useState<SettingsTab | null>(settingsFromHash),
-    [profile, setProfile] = useState<Profile | null>(null),
-    [searching, setSearching] = useState(false),
-    [loadAttempt, setLoadAttempt] = useState(0),
-    [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
-    [panel, setPanel] = useState(false),
+  const [loadAttempt, setLoadAttempt] = useState(0),
     [workspace, setWorkspace] = useState('');
   const [question, setQuestion] = useState<Question | null>(null),
     [change, setChange] = useState<{ path: string; before: string | null; after: string } | null>(
@@ -39,32 +30,31 @@ export function useAppController(injected?: PraxisClient) {
   const scroll = useRef<HTMLDivElement>(null),
     input = useRef<HTMLTextAreaElement>(null);
   const fail = (e: unknown) => setError(e instanceof Error ? e.message : '操作失败，请重试。');
-  const openSettings = (tab: SettingsTab) => {
-    location.hash = `settings/${tab}`;
-    setSettings(tab);
-  };
-  const closeSettings = () => {
-    location.hash = '';
-    setSettings(null);
-  };
-  useEffect(() => {
-    const changed = () => setSettings(settingsFromHash());
-    window.addEventListener('hashchange', changed);
-    return () => window.removeEventListener('hashchange', changed);
-  }, []);
-  useEffect(() => {
-    if (!authenticated) return;
-    let cancelled = false;
-    void client
-      .profile?.()
-      .then((value) => {
-        if (!cancelled) setProfile(value);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [authenticated, client]);
+  const {
+    authenticated,
+    setAuthenticated,
+    checking,
+    sessions,
+    setSessions,
+    providers,
+    setProviders,
+    providerId,
+    setProviderId,
+    profile,
+    setProfile,
+    reloadLists,
+  } = useIdentity(client, fail);
+  const {
+    settings,
+    searching,
+    setSearching,
+    sidebar,
+    setSidebar,
+    panel,
+    setPanel,
+    openSettings,
+    closeSettings,
+  } = useShell(authenticated);
   useEffect(() => {
     const field = input.current;
     if (field) {
@@ -72,41 +62,6 @@ export function useAppController(injected?: PraxisClient) {
       field.style.height = `${Math.min(field.scrollHeight, 200)}px`;
     }
   }, [draft, settings, selected]);
-  useEffect(() => {
-    const key = (event: KeyboardEvent) => {
-      if (!authenticated || settings) return;
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setSearching(true);
-      }
-      if (event.key === 'Escape' && !searching && window.innerWidth <= 760) setSidebar(false);
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [authenticated, settings, searching]);
-  const reloadLists = async () => {
-    const [all, models] = await Promise.all([client.list(), client.providers()]);
-    setSessions(all);
-    setProviders(models);
-    setProviderId((previous) =>
-      models.some((p) => p.id === previous && p.enabled)
-        ? previous
-        : (models.find((p) => p.enabled && p.id === localStorage.getItem('praxis-default-provider'))
-            ?.id ??
-          models.find((p) => p.enabled)?.id ??
-          ''),
-    );
-  };
-  useEffect(() => {
-    void client
-      .current()
-      .then(async (ok) => {
-        setAuthenticated(ok);
-        if (ok) await reloadLists();
-      })
-      .catch(fail)
-      .finally(() => setChecking(false));
-  }, [client]);
   useConversationSubscription({
     client,
     selected,

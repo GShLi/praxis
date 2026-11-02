@@ -1,18 +1,20 @@
 import type { ToolCall, ToolDefinition, ToolResult } from '@praxis/contracts';
-import { assert, safeError } from '@praxis/contracts';
+import { assert } from '@praxis/contracts';
 import type { Approve } from '@praxis/permissions';
 import type { ActivePlugin } from '@praxis/plugin-host';
 import { compileSchema } from '@praxis/schema';
-import { SessionStore, uuid } from '@praxis/storage-local';
+import { SessionStore } from '@praxis/storage-local';
 import { z } from 'zod';
 import { descriptions, ids } from './definitions.ts';
 import { executeFilesTool } from './files-tools.ts';
 import { WorkspaceFiles } from './files.ts';
+import { invokePlugin } from './invoke-plugin.ts';
 import { readPlan } from './plan.ts';
 import { checkPluginPolicies } from './plugin-policy.ts';
 import { executeProcessesTool } from './processes-tools.ts';
 import { schemas } from './schemas.ts';
 import { executeSessionTool } from './session-tools.ts';
+import { recordToolFailure } from './tool-failure.ts';
 import type { Ask, ProcessService } from './types.ts';
 
 export class ToolExecutor {
@@ -99,36 +101,17 @@ export class ToolExecutor {
       if (plugin) {
         result.toolId = `${plugin.manifest.id}:${call.name}`;
         effect = true;
-        result.data = await plugin.tools.get(call.name)!.execute(raw, {
+        result.data = await invokePlugin(
+          plugin,
+          call,
+          callId,
+          raw,
           signal,
-          invokeCore: async (name, args) => {
-            assert(
-              Object.hasOwn(schemas, name),
-              'TOOL_NOT_AVAILABLE',
-              '插件只能通过此服务调用核心工具。',
-            );
-            this.consumeDelegatedTool?.();
-            const delegatedId = uuid();
-            this.store.append(this.sessionId, 'plugin/tool-intent', {
-              pluginId: plugin.manifest.id,
-              parentCallId: callId,
-              delegatedId,
-              name,
-            });
-            const value = await this.execute(
-              { id: delegatedId, name, arguments: JSON.stringify(args) },
-              delegatedId,
-              signal,
-            );
-            this.store.append(
-              this.sessionId,
-              'plugin/tool-result',
-              { pluginId: plugin.manifest.id, parentCallId: callId, result: value },
-              'tool',
-            );
-            return value;
-          },
-        });
+          this.sessionId,
+          this.store,
+          this.execute.bind(this),
+          this.consumeDelegatedTool,
+        );
         result.effectState = 'unknown';
         result.durationMs = Math.round(performance.now() - started);
         return result;
@@ -150,32 +133,7 @@ export class ToolExecutor {
       const diff = (result.data as { diffArtifactId?: string } | undefined)?.diffArtifactId;
       if (diff) result.artifactIds.push(diff);
     } catch (error) {
-      const safe =
-        error instanceof SyntaxError
-          ? { code: 'INVALID_ARGUMENT', safeMessage: '工具参数 JSON 无效。' }
-          : safeError(error);
-      result.status = signal.aborted
-        ? 'cancelled'
-        : ['ACCESS_DENIED', 'APPROVAL_REJECTED'].includes(safe.code)
-          ? 'denied'
-          : 'failed';
-      result.error = { code: safe.code, message: safe.safeMessage };
-      // Unknown errors after dispatch may follow a write; never claim a rollback.
-      if (
-        effect &&
-        ![
-          'FILE_NOT_OBSERVED',
-          'FILE_VERSION_CONFLICT',
-          'FILE_ALREADY_EXISTS',
-          'PATCH_OVERLAP',
-          'PATCH_MATCH_COUNT_MISMATCH',
-          'SANDBOX_UNAVAILABLE',
-          'ACCESS_DENIED',
-          'INVALID_ARGUMENT',
-          'FILE_TOO_LARGE',
-        ].includes(safe.code)
-      )
-        result.effectState = 'unknown';
+      recordToolFailure(result, error, signal.aborted, effect);
     }
     result.durationMs = Math.round(performance.now() - started);
     return result;

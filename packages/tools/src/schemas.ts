@@ -1,3 +1,4 @@
+import { questionSchema as question } from '@praxis/contracts';
 import { z } from 'zod';
 
 export const shortText = z.string().min(1).max(4096);
@@ -12,22 +13,6 @@ export const planItem = z.strictObject({
   id: shortText,
   title: shortText,
   status: z.enum(['pending', 'in_progress', 'completed', 'blocked', 'cancelled']),
-});
-
-export const question = z.strictObject({
-  id: shortText,
-  prompt: shortText,
-  options: z
-    .array(
-      z.strictObject({
-        id: shortText,
-        label: shortText,
-        description: z.string().max(4096).optional(),
-      }),
-    )
-    .min(2)
-    .max(10)
-    .optional(),
 });
 
 export const baseCommand = {

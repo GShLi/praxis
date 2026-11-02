@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { Profile, ViewSession } from './client.ts';
+import type { Profile, ViewSession } from './client-types.ts';
+import type { SettingsTab } from './navigation-state.ts';
+export { settingsFromHash } from './navigation-state.ts';
+export type { SettingsTab } from './navigation-state.ts';
 
 const paths = {
   plus: 'M12 5v14M5 12h14',
@@ -44,33 +47,6 @@ export function Icon({ name }: { name: keyof typeof paths }) {
       <path d={paths[name]} />
     </svg>
   );
-}
-
-export type SettingsTab =
-  | 'general'
-  | 'appearance'
-  | 'models'
-  | 'agent'
-  | 'mcp'
-  | 'plugins'
-  | 'data'
-  | 'account'
-  | 'about';
-export function settingsFromHash(): SettingsTab | null {
-  const value = location.hash.replace('#settings/', '');
-  return [
-    'general',
-    'appearance',
-    'models',
-    'agent',
-    'mcp',
-    'plugins',
-    'data',
-    'account',
-    'about',
-  ].includes(value)
-    ? (value as SettingsTab)
-    : null;
 }
 
 export function AppRail({

@@ -21,3 +21,12 @@ export type {
   ToolResult,
   TurnStatus,
 } from './types.ts';
+
+export {
+  questionSchema,
+  answersSchema,
+  pendingQuestionSchema,
+  eventSchema,
+  deltaSchema,
+} from './interaction.ts';
+export type { PendingQuestion, QuestionAnswer } from './interaction.ts';

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PraxisClient, Profile, Provider, Snapshot } from './client.ts';
-import type { SettingsTab } from './Navigation.tsx';
+import type { PraxisClient, Profile, Provider, Snapshot } from './client-types.ts';
+import type { SettingsTab } from './navigation-state.ts';
 import './settings.css';
 import { About } from './settings/About.tsx';
 import { Account } from './settings/Account.tsx';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Provider } from '../client.ts';
+import type { Provider } from '../client-types.ts';
 import { Row } from './controls.tsx';
 
 export function General({ providers }: { providers: Provider[] }) {

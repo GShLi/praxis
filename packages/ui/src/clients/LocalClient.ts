@@ -10,7 +10,7 @@ import type {
   Profile,
   Provider,
   Snapshot,
-} from '../client.ts';
+} from '../client-types.ts';
 
 export class LocalClient implements PraxisClient {
   desktop = true;
@@ -111,7 +111,9 @@ export class LocalClient implements PraxisClient {
     void this.bridge.call('session/subscribe', { sessionId: id, afterSeq: after }).catch(failure);
     return () => {
       off();
-      void this.bridge.call('session/unsubscribe', { sessionId: id }).catch(() => {});
+      void this.bridge.call('session/unsubscribe', { sessionId: id }).catch(() => {
+        /* Host may already be closed; local listener is removed before this request. */
+      });
     };
   }
   profile() {

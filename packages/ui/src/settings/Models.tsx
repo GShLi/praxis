@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { PraxisClient, Provider } from '../client.ts';
+import type { PraxisClient, Provider } from '../client-types.ts';
 import { Empty, errorText, SettingsIcon, Status } from './controls.tsx';
 import { ProviderEditor } from './ProviderEditor.tsx';
 

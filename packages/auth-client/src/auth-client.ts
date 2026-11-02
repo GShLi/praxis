@@ -96,7 +96,9 @@ export class AuthClient {
         chunks.push(next.value);
       }
     } finally {
-      await reader.cancel().catch(() => {});
+      await reader.cancel().catch(() => {
+        /* Preserve the HTTP/read failure; always release the reader lock. */
+      });
       reader.releaseLock();
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8')) as T;
@@ -138,7 +140,9 @@ export class AuthClient {
   }
   async clear() {
     if (this.accessToken)
-      await this.request('/v1/auth/logout', 'POST', {}, AbortSignal.timeout(1000)).catch(() => {});
+      await this.request('/v1/auth/logout', 'POST', {}, AbortSignal.timeout(1000)).catch(() => {
+        /* Logout still clears local tokens when the server is unreachable. */
+      });
     this.apiKey = '';
     this.accessToken = '';
     this.userId = '';

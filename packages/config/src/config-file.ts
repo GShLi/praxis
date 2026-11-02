@@ -52,7 +52,9 @@ export class ConfigFile<T> {
       }
       return result;
     });
-    this.pending = operation.catch(() => {});
+    this.pending = operation.catch(() => {
+      /* Keep the queue usable; the caller still receives operation rejection. */
+    });
     return operation;
   }
 }

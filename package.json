@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "check": "pnpm typecheck && pnpm test",
+    "check": "pnpm structure && pnpm typecheck && pnpm test",
     "cli": "node --import tsx apps/cli/src/main.ts",
     "host": "node --import tsx apps/agent-host/src/main.ts",
     "format": "prettier --write apps packages tests scripts *.json *.yaml",
@@ -22,7 +22,8 @@
     "build": "pnpm native:build && node --import tsx scripts/build.ts",
     "web": "vite --config apps/web/vite.config.ts",
     "desktop": "electron dist/desktop/main.mjs",
-    "ui:preview": "node --import tsx scripts/preview-ui.ts"
+    "ui:preview": "node --import tsx scripts/preview-ui.ts",
+    "structure": "node --import tsx scripts/check-structure.ts"
   },
   "dependencies": {
     "ignore": "7.0.5",

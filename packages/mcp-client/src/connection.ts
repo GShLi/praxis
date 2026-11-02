@@ -146,6 +146,8 @@ export class McpConnection {
     this.closed = true;
     this.lifetime.abort();
     this.closeTransport?.();
-    await this.client.close().catch(() => {});
+    await this.client.close().catch(() => {
+      /* Lifetime and controlled transport are already aborted; do not expose remote errors during disposal. */
+    });
   }
 }

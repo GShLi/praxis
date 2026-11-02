@@ -1,7 +1,9 @@
 import { assert } from '@praxis/contracts';
 import type { ServerDatabase, SqlConnection } from '@praxis/storage-server';
 import { randomUUID } from 'node:crypto';
+import { AccountService } from './account-service.ts';
 import { recordAudit } from './audit.ts';
+import { requireScope } from './authorization.ts';
 import type { Identity, Scope } from './identity.ts';
 import { scopes } from './identity.ts';
 import { hashPassword, verifyPassword } from './password.ts';
@@ -9,11 +11,13 @@ import { ProviderService } from './provider-service.ts';
 import { digest, equal, randomSecret, SecretCipher } from './secrets.ts';
 
 export class AuthService {
+  private account: AccountService;
   private providers: ProviderService;
   constructor(
     readonly database: ServerDatabase,
     readonly cipher: SecretCipher,
   ) {
+    this.account = new AccountService(database);
     this.providers = new ProviderService(database, cipher);
   }
 
@@ -158,7 +162,7 @@ export class AuthService {
     };
   }
   require(identity: Identity, scope: Scope) {
-    assert(identity.scopes.includes(scope), 'FORBIDDEN', '此凭据没有所需权限。');
+    requireScope(identity, scope);
   }
   async exchange(identity: Identity) {
     assert(identity.kind === 'api-key', 'FORBIDDEN', '此入口要求 Praxis API Key。');
@@ -234,24 +238,20 @@ export class AuthService {
         [identity.sessionId],
       );
   }
-  async createApiKey(identity: Identity, name: string, requested: Scope[], days: number) {
-    this.require(identity, 'keys:write');
-    assert(
-      requested.every((scope) => identity.scopes.includes(scope)),
-      'FORBIDDEN',
-      '不能授予超出当前身份的权限。',
-    );
-    const id = randomUUID(),
-      secret = randomSecret();
-    const expiresAt = new Date(Date.now() + days * 86400_000);
-    await this.database.transaction(async (sql) => {
-      await sql.query(
-        'INSERT INTO api_keys(id,user_id,name,secret_hash,scopes,expires_at) VALUES($1,$2,$3,$4,$5,$6)',
-        [id, identity.userId, name, digest(secret), JSON.stringify(requested), expiresAt],
-      );
-      await recordAudit(sql, identity.userId, 'api-key/create', id);
-    });
-    return { id, key: `pxk_.${id}.${secret}`, expiresAt: expiresAt.toISOString() };
+  createApiKey(...args: Parameters<AccountService['createApiKey']>) {
+    return this.account.createApiKey(...args);
+  }
+  listApiKeys(identity: Identity) {
+    return this.account.listApiKeys(identity);
+  }
+  revokeApiKey(identity: Identity, id: string) {
+    return this.account.revokeApiKey(identity, id);
+  }
+  profile(identity: Identity, csrf?: string) {
+    return this.account.profile(identity, csrf);
+  }
+  deleteProvider(...args: Parameters<ProviderService['deleteProvider']>) {
+    return this.providers.deleteProvider(...args);
   }
   listProviders(...args: Parameters<ProviderService['listProviders']>) {
     return this.providers.listProviders(...args);
