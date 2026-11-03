@@ -1,7 +1,7 @@
 import { AuthClient } from '@praxis/auth-client';
 import { baseData } from '@praxis/config/paths';
+import { bindLegacyProfile, profilePaths, resolveProfileDirectory } from '@praxis/config/profile';
 import { assert } from '@praxis/contracts';
-import { hash } from '@praxis/storage-local';
 import {
   BackupRestoreError,
   createLocalBackup,
@@ -14,7 +14,7 @@ import path from 'node:path';
 import type { CliOptions } from './options.ts';
 
 export async function dataCommand(values: CliOptions, positionals: string[]) {
-  const { action, target, clientKind } = parseDataRequest(values, positionals);
+  const request = parseDataRequest(values, positionals);
   const apiKey = process.env.PRAXIS_API_KEY;
   assert(apiKey, 'PRAXIS_KEY_REQUIRED', '请设置 PRAXIS_API_KEY 验证备份所属账号。');
   const scope = new AbortController(),
@@ -26,41 +26,63 @@ export async function dataCommand(values: CliOptions, positionals: string[]) {
   process.once('SIGTERM', stop);
   try {
     await auth.bind(apiKey, scope.signal);
-    const identity: BackupIdentity = {
-      ownerUserId: auth.userId,
-      serverUrl: auth.origin,
-      clientKind,
-    };
-    if (action === 'inspect') {
+    await authenticatedDataAction(auth, request, values.confirm, scope);
+  } finally {
+    process.off('SIGINT', stop);
+    process.off('SIGTERM', stop);
+    await auth.clear();
+  }
+}
+
+async function authenticatedDataAction(
+  auth: AuthClient,
+  { action, target, clientKind }: ReturnType<typeof parseDataRequest>,
+  confirmation: string | undefined,
+  scope: AbortController,
+) {
+  const profile = { userId: auth.userId, serverUrl: auth.origin, clientKind };
+  const identity: BackupIdentity = { ownerUserId: auth.userId, serverUrl: auth.origin, clientKind };
+  if (action === 'inspect') {
+    assert(target, 'INVALID_COMMAND', '缺少备份目录。');
+    console.log(
+      JSON.stringify(
+        await inspectLocalBackup(path.resolve(target), identity, scope.signal),
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  const directory =
+    action === 'bind-legacy'
+      ? profilePaths(baseData, profile).legacy
+      : await resolveProfileDirectory(baseData, profile);
+  const lease = await acquireLease(path.join(directory, 'writer.lock'));
+  lease.onLost(() => scope.abort());
+  try {
+    scope.signal.throwIfAborted();
+    if (action === 'bind-legacy') {
+      assert(confirmation, 'PROFILE_CONFIRM_REQUIRED', '缺少旧数据的原服务地址确认。');
       console.log(
         JSON.stringify(
-          await inspectLocalBackup(path.resolve(target), identity, scope.signal),
+          await bindLegacyProfile(baseData, profile, confirmation, scope.signal),
           null,
           2,
         ),
       );
-      return;
-    }
-    const directory = path.join(baseData, clientKind, hash(auth.userId));
-    const lease = await acquireLease(path.join(directory, 'writer.lock'));
-    lease.onLost(stop);
-    try {
-      scope.signal.throwIfAborted();
+    } else {
+      assert(target, 'INVALID_COMMAND', '缺少备份目录。');
       await executeDataAction(
         action,
         path.join(directory, 'sessions.sqlite'),
         path.resolve(target),
         identity,
         scope.signal,
-        values.confirm,
+        confirmation,
       );
-    } finally {
-      await lease.release();
     }
   } finally {
-    process.off('SIGINT', stop);
-    process.off('SIGTERM', stop);
-    await auth.clear();
+    await lease.release();
   }
 }
 
@@ -98,13 +120,14 @@ async function executeDataAction(
 function parseDataRequest(
   values: CliOptions,
   positionals: string[],
-): { action: string; target: string; clientKind: BackupIdentity['clientKind'] } {
+): { action: string; target: string | undefined; clientKind: BackupIdentity['clientKind'] } {
   const action = positionals[1],
     target = positionals[2];
   assert(
-    action && ['backup', 'inspect', 'restore'].includes(action) && target,
+    action &&
+      (action === 'bind-legacy' || (['backup', 'inspect', 'restore'].includes(action) && target)),
     'INVALID_COMMAND',
-    'data 支持 backup DIRECTORY / inspect BACKUP / restore BACKUP --confirm SHA256。',
+    'data 支持 backup DIRECTORY / inspect BACKUP / restore BACKUP --confirm SHA256 / bind-legacy --confirm 原服务地址。',
   );
   const clientKind = values.client ?? 'cli';
   assert(
@@ -118,5 +141,7 @@ function parseDataRequest(
       'BACKUP_CONFIRM_REQUIRED',
       '请先 data inspect 查看身份、数量和摘要，再用 --confirm SHA256 确认覆盖此客户端的全部会话。',
     );
+  if (action === 'bind-legacy')
+    assert(values.confirm, 'PROFILE_CONFIRM_REQUIRED', '请用 --confirm 原服务地址明确绑定旧数据。');
   return { action, target, clientKind };
 }

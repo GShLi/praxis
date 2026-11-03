@@ -89,3 +89,7 @@
 - 备份恢复下一切片：storage-local/backup 负责 SQLite 一致快照、受限 Worker、版本/Schema/身份/摘要校验、私有暂存与事务恢复；CLI 持有目标 profile 的原生 writer lease，并通过服务端认证获取账号。备份仅含 Session 数据库及清单，不打包 Key、插件代码或项目文件。恢复先保存当前数据的回退备份，在同一 SQLite 事务中替换受支持的表；不恢复执行授权或自动运行任务。格式从 v1、storage v2 开始，不支持的格式明确拒绝。Node 22.15 没有 sqlite.backup，采用 SQLite 官方 VACUUM INTO 一致快照，并在独立 Worker 运行以保留取消响应。
 - 本地备份恢复：CLI 提供 backup/inspect/restore，完整保存会话数据库内的历史、上下文版本、checkpoint 与产物；真实 writer lease 阻止覆盖活动客户端。恢复验证身份、精确摘要、Schema、记录类型及索引关系，先建立回退备份，再以 SQLite 事务替换；不重放任务或恢复执行授权。已覆盖首次恢复到空 profile。
 - 本批验证：151 项核心测试全部通过（含真实 macOS Keychain），14 项真实 PostgreSQL/HTTP/CLI 集成及全部应用构建通过。新增打包 Worker 测试避免仅源码可运行；测试覆盖篡改后重算摘要、非法权限/序号、结构/版本错误、取消与原数据保留。备份不包含凭据库、插件目录和实际项目文件；桌面维护入口、服务端运维与三平台验收仍需补齐。
+
+- 账号目录隔离复查：Host 的旧路径仅包含 clientKind/userId，不包含 Praxis 来源。新 profile 将按规范化服务 origin、客户端和用户 ID 分层；配置包的 Node 子路径负责目录解析和不可变旧目录绑定，Host 与离线 CLI 共用。旧目录不自动分配给首次登录的服务器，必须用显式 CLI 绑定命令、持有原 writer lease 后写入来源标记；不移动或删除旧会话、插件及配置。分别验证同 ID 不同来源、客户端隔离、旧数据保留、重复绑定及冲突。
+- 账号隔离修复：真实集成先复现不同服务的同 ID 会话泄露，再接通共享 profile 解析。新路径绑定规范化 origin/client/user；旧数据只有在持有 writer lease、明确确认原服务后才写入不可变来源标记，不移动旧数据。Host 初始化失败也会清除新建的认证客户端；profile 装配从登录协调函数分离。
+- 本批验证：154 项核心测试（含真实 macOS Keychain）、16 项 PostgreSQL/HTTP/CLI 集成、结构/类型检查与全部应用构建通过。新增同 ID 跨来源往返、旧目录确认与锁冲突、绑定后历史和备份可用测试；现有私人旧目录保持原样，未代用户执行绑定。

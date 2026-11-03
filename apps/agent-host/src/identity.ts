@@ -2,6 +2,7 @@ import { McpCredentials, NativeSecretBackend, SecretStore } from '@praxis/mcp-cl
 import { McpPrompts } from '@praxis/mcp-client/prompts';
 import { AgentRuntime } from '@praxis/agent-runtime';
 import { AuthClient } from '@praxis/auth-client';
+import { resolveProfileDirectory } from '@praxis/config/profile';
 import { PraxisError, assert, idSchema } from '@praxis/contracts';
 import { McpMaintenance } from '@praxis/mcp-client/maintenance';
 import { McpRuntime } from '@praxis/mcp-client/runtime';
@@ -82,24 +83,12 @@ export class HostIdentity {
     try {
       await this.clear();
       const candidate = new AuthClient(input.serverUrl);
+      this.auth = candidate;
       await candidate.bind(input.praxisApiKey, AbortSignal.timeout(15_000));
       assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
-      const directory = path.join(baseData, this.clientKind(), hash(candidate.userId));
-      this.dataLease = await acquireLease(path.join(directory, 'writer.lock'));
-      this.dataLease.onLost(() => {
-        void this.shutdown();
-      });
-      this.auth = candidate;
-      this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
-      this.store.recover();
+      await this.openProfile(candidate, input.praxisApiKey);
+      assert(!this.isClosing() && this.store, 'HOST_CLOSING', 'Host 正在退出。');
       this.selectedProvider = input.providerId;
-      this.setupMcp(directory, candidate.userId, input.serverUrl, input.praxisApiKey);
-      this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
-      this.pluginHosts = {
-        chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
-        agent: new PluginHost(new Set(Object.keys(schemas)), 'agent'),
-      };
-      await this.loadPlugins();
 
       this.runtime = new AgentRuntime(this.store, {
         model: new DeepSeekClient(),
@@ -142,6 +131,25 @@ export class HostIdentity {
     } finally {
       this.binding = false;
     }
+  }
+  private async openProfile(candidate: AuthClient, praxisKey: string) {
+    const directory = await resolveProfileDirectory(baseData, {
+      userId: candidate.userId,
+      clientKind: this.clientKind(),
+      serverUrl: candidate.origin,
+    });
+    this.dataLease = await acquireLease(path.join(directory, 'writer.lock'));
+    this.dataLease.onLost(this.shutdown);
+    assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
+    this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
+    this.store.recover();
+    this.setupMcp(directory, candidate.userId, candidate.origin, praxisKey);
+    this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
+    this.pluginHosts = {
+      chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
+      agent: new PluginHost(new Set(Object.keys(schemas)), 'agent'),
+    };
+    await this.loadPlugins();
   }
   private setupMcp(directory: string, owner: string, serverUrl: string, praxisKey: string) {
     const store = this.store;

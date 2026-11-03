@@ -195,3 +195,9 @@ pnpm cli data restore /absolute/path/praxis-backup-... --client cli --confirm SH
 备份保存完整会话历史、工具记录、所有上下文版本、checkpoint 和数据库内的文本产物；不包含模型/MCP 凭据存储、插件安装文件或工作区实际文件。会话正文可能包含用户输入的敏感信息，请妥善保存备份。当前支持格式 v1、数据库 v2，单库上限 2 GiB。
 
 恢复前自动在 profile 的 `recovery-backups/` 下创建当前数据的回退备份，随后事务替换。程序拒绝身份、摘要、数据库结构或记录校验不符的备份。若提交结果无法确认，会报告 `BACKUP_RESTORE_UNKNOWN` 和回退路径；先检查当前数据，不自动重试。重新打开客户端后，未完成任务标为中断，待处理输入保持暂停，需要显式继续。恢复历史不会恢复项目文件，也不会重放工具调用。
+
+### 旧版本地账号目录
+
+新建 profile 按 Praxis 服务来源、客户端类型和用户 ID 隔离，同一 ID 在不同服务上不会共享会话、MCP 配置或插件。旧版目录没有来源信息，首次使用新版时会报 `PROFILE_BINDING_REQUIRED`，不会自动猜测归属。
+
+确认 `PRAXIS_SERVER_URL` 指向原服务、API Key 属于原账号，关闭对应客户端后，在自己的终端执行 `pnpm cli data bind-legacy --confirm https://原服务地址 --client cli`；桌面端使用 `--client desktop`。这只为旧目录写入不可变来源标记，不移动或删除会话、配置、插件文件。重复确认同一来源可重试；其他来源或已存在的新数据冲突会明确拒绝合并。不要把旧数据绑定到新建的同名账号或不同服务。
