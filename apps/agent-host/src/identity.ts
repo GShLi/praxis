@@ -3,6 +3,7 @@ import { McpPrompts } from '@praxis/mcp-client/prompts';
 import { AgentRuntime } from '@praxis/agent-runtime';
 import { AuthClient } from '@praxis/auth-client';
 import { resolveProfileDirectory } from '@praxis/config/profile';
+import { UserInstructionConfig } from '@praxis/config/user-instructions';
 import { PraxisError, assert, idSchema } from '@praxis/contracts';
 import { McpMaintenance } from '@praxis/mcp-client/maintenance';
 import { McpRuntime } from '@praxis/mcp-client/runtime';
@@ -21,6 +22,7 @@ export class HostIdentity {
   discoveryScope = new AbortController();
   auth: AuthClient | undefined;
   diagnostics: HostDiagnostics | undefined;
+  userInstructions: UserInstructionConfig | undefined;
   store: SessionStore | undefined;
   runtime: AgentRuntime | undefined;
   dataLease: Awaited<ReturnType<typeof acquireLease>> | undefined;
@@ -52,6 +54,8 @@ export class HostIdentity {
     this.mcpMaintenance = undefined;
     await this.runtime?.close();
     this.runtime = undefined;
+    await this.userInstructions?.close();
+    this.userInstructions = undefined;
     await this.mcpRuntime?.close();
     this.mcpRuntime = undefined;
     await this.mcpCredentials?.close();
@@ -98,6 +102,11 @@ export class HostIdentity {
         model: new DeepSeekClient(),
         interactive: input.interactive,
         beginUse: (_owner, signal) => candidate.beginUse(this.selectedProvider, signal),
+        userInstructions: async (_owner, signal) => {
+          signal.throwIfAborted();
+          assert(this.userInstructions, 'CONFIG_UNAVAILABLE', '用户设置尚未打开。');
+          return this.userInstructions.read();
+        },
         authorizeCommand: async (_owner, signal) => {
           await candidate.profile(signal);
         },
@@ -146,6 +155,7 @@ export class HostIdentity {
     this.dataLease.onLost(this.shutdown);
     assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
     this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
+    this.userInstructions = new UserInstructionConfig(directory);
     this.diagnostics = await HostDiagnostics.open(directory, this.store, this.shutdown);
     assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
     this.store.recover();

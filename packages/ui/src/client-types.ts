@@ -61,6 +61,8 @@ export type HostMethod =
   | 'provider/delete'
   | 'host/diagnostics'
   | 'host/diagnostics-export'
+  | 'user-instructions/read'
+  | 'user-instructions/save'
   | 'plugin/list'
   | 'plugin/inspect'
   | 'plugin/install'
@@ -242,6 +244,10 @@ export interface PraxisClient {
   revokeKey?(id: string): Promise<void>;
   diagnostics?(): Promise<Record<string, unknown>>;
   exportDiagnostics?(): Promise<Record<string, unknown>>;
+  userInstructions?(): Promise<import('@praxis/contracts').UserInstructionSettings>;
+  saveUserInstructions?(
+    input: import('@praxis/contracts').SaveUserInstructions,
+  ): Promise<import('@praxis/contracts').UserInstructionSettings>;
   plugins?(): Promise<PluginState>;
   inspectPlugin?(source: string): Promise<PluginReview>;
   installPlugin?(source: string, digest: string, revision: number): Promise<void>;

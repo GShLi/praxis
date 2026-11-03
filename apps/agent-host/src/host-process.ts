@@ -13,6 +13,7 @@ import type { RpcRoutes } from './rpc-schema.ts';
 import { noArgs } from './rpc-schema.ts';
 import { sessionsRoutes } from './sessions-rpc.ts';
 import { commandsRoutes } from './commands-rpc.ts';
+import { userInstructionsRoutes } from './user-instructions-rpc.ts';
 
 /** Owns process listeners, timers and the authenticated resource scope. */
 export class HostProcess {
@@ -41,6 +42,7 @@ export class HostProcess {
         mcpOAuthRoutes,
         pluginsRoutes,
         commandsRoutes,
+        userInstructionsRoutes,
       ].map((factory) => factory(this.identity, () => this.clientKind)),
     );
   }

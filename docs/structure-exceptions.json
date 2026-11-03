@@ -19,11 +19,6 @@
     "reason": "turn 生命周期在初始化和正常关闭两条路径上都识别清理未知，写 interrupted 与 checkpoint；资源具体初始化仍在 turn-tools。",
     "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
-  "packages/chat-runtime/src/context.ts#buildChatContext:1": {
-    "maxLines": 119,
-    "reason": "服务端上下文压缩算法：读取已有版本、选择协议前缀、生成/验证摘要并提交；连续版本与摘要失败必须保持同一候选状态。",
-    "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
-  },
   "packages/chat-runtime/src/generation.ts#generateChat:1": {
     "maxLines": 97,
     "reason": "原生成生命周期仅增加请求快照中的适配器标识。",
@@ -493,5 +488,20 @@
     "maxLines": 81,
     "reason": "同一个真实 profile 的 CLI 备份、锁冲突、检查、摘要确认、恢复和重新打开共用认证服务器与清理边界。 在同一真实 CLI/Host 身份与生命周期内验证诊断导出，断言已提取到 diagnostic-assertions。",
     "validation": "真实 PostgreSQL/HTTP/CLI 集成：活动 Host 只读导出、退出后工具元数据、私有文件权限及 Key/路径/正文排除；全量 check 与应用构建。"
+  },
+  "packages/ui/src/settings/Personalization.tsx#Personalization:1": {
+    "maxLines": 65,
+    "reason": "单一指令表单的连续 JSX，控制项与字节计数对应同一草稿；异步加载、CAS 保存及卸载保护在独立 Hook。",
+    "validation": "用户指令核心行为、真实 PostgreSQL/HTTP/CLI 集成、结构/类型检查及应用构建；桌面视觉检查尚不可用。"
+  },
+  "packages/ui/src/settings/useUserInstructions.ts#useUserInstructions:1": {
+    "maxLines": 62,
+    "reason": "同一设置编辑器拥有已保存版本、草稿和请求范围；加载与保存共享并发门闩、客户端失效检查及错误显示，拆开会传递相同可变范围。",
+    "validation": "用户指令核心行为、真实 PostgreSQL/HTTP/CLI 集成、结构/类型检查及应用构建；桌面视觉检查尚不可用。"
+  },
+  "tests/user-instructions.test.ts#test(user instructions are pinned for a turn, change next turn, and remain replayable after disabling):1": {
+    "maxLines": 70,
+    "reason": "一个真实 Runtime/SQLite/工作目录内验证任务中变更、下一任务生效和禁用三阶段，模型回调共用状态并验证旧快照；保留同一资源的 finally 清理。",
+    "validation": "user-instructions.test.ts；全量 check 和应用构建。"
   }
 }

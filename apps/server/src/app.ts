@@ -12,6 +12,7 @@ import { registerProviders } from './providers-routes.ts';
 import { registerPublicAuth } from './public-auth-routes.ts';
 import { registerWebAssets } from './web-assets.ts';
 import { webSecurity } from './web-security.ts';
+import { registerUserInstructions } from './user-instructions-routes.ts';
 
 export function createApp(
   auth: AuthService,
@@ -27,6 +28,7 @@ export function createApp(
   registerPublicAuth(app, auth, security);
   registerIdentity(app, auth, security);
   registerAccount(app, auth, security.secure);
+  registerUserInstructions(app, auth);
   registerProviders(app, auth, catalog);
   registerChat(app, auth, chat);
   registerEvents(app, auth, chat);

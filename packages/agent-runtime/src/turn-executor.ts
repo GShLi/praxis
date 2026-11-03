@@ -15,6 +15,8 @@ import { QuestionGate } from './questions.ts';
 import { TurnSteps } from './turn-steps.ts';
 import type { Active, RuntimeOptions } from './types.ts';
 import { executeUserCommand } from './user-command.ts';
+import { snapshotUserInstructions } from './user-instructions.ts';
+import type { ActivePlugin } from '@praxis/plugin-host';
 export class TurnExecutor {
   private workspaceOwners = new Map<string, string>();
   constructor(
@@ -45,11 +47,7 @@ export class TurnExecutor {
         ? undefined
         : await this.options.beginUse(session.ownerUserId, signal);
       signal.throwIfAborted();
-      if (config) {
-        const provider = resolvePluginModel(plugins, config, this.options.model);
-        turn.providerDescriptor = provider.descriptor;
-        steps = new TurnSteps(this.store, { ...this.options, model: provider.model }, this.emit);
-      }
+      if (config) steps = await this.prepareModel(session, turn, plugins, config);
       if (session.kind === 'agent') {
         workspace = await realpath(session.workspace!);
         assert(!this.workspaceOwners.has(workspace), 'WORKSPACE_BUSY', '此工作区已有活动执行。');
@@ -130,6 +128,17 @@ export class TurnExecutor {
           });
         });
     }
+  }
+  private async prepareModel(
+    session: Session,
+    turn: Active,
+    plugins: readonly ActivePlugin[],
+    config: ModelConfig,
+  ) {
+    await snapshotUserInstructions(this.store, session, turn, this.options, config);
+    const provider = resolvePluginModel(plugins, config, this.options.model);
+    turn.providerDescriptor = provider.descriptor;
+    return new TurnSteps(this.store, { ...this.options, model: provider.model }, this.emit);
   }
   private claim(session: Session, turn: Active, config?: ModelConfig) {
     const id = session.id;

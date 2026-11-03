@@ -1,6 +1,7 @@
 import { ChatRuntime } from '@praxis/chat-runtime';
 import type { Event } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
+import { UserInstructionRepository } from '@praxis/storage-server';
 import { databaseFixture, provider } from './fixture.ts';
 
 export const summary = {
@@ -33,8 +34,12 @@ export const model: ModelClient = {
 export async function chatFixture(client: ModelClient = model) {
   const f = await databaseFixture();
   const config = await f.auth.saveProvider(f.identity, provider, 'fixture-vendor-key');
-  const runtime = new ChatRuntime(f.database, client, (_owner, id) =>
-    f.auth.beginUse(f.identity, id, false),
+  const instructions = new UserInstructionRepository(f.database);
+  const runtime = new ChatRuntime(
+    f.database,
+    client,
+    (_owner, id) => f.auth.beginUse(f.identity, id, false),
+    { userInstructions: (owner) => instructions.read(owner) },
   );
   const chat = await runtime.create(f.identity.userId);
   return {

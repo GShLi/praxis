@@ -1,5 +1,6 @@
 export type SettingsTab =
   | 'general'
+  | 'personalization'
   | 'appearance'
   | 'models'
   | 'agent'
@@ -12,6 +13,7 @@ export function settingsFromHash(): SettingsTab | null {
   const value = location.hash.replace('#settings/', '');
   return [
     'general',
+    'personalization',
     'appearance',
     'models',
     'agent',

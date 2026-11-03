@@ -10,6 +10,22 @@ import { pluginCommand } from './plugin-command.ts';
 import { mcpCommand } from './mcp-command.ts';
 import { prepareSession } from './session-setup.ts';
 import { CliSession } from './session.ts';
+import { userInstructionsCommand } from './user-instructions-command.ts';
+import type { CliOptions } from './options.ts';
+
+async function configurationCommand(
+  command: string,
+  host: Awaited<ReturnType<typeof startHost>>,
+  values: CliOptions,
+  positionals: string[],
+  bearer?: string,
+) {
+  if (command === 'plugins') await pluginCommand(host, values, positionals);
+  else if (command === 'mcp') await mcpCommand(host, positionals, values, bearer);
+  else if (command === 'instructions') await userInstructionsCommand(host, values, positionals);
+  else return false;
+  return true;
+}
 
 export async function runCli() {
   const { values, positionals } = parseOptions();
@@ -24,7 +40,9 @@ export async function runCli() {
     return;
   }
   assert(
-    ['doctor', 'run', 'sessions', 'providers', 'plugins', 'mcp', 'data'].includes(command),
+    ['doctor', 'run', 'sessions', 'providers', 'plugins', 'mcp', 'data', 'instructions'].includes(
+      command,
+    ),
     'INVALID_COMMAND',
     '未知命令，使用 --help 查看帮助。',
   );
@@ -43,14 +61,7 @@ export async function runCli() {
       return;
     }
     await bindCliIdentity(host, values);
-    if (command === 'plugins') {
-      await pluginCommand(host, values, positionals);
-      return;
-    }
-    if (command === 'mcp') {
-      await mcpCommand(host, positionals, values, mcpBearer);
-      return;
-    }
+    if (await configurationCommand(command, host, values, positionals, mcpBearer)) return;
     if (command === 'sessions' || command === 'providers') {
       console.log(
         JSON.stringify(

@@ -180,7 +180,17 @@ Token 使用与 Bearer 相同的系统凭据存储。没有系统存储时，使
 
 连接可在桌面设置中编辑或删除，CLI 用 `mcp import FILE` 更新已有 ID、用 `mcp remove SERVER_ID` 删除。编辑后需要重新检查并启用；同一端点保留当前客户端的凭据，换地址或传输会先停用并清理旧凭据。导入文件里的 HTTP 凭据引用不会作为授权来源。删除或更换地址时若系统凭据清理失败，旧配置保持停用并保留引用，刷新设置后可重试。
 
+## 用户指令
+
+Web 与桌面“设置 → 个性化”支持编辑并启用用户指令。桌面 ChatBot 和 Agent 共用该桌面账号的指令，CLI 与 Web 分别管理自己的指令；每次任务/回复开始时固定版本，编辑从下一次生效。当前指令计入上下文预算，压缩后仍按原文重建；启用时的正文、版本和摘要保留在请求历史中，禁用不会删除已有历史。
+
+CLI 使用 `pnpm cli instructions show` 查看版本，再运行 `pnpm cli instructions set /path/to/instructions.txt --revision N`，或 `pnpm cli instructions disable --revision N`。指令文件必须是最多 16 KiB 的 UTF-8 文本；版本冲突不会覆盖更新。指令不授予工具权限，请勿填写密码或 API Key。
+
+这批功能增加 PostgreSQL 迁移 v2。升级服务端时先停止服务、按部署备份流程备份，再执行 `pnpm db:migrate` 后启动；迁移保留账号、统一模型配置和历史，服务运行中会拒绝迁移。本地 SQLite 仍为 v2，不需要迁移；当前 CLI 会话备份不包含客户端设置文件，但包含历史中已使用的指令快照。
+
 ## 诊断导出
+
+桌面和服务端的诊断功能独立于用户指令设置；诊断包不会包含指令正文。
 
 桌面“设置 → 关于”可以显式导出诊断包；CLI 可使用 `pnpm cli data export-diagnostics /absolute/path/existing-directory --client cli`（或 `desktop`），运行中的目标客户端也可只读导出。诊断包仅含运行标识、固定错误分类、耗时和计数，不含对话、文件正文、Key、路径或 URL，不会自动上传。最多 2 MiB / 5000 条，截断及无效行会在包中标明。
 

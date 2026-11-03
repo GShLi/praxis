@@ -1,5 +1,5 @@
 import { ContextBuilder } from '@praxis/context';
-import type { ModelConfig, Session } from '@praxis/contracts';
+import type { Message, ModelConfig, Session, ToolDefinition } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import { SessionStore, uuid } from '@praxis/storage-local';
 import { fixedPrompt } from './prompt.ts';
@@ -44,19 +44,7 @@ export class TurnSteps {
       this.attemptId = uuid();
       this.partial = '';
       const stepId = uuid();
-      this.store.append(id, 'request/snapshot', {
-        turnId: turn.id,
-        stepId,
-        attemptId: this.attemptId,
-        messages,
-        tools,
-        providerId: config.id,
-        configRevision: config.revision,
-        model: config.model,
-        ...turn.providerDescriptor,
-        contextVersion: this.store.context(id).version,
-        instructionRevision: turn.instructions?.revision ?? 0,
-      });
+      this.snapshot(session, turn, config, stepId, messages, tools);
       this.store.append(id, 'step/started', { turnId: turn.id, stepId, ordinal: turn.steps });
       const response = await this.options.model.complete({
         messages,
@@ -80,6 +68,31 @@ export class TurnSteps {
       assert(turn.tools <= (this.options.maxTools ?? 200), 'BUDGET_EXHAUSTED', '工具预算已用完。');
       if (!message.toolCalls?.length && (await this.done(id, turn))) break;
     }
+  }
+  private snapshot(
+    session: Session,
+    turn: Active,
+    config: ModelConfig,
+    stepId: string,
+    messages: Message[],
+    tools: ToolDefinition[],
+  ) {
+    this.store.append(session.id, 'request/snapshot', {
+      turnId: turn.id,
+      stepId,
+      attemptId: this.attemptId,
+      messages,
+      tools,
+      providerId: config.id,
+      configRevision: config.revision,
+      model: config.model,
+      ...turn.providerDescriptor,
+      contextVersion: this.store.context(session.id).version,
+      instructionRevision: turn.instructions?.revision ?? 0,
+      userInstructions: turn.userInstructions
+        ? { revision: turn.userInstructions.revision, hash: turn.userInstructions.hash }
+        : null,
+    });
   }
   private async done(id: string, turn: Active) {
     // Close steer acceptance synchronously with the final claim, before the caller's await resumes.

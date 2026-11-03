@@ -24,21 +24,38 @@ CREATE TABLE chat_checkpoints(session_id TEXT NOT NULL REFERENCES chats(id) ON D
 export async function migrate(database: ServerDatabase) {
   await database.transaction(async (sql) => {
     await sql.query('SELECT pg_advisory_xact_lock(707261786973)');
+    const instance = await sql.query<{ acquired: boolean }>(
+      'SELECT pg_try_advisory_xact_lock(707261786974) AS acquired',
+    );
+    assert(instance.rows[0]?.acquired, 'SERVER_ALREADY_RUNNING', '请先停止服务端再迁移数据库。');
     await sql.query(
       'CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, checksum TEXT NOT NULL, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())',
     );
     const migrations = await sql.query<{ version: number; checksum: string }>(
       'SELECT version,checksum FROM schema_migrations ORDER BY version',
     );
-    const checksum = createHash('sha256').update(initialMigration).digest('hex');
+    const scripts = [
+      initialMigration,
+      'CREATE TABLE user_instructions(owner TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, revision INTEGER NOT NULL CHECK(revision>0), document JSONB NOT NULL);',
+    ].map((source, index) => ({
+      source,
+      version: index + 1,
+      checksum: createHash('sha256').update(source).digest('hex'),
+    }));
     assert(
-      migrations.rows.every((r) => r.version === 1 && r.checksum === checksum),
+      migrations.rows.every(
+        (r, index) =>
+          r.version === scripts[index]?.version && r.checksum === scripts[index]?.checksum,
+      ),
       'MIGRATION_CONFLICT',
       '数据库迁移版本或校验和不一致。',
     );
-    if (!migrations.rows.length) {
-      await sql.query(initialMigration);
-      await sql.query('INSERT INTO schema_migrations(version,checksum) VALUES(1,$1)', [checksum]);
+    for (const script of scripts.slice(migrations.rows.length)) {
+      await sql.query(script.source);
+      await sql.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)', [
+        script.version,
+        script.checksum,
+      ]);
     }
   });
 }

@@ -6,6 +6,7 @@ import path from 'node:path';
 /** Single Host writer, serialized revision checks, atomic publication. Stores no credentials. */
 export class ConfigFile<T> {
   private pending: Promise<unknown> = Promise.resolve();
+  private closing = false;
   constructor(
     readonly file: string,
     private validate: (value: unknown) => T,
@@ -29,6 +30,7 @@ export class ConfigFile<T> {
     }
   }
   update(expectedRevision: number, change: (current: T) => T) {
+    assert(!this.closing, 'CONFIG_CLOSED', '配置正在关闭。');
     const operation = this.pending.then(async () => {
       const current = await this.read();
       assert(
@@ -56,5 +58,9 @@ export class ConfigFile<T> {
       /* Keep the queue usable; the caller still receives operation rejection. */
     });
     return operation;
+  }
+  async close() {
+    this.closing = true;
+    await this.pending;
   }
 }

@@ -219,6 +219,18 @@ export class WebClient implements PraxisClient {
   profile() {
     return this.request<Profile>('/v1/me');
   }
+  userInstructions() {
+    return this.request<import('@praxis/contracts').UserInstructionSettings>(
+      '/v1/preferences/instructions',
+    );
+  }
+  saveUserInstructions(input: import('@praxis/contracts').SaveUserInstructions) {
+    return this.request<import('@praxis/contracts').UserInstructionSettings>(
+      '/v1/preferences/instructions',
+      'PUT',
+      input,
+    );
+  }
   keys() {
     return this.request<ApiKeyInfo[]>('/v1/api-keys');
   }

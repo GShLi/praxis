@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PraxisClient, Profile, Provider, Snapshot } from './client-types.ts';
+import type { PraxisClient, Provider, Snapshot } from './client-types.ts';
 import type { SettingsTab } from './navigation-state.ts';
 import './settings.css';
 import { About } from './settings/About.tsx';
@@ -7,12 +7,15 @@ import { Account } from './settings/Account.tsx';
 import { AgentSettings } from './settings/AgentSettings.tsx';
 import { Appearance } from './settings/Appearance.tsx';
 import { categories } from './settings/categories.ts';
-import { errorText, SettingsIcon } from './settings/controls.tsx';
+import { SettingsIcon } from './settings/controls.tsx';
 import { DataSettings } from './settings/DataSettings.tsx';
 import { General } from './settings/General.tsx';
 import { McpSettings } from './settings/McpSettings.tsx';
 import { Models } from './settings/Models.tsx';
 import { PluginSettings } from './settings/PluginSettings.tsx';
+import { Personalization } from './settings/Personalization.tsx';
+import { useSettingsProfile } from './settings/useSettingsProfile.ts';
+import './settings/styles/personalization.css';
 
 export function Settings({
   tab: requestedTab,
@@ -38,15 +41,8 @@ export function Settings({
       ? 'general'
       : requestedTab;
   const [search, setSearch] = useState('');
-  const [profile, setProfile] = useState<Profile | null>(null),
-    [profileError, setProfileError] = useState('');
+  const { profile, profileError } = useSettingsProfile(client);
   const main = useRef<HTMLElement>(null);
-  useEffect(() => {
-    void client
-      .profile?.()
-      .then(setProfile)
-      .catch((e) => setProfileError(errorText(e)));
-  }, [client]);
   useEffect(() => {
     main.current?.scrollTo({ top: 0 });
   }, [tab]);
@@ -105,6 +101,7 @@ export function Settings({
               <h2>{current.title}</h2>
             </div>
             {tab === 'general' && <General providers={providers} />}
+            {tab === 'personalization' && <Personalization client={client} />}
             {tab === 'appearance' && <Appearance />}
             {tab === 'models' && <Models client={client} providers={providers} saved={saved} />}
             {tab === 'agent' && <AgentSettings client={client} snapshot={snapshot} />}

@@ -1,5 +1,5 @@
 import { digest } from '@praxis/auth';
-import type { Event, ModelConfig } from '@praxis/contracts';
+import type { Event, ModelConfig, UserInstructionSettings } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
 import type { ServerDatabase } from '@praxis/storage-server';
@@ -26,6 +26,9 @@ export class ChatRuntime extends EventEmitter {
       providerId: string,
       signal: AbortSignal,
     ) => Promise<ModelConfig>,
+    private options: {
+      userInstructions?: (owner: string, signal: AbortSignal) => Promise<UserInstructionSettings>;
+    } = {},
   ) {
     super();
     this.repository = new ChatRepository(database);
@@ -154,6 +157,7 @@ export class ChatRuntime extends EventEmitter {
         repository: this.repository,
         append: this.append.bind(this),
         beginUse: this.beginUse,
+        userInstructions: this.options.userInstructions,
         emit: (name, payload) => {
           this.emit(name, payload);
         },

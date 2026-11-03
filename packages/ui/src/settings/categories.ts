@@ -7,6 +7,13 @@ export const categories = [
     icon: 'sliders',
   },
   {
+    id: 'personalization',
+    title: '个性化',
+    description: '设置回答与执行任务时遵循的个人指令。',
+    group: '个人',
+    icon: 'person',
+  },
+  {
     id: 'appearance',
     title: '外观',
     description: '调整主题与回答的文字大小。',

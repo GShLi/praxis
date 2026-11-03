@@ -7,6 +7,7 @@ export function parseOptions() {
       server: { type: 'string' },
       client: { type: 'string' },
       confirm: { type: 'string' },
+      revision: { type: 'string' },
       workspace: { type: 'string' },
       provider: { type: 'string' },
       resume: { type: 'string' },

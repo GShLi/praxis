@@ -7,6 +7,8 @@ const allowed = new Set([
   'provider/delete',
   'host/diagnostics',
   'host/diagnostics-export',
+  'user-instructions/read',
+  'user-instructions/save',
   'plugin/list',
   'plugin/inspect',
   'plugin/install',

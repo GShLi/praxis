@@ -33,6 +33,12 @@ export type { PendingQuestion, QuestionAnswer } from './interaction.ts';
 export { userCommandSchema } from './user-command.ts';
 export type { UserCommand } from './user-command.ts';
 export {
+  userInstructionsSchema,
+  userInstructionSettingsSchema,
+  saveUserInstructionsSchema,
+} from './user-instructions.ts';
+export type { UserInstructionSettings, SaveUserInstructions } from './user-instructions.ts';
+export {
   mcpPromptEntrySchema,
   mcpPromptGetSchema,
   mcpPromptApplySchema,

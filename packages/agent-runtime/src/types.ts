@@ -1,5 +1,6 @@
 import type { ProjectInstructions } from './instructions.ts';
-import type { Message, ModelConfig, Session } from '@praxis/contracts';
+import type { Message, ModelConfig, Session, UserInstructionSettings } from '@praxis/contracts';
+import type { userInstructionMaterial } from '@praxis/context';
 import type { ModelClient } from '@praxis/model-core';
 import type { ActivePlugin } from '@praxis/plugin-host';
 import type { Approve } from '@praxis/permissions';
@@ -10,6 +11,7 @@ import { ToolExecutor } from '@praxis/tools';
 export interface RuntimeOptions {
   model: ModelClient;
   beginUse: (owner: string, signal: AbortSignal) => Promise<ModelConfig>;
+  userInstructions?: (owner: string, signal: AbortSignal) => Promise<UserInstructionSettings>;
   authorizeCommand?: (owner: string, signal: AbortSignal) => Promise<void>;
   interactive?: boolean;
   protectedPaths?: string[];
@@ -33,6 +35,7 @@ export interface RuntimeOptions {
 }
 
 export interface Active {
+  userInstructions?: ReturnType<typeof userInstructionMaterial>;
   instructions?: ProjectInstructions;
   command?: boolean;
   id: string;

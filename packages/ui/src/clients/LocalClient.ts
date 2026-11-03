@@ -131,6 +131,17 @@ export class LocalClient implements PraxisClient {
   exportDiagnostics() {
     return this.bridge.call<Record<string, unknown>>('host/diagnostics-export');
   }
+  userInstructions() {
+    return this.bridge.call<import('@praxis/contracts').UserInstructionSettings>(
+      'user-instructions/read',
+    );
+  }
+  saveUserInstructions(input: import('@praxis/contracts').SaveUserInstructions) {
+    return this.bridge.call<import('@praxis/contracts').UserInstructionSettings>(
+      'user-instructions/save',
+      input,
+    );
+  }
   plugins() {
     return this.bridge.call<PluginState>('plugin/list');
   }

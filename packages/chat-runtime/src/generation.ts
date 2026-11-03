@@ -1,9 +1,10 @@
 import type { ModelConfig } from '@praxis/contracts';
 import { assert, safeError } from '@praxis/contracts';
-import type { ChatContextServices } from './context.ts';
+import type { ChatContextServices } from './context-types.ts';
 import { buildChatContext } from './context.ts';
 import type { Running } from './types.ts';
-export interface GenerationServices extends ChatContextServices {
+import { snapshotUserInstructions, type UserInstructionOptions } from './user-instructions.ts';
+export interface GenerationServices extends ChatContextServices, UserInstructionOptions {
   beginUse: (owner: string, providerId: string, signal: AbortSignal) => Promise<ModelConfig>;
   emit: (name: string, payload: unknown) => void;
 }
@@ -34,18 +35,7 @@ export async function generateChat(
   }, 500);
   try {
     run.controller.signal.throwIfAborted();
-    const config = await services.beginUse(run.owner, providerId, run.controller.signal);
-    run.controller.signal.throwIfAborted();
-    const messages = await buildChatContext(services, run, config, inputId);
-    await services.append(run.chatId, 'request/snapshot', {
-      generationId: run.id,
-      messages,
-      tools: [],
-      providerId,
-      configRevision: config.revision,
-      model: config.model,
-      adapter: config.adapter ?? 'openai-compatible',
-    });
+    const { config, messages } = await prepareGeneration(services, run, providerId, inputId);
     const response = await services.model.complete({
       messages,
       tools: [],
@@ -103,4 +93,26 @@ export async function generateChat(
     });
     services.emit('event', event);
   }
+}
+
+async function prepareGeneration(
+  services: GenerationServices,
+  run: Running,
+  providerId: string,
+  inputId: string,
+) {
+  const config = await services.beginUse(run.owner, providerId, run.controller.signal);
+  run.controller.signal.throwIfAborted();
+  const personal = await snapshotUserInstructions(services, run, config);
+  const messages = await buildChatContext(services, run, config, inputId, personal);
+  await services.append(run.chatId, 'request/snapshot', {
+    generationId: run.id,
+    messages,
+    tools: [],
+    providerId,
+    configRevision: config.revision,
+    model: config.model,
+    adapter: config.adapter ?? 'openai-compatible',
+  });
+  return { config, messages };
 }

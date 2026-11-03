@@ -7,7 +7,7 @@ test('real PostgreSQL migration is repeatable and credential rotation revokes re
   const f = await databaseFixture();
   try {
     await migrate(f.database);
-    assert.equal((await f.database.query('SELECT version FROM schema_migrations')).rowCount, 1);
+    assert.equal((await f.database.query('SELECT version FROM schema_migrations')).rowCount, 2);
     const rotated = await f.auth.refresh(f.login.refreshToken, false);
     await f.auth.authenticate(rotated.accessToken);
     await assert.rejects(f.auth.refresh(f.login.refreshToken, false), { code: 'UNAUTHENTICATED' });
