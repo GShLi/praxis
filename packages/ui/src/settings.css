@@ -4,6 +4,7 @@
 @import './settings/styles/providers.css';
 @import './settings/styles/editor.css';
 @import './settings/styles/plugins.css';
+@import './settings/styles/mcp.css';
 @import './settings/styles/account.css';
 @import './settings/styles/about.css';
 @import './settings/styles/responsive.css';

@@ -1,13 +1,12 @@
-import { McpCredential } from './McpCredential.tsx';
-import { McpOAuth } from './McpOAuth.tsx';
+import { McpServerRow } from './McpServerRow.tsx';
 import { useState } from 'react';
-import type { PraxisClient } from '../client-types.ts';
+import type { PraxisClient, McpState } from '../client-types.ts';
 import { Empty, SettingsIcon, Status } from './controls.tsx';
 import { McpEditor } from './McpEditor.tsx';
 import { useMcpSettings } from './useMcpSettings.ts';
 
 export function McpSettings({ client }: { client: PraxisClient }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<McpState['value'][number] | 'new' | null>(null);
   const settings = useMcpSettings(client);
   const { state, message, busy, checked } = settings;
   return (
@@ -17,7 +16,7 @@ export function McpSettings({ client }: { client: PraxisClient }) {
         <button
           className="primary-button compact"
           disabled={busy || !client.saveMcp || !state}
-          onClick={() => setEditing(true)}
+          onClick={() => setEditing('new')}
         >
           <SettingsIcon name="plus" />
           添加连接
@@ -29,65 +28,34 @@ export function McpSettings({ client }: { client: PraxisClient }) {
         </Empty>
       )}
       {state?.value.map((server) => (
-        <article className="provider-row" key={server.id}>
-          <span className="connection-symbol">
-            <SettingsIcon name="connect" />
-          </span>
-          <div className="provider-summary">
-            <h3>
-              {server.displayName}
-              <span className="settings-badge">{server.enabled ? '已启用' : '未启用'}</span>
-            </h3>
-            <p>{server.transport.endpoint ?? server.transport.executable}</p>
-            {client.setMcpBearer && client.clearMcpCredential && (
-              <McpCredential
-                server={server}
-                busy={busy}
-                save={(token) => settings.setBearer(server.id, server.revision, token)}
-                clear={() => settings.clearCredential(server.id, server.revision)}
-              />
-            )}
-            <McpOAuth
-              client={client}
-              server={server}
-              storeRevision={state.revision}
-              busy={busy}
-              completed={settings.refresh}
-            />
-          </div>
-          <button
-            className="secondary-button"
-            disabled={busy || !client.testMcp}
-            onClick={() => {
-              void settings.check(server.id, server.revision);
-            }}
-          >
-            检查连接
-          </button>
-          {server.enabled ? (
-            <button
-              className="text-button"
-              disabled={busy || !client.disableMcp}
-              onClick={() => {
-                void settings.disable(server.id);
-              }}
-            >
-              停用
-            </button>
-          ) : (
-            <button
-              className="secondary-button"
-              disabled={busy || !client.enableMcp || checked[server.id] !== server.revision}
-              onClick={() => {
-                void settings.enable(server.id, server.revision);
-              }}
-            >
-              启用 Agent 工具
-            </button>
-          )}
-        </article>
+        <McpServerRow
+          key={server.id}
+          server={server}
+          client={client}
+          busy={busy}
+          checked={checked[server.id] === server.revision}
+          storeRevision={state.revision}
+          edit={() => setEditing(server)}
+          actions={{
+            setBearer: (token) => settings.setBearer(server.id, server.revision, token),
+            clearCredential: () => settings.clearCredential(server.id, server.revision),
+            check: () => settings.check(server.id, server.revision),
+            disable: () => settings.disable(server.id),
+            enable: () => settings.enable(server.id, server.revision),
+            remove: () => settings.remove(server.id, server.revision),
+            refresh: settings.refresh,
+          }}
+        />
       ))}
-      {editing && <McpEditor busy={busy} save={settings.save} cancel={() => setEditing(false)} />}
+      {editing && (
+        <McpEditor
+          key={editing === 'new' ? 'new' : editing.id}
+          busy={busy}
+          {...(editing === 'new' ? {} : { initial: editing })}
+          save={(config) => settings.save(config, editing === 'new' ? null : editing.revision)}
+          cancel={() => setEditing(null)}
+        />
+      )}
       <Status message={message} />
       <div className="settings-info-note">
         <SettingsIcon name="info" />

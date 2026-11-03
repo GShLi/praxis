@@ -77,4 +77,18 @@ export class McpConfigService {
     this.invalidate(serverId);
     return result;
   }
+  async remove(serverId: string, expectedStoreRevision: number, expectedRevision: number) {
+    const result = await this.file.update(expectedStoreRevision, (configs) => {
+      const config = configs.find((value) => value.id === serverId);
+      assert(
+        config?.revision === expectedRevision,
+        'CONFIG_CONFLICT',
+        '服务器版本已变化，请刷新后重试。',
+      );
+      assert(!config.enabled, 'MCP_ENABLED', '请先停用服务器并清理其凭据。');
+      return configs.filter((value) => value.id !== serverId);
+    });
+    this.invalidate(serverId);
+    return result;
+  }
 }

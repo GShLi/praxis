@@ -36,6 +36,7 @@ export function McpOAuth({
       </button>
       {open && (
         <form
+          className="settings-editor mcp-credential-form"
           onSubmit={(event) => {
             event.preventDefault();
             void auth.start({
@@ -90,7 +91,7 @@ export function McpOAuth({
               placeholder="docs:read"
             />
           </label>
-          <label>
+          <label className="settings-checkbox">
             <input
               type="checkbox"
               checked={allowPrivateIssuer}

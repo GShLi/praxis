@@ -1,0 +1,40 @@
+.provider-row.mcp-server {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+}
+.mcp-server-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.mcp-credential {
+  margin-top: 12px;
+}
+.mcp-credential > small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.mcp-credential-form {
+  margin-top: 12px;
+}
+.mcp-credential-form input[type='checkbox'] {
+  width: auto;
+}
+.mcp-delete-confirmation {
+  grid-column: 1 / -1;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.mcp-delete-confirmation p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.mcp-delete-confirmation button + button {
+  margin-left: 12px;
+}

@@ -92,9 +92,14 @@ export function useMcpSettings(client: PraxisClient) {
         await client.clearMcpCredential!(id, state!.revision, revision);
         return '本地凭据已清除，连接已停用。远端 Token 未撤销。';
       }, true),
-    save: (config: unknown) =>
+    remove: (id: string, revision: number) =>
       run(async () => {
-        await client.saveMcp!(config, state!.revision, null);
+        await client.deleteMcp!(id, state!.revision, revision);
+        return '连接和本地凭据已删除。远端授权未撤销。';
+      }, true),
+    save: (config: unknown, revision: number | null = null) =>
+      run(async () => {
+        await client.saveMcp!(config, state!.revision, revision);
         return '连接已保存，请先检查连接。';
       }, true),
   };

@@ -73,6 +73,7 @@ export type HostMethod =
   | 'mcp/oauth-cancel'
   | 'mcp/server-list'
   | 'mcp/server-upsert'
+  | 'mcp/server-delete'
   | 'mcp/server-disable'
   | 'mcp/server-enable'
   | 'mcp/test'
@@ -156,7 +157,12 @@ export interface McpState {
     revision: number;
     enabled: boolean;
     protocol: string;
-    transport: { type: string; endpoint?: string; executable?: string };
+    transport: {
+      type: string;
+      endpoint?: string;
+      executable?: string;
+      allowPrivateDestination?: boolean;
+    };
     credential?: { type: 'none' | 'bearer' | 'oauth'; storage: 'os' | 'memory' | 'missing' | null };
   }>;
 }
@@ -249,6 +255,7 @@ export interface PraxisClient {
   applyMcpPrompt?(input: McpPromptApply, providerId: string): Promise<void>;
   cancelMcpPrompt?(sessionId: string): Promise<void>;
   saveMcp?(config: unknown, storeRevision: number, configRevision: number | null): Promise<void>;
+  deleteMcp?(id: string, storeRevision: number, configRevision: number): Promise<void>;
   disableMcp?(id: string, revision: number): Promise<void>;
   testMcp?(id: string, revision: number): Promise<McpTestResult>;
   enableMcp?(id: string, storeRevision: number, configRevision: number): Promise<void>;

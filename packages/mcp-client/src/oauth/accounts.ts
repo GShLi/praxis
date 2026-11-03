@@ -181,4 +181,12 @@ export class OAuthAccounts {
   invalidate(serverId: string) {
     for (const job of this.active.values()) if (job.serverId === serverId) job.cancel.abort();
   }
+  async stopServer(serverId: string) {
+    this.invalidate(serverId);
+    await Promise.allSettled(
+      [...this.active.values()]
+        .filter((job) => job.serverId === serverId)
+        .map((job) => job.promise),
+    );
+  }
 }

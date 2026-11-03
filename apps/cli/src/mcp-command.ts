@@ -51,11 +51,17 @@ export async function mcpCommand(
     const config = state.value.find((c) => c.id === target);
     assert(config, 'MCP_NOT_FOUND', '需要已保存的服务器 ID。');
     assert(
-      ['test', 'enable', 'disable'].includes(action),
+      ['test', 'enable', 'disable', 'remove'].includes(action),
       'INVALID_COMMAND',
-      'mcp 支持 list / import FILE / test ID / enable ID / disable ID。',
+      'mcp 支持 list / import FILE / test ID / enable ID / disable ID / remove ID。',
     );
-    if (action === 'disable')
+    if (action === 'remove')
+      result = await host.rpc.request('mcp/server-delete', {
+        serverId: config.id,
+        expectedStoreRevision: state.revision,
+        expectedRevision: config.revision,
+      });
+    else if (action === 'disable')
       result = await host.rpc.request('mcp/server-disable', {
         serverId: config.id,
         expectedStoreRevision: state.revision,

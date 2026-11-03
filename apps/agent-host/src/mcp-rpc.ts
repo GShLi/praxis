@@ -45,7 +45,6 @@ export function mcpRoutes(identity: HostIdentity): RpcRoutes {
       };
     },
     'mcp/server-upsert': async (params: unknown) => {
-      const { mcpConfig } = identity.require();
       const input = z
         .strictObject({
           config: z.unknown(),
@@ -53,7 +52,19 @@ export function mcpRoutes(identity: HostIdentity): RpcRoutes {
           expectedRevision: z.number().int().positive().nullable(),
         })
         .parse(params);
-      return mcpConfig!.upsert(input.config, input.expectedStoreRevision, input.expectedRevision);
+      return credentials().saveConfig(
+        input.config,
+        input.expectedStoreRevision,
+        input.expectedRevision,
+      );
+    },
+    'mcp/server-delete': async (params) => {
+      const input = credentialInput.parse(params);
+      return credentials().deleteConfig(
+        input.serverId,
+        input.expectedStoreRevision,
+        input.expectedRevision,
+      );
     },
     'mcp/server-disable': async (params: unknown) => {
       const { mcpConfig } = identity.require();

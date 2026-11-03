@@ -19,6 +19,7 @@ const allowed = new Set([
   'mcp/oauth-cancel',
   'mcp/server-list',
   'mcp/server-upsert',
+  'mcp/server-delete',
   'mcp/server-disable',
   'mcp/server-enable',
   'mcp/test',

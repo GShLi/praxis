@@ -60,6 +60,12 @@ export class McpOAuth {
     for (const flow of this.flows.values())
       if (flow.input.serverId === serverId && !flow.committing) flow.cancel();
   }
+  async stopServer(serverId: string) {
+    const flows = [...this.flows.values()].filter((flow) => flow.input.serverId === serverId);
+    for (const flow of flows) flow.cancel();
+    await Promise.allSettled(flows.map((flow) => flow.completed));
+    await this.accounts.stopServer(serverId);
+  }
   resolve(config: McpConfig, signal: AbortSignal) {
     return this.accounts.resolve(config, signal);
   }

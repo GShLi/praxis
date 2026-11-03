@@ -131,6 +131,12 @@ test('CLI consumes a one-time Bearer input, reports memory fallback, and enables
     );
     assert.match(listed.stdout, /"storage": "missing"/);
     assert.ok(!listed.stdout.includes(token));
+    const removed = await execute(
+      process.execPath,
+      ['--import', 'tsx', 'apps/cli/src/main.ts', 'mcp', 'remove', serverId],
+      options,
+    );
+    assert.equal(JSON.parse(removed.stdout).value.length, 0);
   } finally {
     await host?.close();
     server.close();

@@ -5,6 +5,7 @@ import type { SecretStore } from './secret-store.ts';
 import { credentialReference } from './references.ts';
 import { CredentialRecords } from './records.ts';
 import { McpOAuth } from '../oauth/service.ts';
+import { CredentialConfigChanges } from './config-changes.ts';
 
 export interface McpAuthentication {
   authEpoch: number;
@@ -19,6 +20,7 @@ export type ResolveCredentials = (
 export class McpCredentials {
   readonly oauth: McpOAuth;
   private records: CredentialRecords;
+  private configChanges: CredentialConfigChanges;
   private closed = false;
   private lifetime = new AbortController();
   private pending = new Set<Promise<unknown>>();
@@ -32,6 +34,22 @@ export class McpCredentials {
   ) {
     this.records = new CredentialRecords(configs, secrets, owner, client, this.lifetime.signal);
     this.oauth = new McpOAuth(this.records, protectedValues, authenticationChanged);
+    this.configChanges = new CredentialConfigChanges(this.records, (id) =>
+      this.oauth.stopServer(id),
+    );
+  }
+  saveConfig(raw: unknown, storeRevision: number, revision: number | null) {
+    return this.track(() => {
+      assert(
+        !containsSecret(raw, this.protectedValues),
+        'MCP_SECRET_DENIED',
+        '连接配置包含已知秘密。',
+      );
+      return this.configChanges.save(raw, storeRevision, revision);
+    });
+  }
+  deleteConfig(id: string, storeRevision: number, revision: number) {
+    return this.track(() => this.configChanges.remove(id, storeRevision, revision));
   }
   setBearer(
     serverId: string,

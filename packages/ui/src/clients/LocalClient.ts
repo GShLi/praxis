@@ -207,6 +207,13 @@ export class LocalClient implements PraxisClient {
   async disableMcp(id: string, revision: number) {
     await this.bridge.call('mcp/server-disable', { serverId: id, expectedStoreRevision: revision });
   }
+  async deleteMcp(id: string, storeRevision: number, configRevision: number) {
+    await this.bridge.call('mcp/server-delete', {
+      serverId: id,
+      expectedStoreRevision: storeRevision,
+      expectedRevision: configRevision,
+    });
+  }
   async testMcp(id: string, revision: number) {
     return this.bridge.call<McpTestResult>('mcp/test', {
       serverId: id,

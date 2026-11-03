@@ -215,9 +215,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/settings/McpEditor.tsx#McpEditor:1": {
-    "maxLines": 111,
-    "reason": "连续服务器表单 JSX 新增提示词能力选择；无外部 I/O。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 133,
+    "reason": "同一远程连接表单支持新建/编辑和协议/能力字段，连续 JSX；保存委托给客户端 Hook，不含网络业务。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "packages/ui/src/settings/McpSettings.tsx#McpSettings:1": {
     "maxLines": 94,
@@ -240,9 +240,9 @@
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/ui/src/settings/useMcpSettings.ts#useMcpSettings:1": {
-    "maxLines": 97,
-    "reason": "已有设置状态 Hook 增加刷新入口，复用原有异常与身份代数保护。",
-    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+    "maxLines": 102,
+    "reason": "单一设置状态 Hook 增加删除和编辑版本参数，沿用身份代数、失败后刷新与操作状态。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "packages/ui/src/settings/useProviderEditor.ts#useProviderEditor:1": {
     "maxLines": 141,
@@ -430,9 +430,9 @@
     "validation": "runtime-initialization、plugin-provider 回归及全量检查/构建。"
   },
   "apps/agent-host/src/mcp-rpc.ts#mcpRoutes:1": {
-    "maxLines": 83,
-    "reason": "MCP 控制路由表；凭据持久化由独立 service 负责，路由只做校验/身份和调用。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 94,
+    "reason": "MCP 控制路由表增加版本化删除，修改/删除/秘密清理由凭据用例协调，路由不内嵌持久化。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "packages/mcp-client/src/credentials/secret-process.ts#secretProcess:1": {
     "maxLines": 69,
@@ -445,14 +445,14 @@
     "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/McpCredential.tsx#McpCredential:1": {
-    "maxLines": 91,
-    "reason": "单一凭据编辑器的连续 JSX；密码仅组件状态且提交后清除，传输由传入回调负责。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 92,
+    "reason": "原有凭据表单仅增加独立样式类，秘密仍仅存在于局部输入状态。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "tests/integration/mcp-auth.test.ts#test(CLI consumes a one-time Bearer input, reports memory fallback, and enables it for a foreground run):1": {
-    "maxLines": 125,
-    "reason": "一组真实 PostgreSQL/HTTP/Host/CLI 生命周期验证临时凭据跨进程消失与前台运行接通；Provider 安装已提取共享夹具。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 131,
+    "reason": "已有 CLI 前台凭据集成末尾增加真实 remove 调用，复用同一个临时 profile 验证删除路由。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "tests/mcp-bearer.test.ts#test(Bearer authentication reaches only its endpoint, rejects reflected secrets and invalidates active operations on rotation):1": {
     "maxLines": 84,
@@ -465,9 +465,9 @@
     "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/McpOAuth.tsx#McpOAuth:1": {
-    "maxLines": 123,
-    "reason": "OAuth 注册表单的连续 JSX 和局部字段状态；网络轮询与生命周期在 useMcpOAuth、mcp-oauth-poll，视图不持有 Token。",
-    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+    "maxLines": 124,
+    "reason": "OAuth 注册表单增加样式类；网络轮询与生命周期仍在专属 Hook 和客户端模块。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "packages/ui/src/settings/useMcpOAuth.ts#useMcpOAuth:1": {
     "maxLines": 76,
@@ -498,5 +498,10 @@
     "maxLines": 86,
     "reason": "同一真实 HTTP 操作跨 Token 到期、刷新与旧范围取消；共享连接和计时边界在单一 finally 清理。",
     "validation": "mcp-oauth-runtime 测试检查旧操作取消、配置版本保持和 Session 不含 Token；全量结构/类型/测试。"
+  },
+  "packages/ui/src/settings/McpServerRow.tsx#McpServerRow:1": {
+    "maxLines": 111,
+    "reason": "从设置页提取单个连接视图，集中显示凭据、授权和操作按钮，删除确认仅是局部视图状态。",
+    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   }
 }

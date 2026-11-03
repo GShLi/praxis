@@ -5,7 +5,7 @@ pnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_
 pnpm cli sessions
 pnpm cli providers
 pnpm cli plugins [list|inspect PATH|install PATH --digest SHA256|enable ID|disable ID]
-pnpm cli mcp [list|import FILE|test ID|enable ID|disable ID]
+pnpm cli mcp [list|import FILE|test ID|enable ID|disable ID|remove ID]
 pnpm cli mcp list-prompts SESSION_ID SERVER_ID
 pnpm cli mcp preview SESSION_ID SERVER_ID NAME --arguments '{"topic":"Hello"}'
 pnpm cli run --resume SESSION_ID --apply-prompt PREVIEW_ID --content-hash HASH --provider PROVIDER_ID

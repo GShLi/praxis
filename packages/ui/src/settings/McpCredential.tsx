@@ -36,6 +36,7 @@ export function McpCredential({
       </button>
       {open && (
         <form
+          className="settings-editor mcp-credential-form"
           onSubmit={(event) => {
             event.preventDefault();
             void save(token)
