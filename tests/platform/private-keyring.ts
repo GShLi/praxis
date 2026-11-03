@@ -80,4 +80,34 @@ export class PrivateKeyring {
       clearTimeout(timer);
     }
   }
+
+  async lock() {
+    const base = [
+      '--user',
+      'call',
+      'org.freedesktop.secrets',
+      '/org/freedesktop/secrets',
+      'org.freedesktop.Secret.Service',
+    ];
+    const alias = await execute('/usr/bin/busctl', [...base, 'ReadAlias', 's', 'default'], {
+      timeout: 1000,
+    });
+    const match = /^o "(\/org\/freedesktop\/secrets\/collection\/[^"\n]+)"\s*$/.exec(alias.stdout);
+    assert(match?.[1], 'Private keyring must have a default collection.');
+    const collection = match[1];
+    await execute('/usr/bin/busctl', [...base, 'Lock', 'ao', '1', collection], { timeout: 1000 });
+    const result = await execute(
+      '/usr/bin/busctl',
+      [
+        '--user',
+        'get-property',
+        'org.freedesktop.secrets',
+        collection,
+        'org.freedesktop.Secret.Collection',
+        'Locked',
+      ],
+      { timeout: 1000 },
+    );
+    assert.equal(result.stdout.trim(), 'b true');
+  }
 }

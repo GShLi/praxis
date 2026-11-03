@@ -53,13 +53,29 @@ export class NativeSecretBackend implements SecretBackend {
         ]
       : [action, key];
     const result = await secretProcess(this.executable, args, value, signal);
-    // secret-tool uses exit 1 both for absence and service errors; only quiet, empty output is absence.
+    // A quiet lookup exit 1 can also mean an existing, locked item. Search without
+    // unlocking before reporting absence; keep all helper output in private pipes.
     const absent = action !== 'set' && result.code === (linux ? 1 : 44);
-    if (absent && (!linux || (!result.stderrPresent && result.output.length === 0)))
+    if (
+      absent &&
+      (!linux ||
+        (!result.stderrPresent &&
+          result.output.length === 0 &&
+          (await this.linuxAbsent(key, signal))))
+    )
       return undefined;
     assert(result.code === 0, 'SECRET_STORE_UNAVAILABLE', '系统凭据存储不可用。');
     // secret-tool appends a newline only for a terminal; our stdout is always a private pipe.
     return result.output;
+  }
+  private async linuxAbsent(key: string, signal: AbortSignal) {
+    const result = await secretProcess(
+      this.executable,
+      ['search', '--all', 'service', 'ai.praxis.mcp', 'account', key],
+      '',
+      signal,
+    );
+    return result.code === 0 && !result.stderrPresent && result.output.length === 0;
   }
   async set(key: string, value: string, signal: AbortSignal) {
     await this.invoke('set', key, value, signal);

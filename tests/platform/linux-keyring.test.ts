@@ -14,6 +14,10 @@ test('Linux private OS keyring never truncates credentials at the secret-tool in
   await isolated('limits');
 });
 
+test('Linux locked credentials are not reported missing or overwritten before unlock', async () => {
+  await isolated('locked');
+});
+
 async function isolated(scenario: string) {
   assert.equal(process.platform, 'linux');
   const helper = process.env.PRAXIS_TEST_KEYRING_HELPER ?? '/usr/bin/gnome-keyring-daemon';

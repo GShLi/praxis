@@ -60,6 +60,30 @@ async function main() {
   assert.equal(process.env.PRAXIS_TEST_PRIVATE_KEYRING, '1');
   if (process.argv[2] === 'round-trip') await roundTrip();
   else if (process.argv[2] === 'limits') await limits();
+  else if (process.argv[2] === 'locked') await locked();
   else throw new Error('Unknown private keyring test case.');
+}
+
+async function locked() {
+  let daemon = new PrivateKeyring();
+  const store = new SecretStore(new NativeSecretBackend('auto'));
+  const key = randomBytes(32).toString('hex');
+  try {
+    await daemon.ready();
+    assert.equal(await store.put(key, 'private-lock-fixture'), 'os');
+    await daemon.lock();
+    await assert.rejects(store.get(key, 'os'), { code: 'SECRET_STORE_UNAVAILABLE' });
+    await assert.rejects(store.replace(key, 'replacement', 'os'), {
+      code: 'SECRET_STORE_UNAVAILABLE',
+    });
+    await daemon.stop();
+    daemon = new PrivateKeyring();
+    await daemon.ready();
+    assert.equal(await store.get(key, 'os'), 'private-lock-fixture');
+    await store.delete(key, 'os');
+  } finally {
+    await store.close();
+    await daemon.stop();
+  }
 }
 await main();
