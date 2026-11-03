@@ -28,7 +28,7 @@ pnpm check
 pnpm cli doctor
 ```
 
-`doctor` 启动独立 Host，检查协议和环境后关闭 Host。`pnpm host` 是内部 JSON 行协议入口，不是交互聊天命令。当前只验证了本机 macOS ARM64；CI 已配置三平台检查，但尚未运行远端 CI。
+`doctor` 启动独立 Host，检查协议和环境后关闭 Host。`pnpm host` 是内部 JSON 行协议入口，不是交互聊天命令。本机 macOS ARM64 已通过核心回归；Ubuntu 22.04.5 x64 已通过隔离机制原型、结构/类型检查和应用构建，原生文件、完整命令后端与桌面运行仍待验证。CI 已配置三平台检查，但尚未运行远端 CI。
 
 服务端使用 PostgreSQL，先复制 `.env.example` 为私有 `.env`，设置数据库连接和独立主密钥（可用 `pnpm server:keygen` 在自己的终端生成），再运行：
 
@@ -190,7 +190,7 @@ Web 与桌面“设置 → 个性化”支持编辑并启用用户指令。桌�
 
 CLI 使用 `pnpm cli instructions show` 查看版本，再运行 `pnpm cli instructions set /path/to/instructions.txt --revision N`，或 `pnpm cli instructions disable --revision N`。指令文件必须是最多 16 KiB 的 UTF-8 文本；版本冲突不会覆盖更新。指令不授予工具权限，请勿填写密码或 API Key。
 
-这批功能增加 PostgreSQL 迁移 v2。升级服务端时先停止服务、按部署备份流程备份，再执行 `pnpm db:migrate` 后启动；迁移保留账号、统一模型配置和历史，服务运行中会拒绝迁移。本地 SQLite 仍为 v2，不需要迁移；当前 CLI 会话备份不包含客户端设置文件，但包含历史中已使用的指令快照。
+这批功能增加 PostgreSQL 迁移 v2。升级服务端时先停止服务、按部署备份流程备份，再执行 `pnpm db:migrate` 后启动；迁移保留账号、统一模型配置和历史，服务运行中会拒绝迁移。本地 SQLite 已因上下文视图升级为 v3，打开旧库时保留历史并迁移；当前 CLI 会话备份不包含客户端设置文件，但包含历史中已使用的指令快照。
 
 ## 诊断导出
 

@@ -19,25 +19,7 @@ export function inspect(file: string, text: string) {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const occurrences = new Map<string, number>();
   function visit(node: ts.Node) {
-    if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-      node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
-    ) {
-      const typeOnly = ts.isImportDeclaration(node)
-        ? Boolean(node.importClause?.isTypeOnly)
-        : node.isTypeOnly;
-      imports.push({ name: node.moduleSpecifier.text, typeOnly });
-      if (ts.isExportDeclaration(node) && !node.exportClause)
-        errors.push(`${file}: 请使用显式导出`);
-    }
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments[0] &&
-      ts.isStringLiteral(node.arguments[0])
-    )
-      imports.push({ name: node.arguments[0].text, typeOnly: false });
+    inspectImport(node, file, imports, errors);
     if (ts.isFunctionLike(node) && 'body' in node && node.body) {
       const length =
         source.getLineAndCharacterOfPosition(node.end).line -
@@ -63,6 +45,32 @@ export function inspect(file: string, text: string) {
         errors.push(`${file}: index.ts 只能导出与声明契约`);
     }
   return { sizes, imports, errors };
+}
+function inspectImport(node: ts.Node, file: string, imports: Import[], errors: string[]) {
+  if (
+    (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+    node.moduleSpecifier &&
+    ts.isStringLiteral(node.moduleSpecifier)
+  ) {
+    const typeOnly = ts.isImportDeclaration(node)
+      ? Boolean(node.importClause?.isTypeOnly)
+      : node.isTypeOnly;
+    imports.push({ name: node.moduleSpecifier.text, typeOnly });
+    if (ts.isExportDeclaration(node) && !node.exportClause) errors.push(`${file}: 请使用显式导出`);
+  }
+  if (
+    ts.isCallExpression(node) &&
+    node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+    node.arguments[0] &&
+    ts.isStringLiteral(node.arguments[0])
+  )
+    imports.push({ name: node.arguments[0].text, typeOnly: false });
+  if (
+    ts.isImportTypeNode(node) &&
+    ts.isLiteralTypeNode(node.argument) &&
+    ts.isStringLiteral(node.argument.literal)
+  )
+    imports.push({ name: node.argument.literal.text, typeOnly: true });
 }
 function functionName(node: ts.SignatureDeclaration, source: ts.SourceFile): string {
   if (node.name) return node.name.getText(source);

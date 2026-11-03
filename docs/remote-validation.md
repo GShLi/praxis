@@ -43,6 +43,23 @@ ssh -o BatchMode=yes -o ConnectTimeout=10 -p 22 double@192.168.1.20 'uname -s; u
 
 首次连接尚未登记主机指纹时，先手动连接并核对指纹；无需关闭 SSH 主机校验。
 
+### Ubuntu 构建依赖
+
+Ubuntu 22.04.5 LTS 可以作为实际验证目标；内核版本以 `uname -r` 为准，不从发行版小版本推断。测试使用普通用户。项目要求的 Node/pnpm 版本见根目录 `package.json`，可安装到专用测试目录，无需修改系统 Node 或使用 root 运行测试。
+
+缺少编译器和 Secret Service 命令行工具时，由有 sudo 权限的用户执行：
+
+```sh
+sudo apt-get update
+sudo apt-get install --no-install-recommends build-essential libsecret-tools
+```
+
+`libsecret-tools` 提供 `secret-tool`；实际系统凭据测试还需要该用户可访问且已解锁的 Secret Service。仅安装命令不代表凭据持久化已可用，无图形登录的 SSH 环境可能只能验证明确的内存降级。不要为了测试关闭认证或配置无限制免密 sudo。
+
+原生命令隔离另需 Bubblewrap 和可用的用户 namespace。缺少 Bubblewrap 时可由管理员安装 `bubblewrap`；探测失败须保留失败结果，不能自动以普通宿主进程代替。编译、命令隔离、凭据和桌面交互分别记录验收状态。
+
+`pnpm test:linux-isolation` 在原生 Linux 上用 Bubblewrap 和 `/usr/bin/python3` 验证最小挂载/环境隔离、宿主 TCP 与抽象 Unix socket 不可达，以及模拟 Host 强杀后的双重 fork/setsid 子孙清理。它使用临时假数据和本地测试监听，不读取系统凭据；不是生产策略实现，也不会启用 Praxis 的命令工具。此专用套件不包含在跨平台 `pnpm check` 中，不能用 macOS/Windows 上的跳过结果计为通过。
+
 ## Windows
 
 需要 Windows 的 **OpenSSH Server**，并配置从这台 Mac 到 Windows 账号的公钥登录。账号和 IP 与 Linux 一样填写，另外提供 Windows 形式的专用测试目录。

@@ -90,6 +90,9 @@ importers:
       '@praxis/plugin-host':
         specifier: workspace:*
         version: link:packages/plugin-host
+      '@praxis/plugin-sdk':
+        specifier: workspace:*
+        version: link:packages/plugin-sdk
       '@praxis/schema':
         specifier: workspace:*
         version: link:packages/schema

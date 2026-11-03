@@ -60,3 +60,21 @@ test('structure gate finds cycles including types without rejecting shared leave
   );
   assert.deepEqual(acyclic, []);
 });
+
+test('inline import types still require a declared dependency', () => {
+  const result = inspect(
+    'tests/example.test.ts',
+    `let services: import('@praxis/plugin-sdk').PluginServices;
+     type Module = typeof import('@praxis/model-core');`,
+  );
+  const errors: string[] = [];
+  dependencies(
+    'tests/example.test.ts',
+    result.imports,
+    [{ directory: '.', manifest: { name: 'root' } }],
+    errors,
+  );
+  assert(errors.some((error) => error.includes('未声明依赖 @praxis/plugin-sdk')));
+  assert(errors.some((error) => error.includes('未声明依赖 @praxis/model-core')));
+  assert(result.imports.every((dependency) => dependency.typeOnly));
+});
