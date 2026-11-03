@@ -21,7 +21,12 @@ export async function createTurnTools(
 ) {
   const signal = turn.controller.signal;
   const files = await createTurnFiles(store, options, session, turn, workspace, config);
-  const processes = options.processes?.(session, store);
+  const processes = options.processes?.(session, store, {
+    turnId: turn.id,
+    deadline: turn.deadline,
+    approve: approvals.forTurn(session.id, turn.id),
+    onFatal: (error) => turn.controller.abort(error),
+  });
   let extension: ToolExtension | undefined;
   try {
     extension = config

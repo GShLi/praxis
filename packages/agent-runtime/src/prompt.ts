@@ -37,6 +37,7 @@ export async function fixedPrompt(
         workspace: session.workspace,
         permission: store.get(id).permission,
         plan: turn.executor?.plan(),
+        executions: turn.executor?.processes?.list({ includeFinished: false, limit: 20 }) ?? [],
         remainingSteps: (options.maxSteps ?? 100) - turn.steps,
         remainingTools: (options.maxTools ?? 200) - turn.tools,
       }),

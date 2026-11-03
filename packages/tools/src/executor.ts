@@ -119,7 +119,7 @@ export class ToolExecutor {
       const permission = this.store.get(this.sessionId).permission;
       assert(!writing || !this.processes?.active, 'WORKSPACE_BUSY', '活动命令占用工作区修改位置。');
       assert(
-        !writing || permission.mode === 'workspace-write',
+        !writing || name === 'process_exec' || permission.mode === 'workspace-write',
         'ACCESS_DENIED',
         '会话当前是只读模式。',
       );
@@ -159,7 +159,9 @@ export class ToolExecutor {
     if (!plugin && !extension) {
       const parsed = schemas[name].parse(raw);
       assert(
-        !writing || this.store.get(this.sessionId).permission.mode === 'workspace-write',
+        !writing ||
+          name === 'process_exec' ||
+          this.store.get(this.sessionId).permission.mode === 'workspace-write',
         'ACCESS_DENIED',
         '会话当前是只读模式。',
       );

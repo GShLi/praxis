@@ -155,6 +155,20 @@ export class SessionStore extends EventEmitter {
       .get(id, type, scope ?? null, scope ?? null) as Row | undefined;
     return row ? (JSON.parse(String(row.document)) as Event) : undefined;
   }
+  matchingEvents(id: string, type: string, limit: number, scope?: string): Event[] {
+    assert(
+      Number.isInteger(limit) && limit >= 1 && limit <= 4096,
+      'INVALID_ARGUMENT',
+      '事件查询上限无效。',
+    );
+    return (
+      this.db
+        .prepare(
+          "SELECT document FROM events WHERE session_id=? AND json_extract(document,'$.type')=? AND (? IS NULL OR json_extract(document,'$.payload.scope')=?) ORDER BY seq DESC LIMIT ?",
+        )
+        .all(id, type, scope ?? null, scope ?? null, limit) as Row[]
+    ).map((row) => JSON.parse(String(row.document)) as Event);
+  }
   accept(...args: Parameters<InputRepository['accept']>) {
     return this.inputRepository.accept(...args);
   }

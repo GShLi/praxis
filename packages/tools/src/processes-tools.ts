@@ -13,12 +13,23 @@ export async function executeProcessesTool(
   switch (name) {
     case 'process_exec':
       assert(processes, 'SANDBOX_UNAVAILABLE', '此平台命令隔离尚未通过验证。');
-      result.data = await processes.execute(schemas.process_exec.parse(raw), signal, permission);
+      result.data = await processes.execute(
+        schemas.process_exec.parse(raw),
+        signal,
+        permission,
+        result.callId,
+      );
       result.effectState = 'unknown';
       {
         const state = (result.data as { processState: string }).processState;
         result.status =
-          state === 'running' ? 'running' : state === 'succeeded' ? 'succeeded' : 'failed';
+          state === 'running' || state === 'cancelling'
+            ? 'running'
+            : state === 'succeeded'
+              ? 'succeeded'
+              : state === 'cancelled'
+                ? 'cancelled'
+                : 'failed';
       }
       break;
     case 'process_read':

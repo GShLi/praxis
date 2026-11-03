@@ -8,6 +8,7 @@ export interface ProcessService {
     input: z.infer<typeof schemas.process_exec>,
     signal: AbortSignal,
     permission: Permission,
+    callId?: string,
   ): Promise<unknown>;
   read(input: z.infer<typeof schemas.process_read>, signal: AbortSignal): Promise<unknown>;
   list(input: z.infer<typeof schemas.process_list>): unknown;

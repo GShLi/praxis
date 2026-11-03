@@ -18,7 +18,16 @@ export interface RuntimeOptions {
   interactive?: boolean;
   protectedPaths?: string[];
   plugins?: (kind: 'chat' | 'agent') => readonly ActivePlugin[];
-  processes?: (session: Session, store: SessionStore) => ProcessService;
+  processes?: (
+    session: Session,
+    store: SessionStore,
+    turn: {
+      turnId: string;
+      deadline: number;
+      approve: Approve;
+      onFatal(error: Error): void;
+    },
+  ) => ProcessService;
   toolExtension?: (
     session: Session,
     config: ModelConfig,

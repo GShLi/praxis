@@ -26,6 +26,11 @@ export function recordToolFailure(
       'PATCH_MATCH_COUNT_MISMATCH',
       'SANDBOX_UNAVAILABLE',
       'ACCESS_DENIED',
+      'APPROVAL_REJECTED',
+      'APPROVAL_STALE',
+      'APPROVAL_UNAVAILABLE',
+      'EXECUTION_CLOSED',
+      'WORKSPACE_BUSY',
       'INVALID_ARGUMENT',
       'FILE_TOO_LARGE',
     ].includes(safe.code)
