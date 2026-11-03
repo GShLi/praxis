@@ -8,17 +8,15 @@ import { searchContent, type SearchInput } from './text-search.ts';
 import { readDirectory } from './directory.ts';
 import { scanFiles } from './traversal.ts';
 import type { NativeDirectoryEntry } from './native/protocol.ts';
+interface DirectorySnapshot {
+  key: string;
+  entries: Array<NativeDirectoryEntry & { path: string }>;
+  offset: number;
+  incomplete: boolean;
+}
 export class FileSearch {
   beforeDirectory: ((directory: string) => Promise<void>) | undefined;
-  private snapshots = new Map<
-    string,
-    {
-      key: string;
-      entries: Array<NativeDirectoryEntry & { path: string }>;
-      offset: number;
-      incomplete: boolean;
-    }
-  >();
+  private snapshots = new Map<string, DirectorySnapshot>();
   constructor(
     private paths: WorkspacePathPolicy,
     private content: FileContent,
@@ -32,7 +30,9 @@ export class FileSearch {
     },
     signal?: AbortSignal,
   ) {
+    signal?.throwIfAborted();
     const target = await this.paths.resolve(input.path);
+    signal?.throwIfAborted();
     const key = JSON.stringify({ path: target, hidden: input.includeHidden });
     if (input.cursor) {
       const snapshot = this.snapshots.get(input.cursor);
@@ -40,10 +40,7 @@ export class FileSearch {
       const entries = snapshot.entries.slice(snapshot.offset, snapshot.offset + input.limit);
       const offset = snapshot.offset + entries.length;
       let nextCursor: string | undefined;
-      if (offset < snapshot.entries.length) {
-        nextCursor = uuid();
-        this.snapshots.set(nextCursor, { ...snapshot, offset });
-      }
+      if (offset < snapshot.entries.length) nextCursor = this.remember({ ...snapshot, offset });
       return {
         path: target,
         entries,
@@ -64,15 +61,13 @@ export class FileSearch {
       }));
     let nextCursor: string | undefined;
     if (entries.length > input.limit) {
-      nextCursor = uuid();
-      this.snapshots.set(nextCursor, {
+      nextCursor = this.remember({
         key,
         entries,
         offset: input.limit,
         incomplete: listing.incomplete,
       });
     }
-    if (this.snapshots.size > 32) this.snapshots.delete(this.snapshots.keys().next().value!);
     return {
       path: target,
       entries: entries.slice(0, input.limit),
@@ -80,6 +75,15 @@ export class FileSearch {
       truncated: entries.length > input.limit,
       ...(nextCursor ? { nextCursor } : {}),
     };
+  }
+  private remember(snapshot: DirectorySnapshot) {
+    const cursor = uuid();
+    this.snapshots.set(cursor, snapshot);
+    if (this.snapshots.size > 32) {
+      const oldest = this.snapshots.keys().next().value;
+      if (oldest) this.snapshots.delete(oldest);
+    }
+    return cursor;
   }
   scan(
     input: { path: string; includeHidden: boolean; respectIgnore: boolean },

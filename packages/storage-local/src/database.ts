@@ -20,14 +20,16 @@ export function openDatabase(path: string) {
     chmodSync(path, 0o600);
   }
   const db = new DatabaseSync(path);
-  db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
-  const version = (db.prepare('PRAGMA user_version').get() as Row).user_version;
-  assert(
-    version === 0 || version === 1 || version === 2,
-    'STORAGE_VERSION_UNSUPPORTED',
-    '数据库版本比程序新，请升级程序。',
-  );
-  db.exec(`
+  try {
+    const version = (db.prepare('PRAGMA user_version').get() as Row).user_version;
+    assert(
+      version === 0 || version === 1 || version === 2,
+      'STORAGE_VERSION_UNSUPPORTED',
+      '数据库版本比程序新，请升级程序。',
+    );
+    db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
+    db.exec(`
+      BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, owner TEXT NOT NULL, document TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS events(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, seq INTEGER NOT NULL, document TEXT NOT NULL, PRIMARY KEY(session_id,seq));
       CREATE TABLE IF NOT EXISTS inputs(id TEXT PRIMARY KEY, session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, request_id TEXT NOT NULL, digest TEXT NOT NULL, document TEXT NOT NULL, state TEXT NOT NULL, accepted_seq INTEGER NOT NULL, UNIQUE(session_id,request_id));
@@ -38,6 +40,11 @@ export function openDatabase(path: string) {
       CREATE TABLE IF NOT EXISTS requests(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, request_id TEXT NOT NULL, digest TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(session_id,request_id));
       CREATE TABLE IF NOT EXISTS maintenance_operations(id TEXT PRIMARY KEY, owner TEXT NOT NULL, state TEXT NOT NULL, document TEXT NOT NULL);
       PRAGMA user_version=2;
+      COMMIT;
     `);
-  return db;
+    return db;
+  } catch (error) {
+    db.close(); // Also rolls back a partially initialized schema before releasing its locks.
+    throw error;
+  }
 }
