@@ -1,3 +1,4 @@
+import { providerModelChoices } from '@praxis/model-core/provider-models';
 import { McpPrompts } from './McpPrompts.tsx';
 import { Icon } from '../Navigation.tsx';
 import { PluginCommands } from './PluginCommands.tsx';
@@ -107,7 +108,7 @@ export function Composer({
             <option value="" disabled>
               选择模型
             </option>
-            {providers
+            {providerModelChoices(providers)
               .filter((p) => p.enabled)
               .map((p) => (
                 <option value={p.id} key={p.id}>

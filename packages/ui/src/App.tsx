@@ -1,3 +1,4 @@
+import { providerModelChoices } from '@praxis/model-core/provider-models';
 import { AppRail, SessionSearch } from './Navigation.tsx';
 import { Settings } from './Settings.tsx';
 import { useAppController } from './app/useAppController.ts';
@@ -113,7 +114,10 @@ export function App({ client: injected }: { client?: PraxisClient }) {
           close={() => {
             closeSettings();
             const preferred = localStorage.getItem('praxis-default-provider');
-            if (!selected && providers.some((p) => p.id === preferred && p.enabled))
+            if (
+              !selected &&
+              providerModelChoices(providers).some((p) => p.id === preferred && p.enabled)
+            )
               setProviderId(preferred!);
           }}
           saved={reloadLists}

@@ -110,9 +110,9 @@
     "validation": "mcp-client/model-catalog 的 DNS、重定向、私网拒绝、超时/取消测试"
   },
   "packages/ui/src/App.tsx#App:1": {
-    "maxLines": 228,
-    "reason": "根 JSX 仅新增 question 传递；已有状态与行为分别由 Hook、客户端和组件拥有。",
-    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+    "maxLines": 231,
+    "reason": "共享应用壳 JSX；默认模型改用共享选择投影，继续保留对话与设置装配，业务规则不在此实现。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
   },
   "packages/ui/src/Navigation.tsx#AppRail:1": {
     "maxLines": 131,
@@ -145,9 +145,9 @@
     "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/ui/src/app/useIdentity.ts#useIdentity:1": {
-    "maxLines": 69,
-    "reason": "同一登录状态的 profile/列表装载与初始化取消，返回 React 状态合同；外部 HTTP 在 client 适配器。",
-    "validation": "TS、UI 浏览器样例和构建"
+    "maxLines": 71,
+    "reason": "单一登录/列表刷新生命周期，增加多模型选择投影与失效选择回退，保留原有身份清理。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
   },
   "packages/ui/src/auth/Login.tsx#Login:1": {
     "maxLines": 98,
@@ -214,11 +214,6 @@
     "reason": "插件安装审阅、启停列表 JSX，校验与加载留在 Host；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
-  "packages/ui/src/settings/ProviderEditor.tsx#ProviderEditor:1": {
-    "maxLines": 219,
-    "reason": "连续表单 JSX，增加适配器选择及目录能力提示，所有请求和状态继续委托 Hook。",
-    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
-  },
   "packages/ui/src/settings/useMcpSettings.ts#useMcpSettings:1": {
     "maxLines": 102,
     "reason": "单一设置状态 Hook 增加删除和编辑版本参数，沿用身份代数、失败后刷新与操作状态。",
@@ -226,7 +221,7 @@
   },
   "packages/ui/src/settings/useProviderEditor.ts#useProviderEditor:1": {
     "maxLines": 141,
-    "reason": "同一个模型表单草稿生命周期，适配器/地址共同决定 Key 复用与目录有效性；保留请求版本防止过期回写。",
+    "reason": "一个供应商编辑草稿的生命周期，管理保存锁和卸载保护；模型目录请求已拆至 useProviderCatalog，更新 Key 不删除模型。",
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/workspace/src/lease.ts#acquireLease:1": {
@@ -308,11 +303,6 @@
     "maxLines": 113,
     "reason": "固定本机 MCP 协议 fixture 增加 OAuth 资源元数据；连接和请求生命周期仍由 fixture 统一释放。",
     "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
-  },
-  "packages/ui/src/settings/ModelCapacity.tsx#ModelCapacity:1": {
-    "maxLines": 65,
-    "reason": "高级设置的连续 JSX，增加用户选择插件适配器；不包含 I/O 或异步状态。",
-    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "apps/cli/src/run-cli.ts#runCli:1": {
     "maxLines": 74,
@@ -488,5 +478,75 @@
     "maxLines": 70,
     "reason": "一个真实 Runtime/SQLite/工作目录内验证任务中变更、下一任务生效和禁用三阶段，模型回调共用状态并验证旧快照；保留同一资源的 finally 清理。",
     "validation": "user-instructions.test.ts；全量 check 和应用构建。"
+  },
+  "packages/ui/src/settings/ProviderConnectionFields.tsx#ProviderConnectionFields:1": {
+    "maxLines": 84,
+    "reason": "连接字段与预设的连续 JSX；草稿、校验、请求生命周期均归编辑器 Hook。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderDeleteDialog.tsx#ProviderDeleteDialog:1": {
+    "maxLines": 70,
+    "reason": "单一删除确认操作的生命周期与短 JSX，操作锁和卸载保护共用引用，避免在途响应修改新弹窗。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderDetails.tsx#ProviderDetails:1": {
+    "maxLines": 81,
+    "reason": "详情页标题和可键盘导航的标签 JSX，概览和模型面板已按职责拆分，请求归目录 Hook。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderList.tsx#ProviderList:1": {
+    "maxLines": 78,
+    "reason": "只含列表筛选和连续 JSX，无网络与持久化；维持列表搜索状态在切换供应商时不丢失。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderModelFields.tsx#ProviderModelFields:1": {
+    "maxLines": 73,
+    "reason": "单个模型的参数与启用状态表单 JSX，所有变更通过 patch 回交草稿所有者。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderModelPicker.tsx#ProviderModelPicker:1": {
+    "maxLines": 156,
+    "reason": "模型目录、搜索、添加与已选模型的连续 JSX；目录异步生命周期和持久化已分离到 Hook，模型参数行独立。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderModelsTab.tsx#ProviderModelsTab:1": {
+    "maxLines": 61,
+    "reason": "模型详情搜索与默认模型操作 JSX，标识生成依赖 model-core 的公开规则。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/ProviderOverview.tsx#ProviderOverview:1": {
+    "maxLines": 88,
+    "reason": "供应商连接事实和目录验证结果的纯展示 JSX，异步目录状态由父组件 Hook 拥有。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/SettingsDialog.tsx#SettingsDialog:1": {
+    "maxLines": 75,
+    "reason": "原生 dialog、关闭入口和草稿放弃提示的连续 JSX；焦点和导航监听已拆至生命周期 Hook。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "packages/ui/src/settings/useProvidersPage.ts#useProvidersPage:1": {
+    "maxLines": 62,
+    "reason": "供应商页面选中项、弹窗归属、提交后刷新和默认偏好共用生命周期；详情和编辑请求单独拥有。",
+    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+  },
+  "tests/fixtures/provider-fixture.ts#providerFixture:1": {
+    "maxLines": 80,
+    "reason": "开发专用内存供应商集合及其客户端操作共用闭包，支持可重复失败/延迟/成功；不连接真实模型，不保存 Key。",
+    "validation": "类型检查、预览构建和实际桌面样例操作。"
+  },
+  "tests/integration/provider-models.test.ts#test(multiple models share one encrypted credential and enforce per-model enablement and ownership):1": {
+    "maxLines": 74,
+    "reason": "同一临时 PostgreSQL 数据库中连续验证升级、选模型、密钥轮换、旧客户端编辑和权限隔离；finally 统一释放资源。",
+    "validation": "独立 PostgreSQL 集成测试。"
+  },
+  "packages/auth/src/provider-service.ts#saveProvider:1": {
+    "maxLines": 61,
+    "reason": "供应商加密保存的单一数据库事务，旧客户端兼容投影已拆至 schema；保留行锁、版本校验、加密与审计的原子性。",
+    "validation": "独立 PostgreSQL 多模型、旧客户端写入、密钥轮换与权限测试。"
+  },
+  "packages/ui/src/settings/ProviderEditor.tsx#ProviderEditor:1": {
+    "maxLines": 80,
+    "reason": "弹窗表单的纯 JSX 装配，连接字段、模型集合、状态与生命周期分别拆分；错误提示滚动与表单所有权保持在同一组件。",
+    "validation": "真实桌面样例验证未保存保护、失败重试和模型保留，类型检查及构建。"
   }
 }

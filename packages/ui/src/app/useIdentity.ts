@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { providerModelChoices } from '@praxis/model-core/provider-models';
 import type { PraxisClient, Profile, Provider, ViewSession } from '../client-types.ts';
 export function useIdentity(client: PraxisClient, fail: (error: unknown) => void) {
   const [authenticated, setAuthenticated] = useState(false),
@@ -26,12 +27,14 @@ export function useIdentity(client: PraxisClient, fail: (error: unknown) => void
     const [all, models] = await Promise.all([client.list(), client.providers()]);
     setSessions(all);
     setProviders(models);
+    const choices = providerModelChoices(models);
     setProviderId((previous) =>
-      models.some((p) => p.id === previous && p.enabled)
+      choices.some((p) => p.id === previous && p.enabled)
         ? previous
-        : (models.find((p) => p.enabled && p.id === localStorage.getItem('praxis-default-provider'))
-            ?.id ??
-          models.find((p) => p.enabled)?.id ??
+        : (choices.find(
+            (p) => p.enabled && p.id === localStorage.getItem('praxis-default-provider'),
+          )?.id ??
+          choices.find((p) => p.enabled)?.id ??
           ''),
     );
   };

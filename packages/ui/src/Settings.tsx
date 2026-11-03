@@ -96,10 +96,12 @@ export function Settings({
           </nav>
         </aside>
         <main className="settings-main" ref={main}>
-          <div className="settings-main-inner">
-            <div className="settings-page-heading">
-              <h2>{current.title}</h2>
-            </div>
+          <div className={`settings-main-inner ${tab === 'models' ? 'providers-main' : ''}`}>
+            {tab !== 'models' && (
+              <div className="settings-page-heading">
+                <h2>{current.title}</h2>
+              </div>
+            )}
             {tab === 'general' && <General providers={providers} />}
             {tab === 'personalization' && <Personalization client={client} />}
             {tab === 'appearance' && <Appearance />}

@@ -45,7 +45,7 @@ pnpm server
 
 `pnpm ui:preview` 生成 `.cache/ui-preview/index.html`，可以直接打开检查界面。该入口只有明确标注的测试数据，没有模型调用或文件执行能力，也不属于生产构建。
 
-在“设置 → 模型提供商”填写 Base URL 和 API Key，点击“获取模型列表”，选择模型后保存。当前支持公网 HTTPS 的 OpenAI 兼容 Chat Completions 接口；Base URL 应包含厂商要求的 `/v1` 等前缀，列表通过其下的 `GET /models` 获取。查询不会保存配置；接口不支持或列表为空时，可手动输入模型 ID。上下文窗口和输出上限在“高级设置”中调整。编辑时可复用同一地址已保存的 Key；修改地址须重新填写对应的 Key。Web 由服务端查询，桌面端由本地 Host 直连厂商。
+在“设置 → 模型供应商”使用左侧搜索列表选择供应商，右侧查看连接概览和模型。添加、编辑均通过弹窗完成；一个供应商保存一份地址和 Key，可管理多个模型。填写 Base URL 和 API Key 后点击“获取模型列表”，搜索并添加模型，也可手动填写 ID。当前支持公网 HTTPS 的 OpenAI 兼容 Chat Completions 接口；Base URL 应包含厂商要求的 `/v1` 等前缀，列表通过其下的 `GET /models` 获取。查询不会保存配置，也不表示模型生成能力已经验证。每个模型的容量与启用状态可独立调整，默认模型偏好只保存在当前客户端。编辑时同一地址和适配器可复用已保存的 Key；更新 Key 不删除模型，修改地址或适配器须重新填写对应 Key。Web 由服务端查询，桌面端由本地 Host 直连厂商。旧单模型配置自动兼容，不需清空或迁移用户数据库；升级后须重启服务端与桌面/CLI Host，使用新版本的多模型接口。
 
 CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置中保存。配置 `PRAXIS_SERVER_URL` 和 `PRAXIS_API_KEY` 后运行 `pnpm cli run --workspace /path/to/project`，或追加 `--prompt "创建 HelloWorld 页面"` 执行单次任务。`--resume SESSION_ID` 继续历史会话；`pnpm cli sessions` 查看 ID。退出会停止本客户端任务。当前命令沙箱尚不可用，Agent 只能使用已实现的文件和会话工具。
 
@@ -57,7 +57,7 @@ CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置�
 
 ## 插件模型适配器
 
-统一模型配置的“高级设置 → 模型适配器”默认是 `openai-compatible`，兼容已有配置。可信插件用 `registerProvider('custom', client)` 注册后，填写 `插件ID/custom`。当前插件接口仅定义生成，不约定模型发现协议，因此插件模型按作者说明手动填写 ID。更改适配器与更改地址一样，需要重新填写 Key；未安装或未启用该适配器时明确失败，不会把凭据交给默认适配器。当前 turn 的生成和压缩固定同一个插件版本。
+供应商编辑弹窗的“连接高级设置 → 模型适配器”默认是 `openai-compatible`，兼容已有配置。可信插件用 `registerProvider('custom', client)` 注册后，填写 `插件ID/custom`。当前插件接口仅定义生成，不约定模型发现协议，因此插件模型按作者说明手动填写 ID。更改适配器与更改地址一样，需要重新填写 Key；未安装或未启用该适配器时明确失败，不会把凭据交给默认适配器。当前 turn 的生成和压缩固定同一个插件版本。
 
 模型适配器的 `ModelRequest.beforeRetry` 是预算边界：首次调用由运行时计费，适配器每次额外发送前必须调用此回调；回调抛错时立即停止。内置适配器已将 HTTP 重试接入任务及摘要预算。可信插件须遵守同一契约；同进程 SDK 无法强制拦截插件自行联网。
 

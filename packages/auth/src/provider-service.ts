@@ -1,4 +1,5 @@
 import type { ModelConfig } from '@praxis/contracts';
+import { parseModelSelection, providerModels } from '@praxis/model-core/provider-models';
 import { assert } from '@praxis/contracts';
 import type { ModelDiscoveryInput } from '@praxis/model-core/provider';
 import {
@@ -12,7 +13,7 @@ import { recordAudit } from './audit.ts';
 import { requireScope } from './authorization.ts';
 import type { Identity } from './identity.ts';
 import type { ProviderInput, ProviderRow } from './provider-schema.ts';
-import { providerInputSchema } from './provider-schema.ts';
+import { providerInputSchema, preserveProviderModels } from './provider-schema.ts';
 import { SecretCipher } from './secrets.ts';
 export class ProviderService {
   constructor(
@@ -68,6 +69,7 @@ export class ProviderService {
           'CONFIG_CONFLICT',
           '配置已被修改，请重新加载。',
         );
+        input = preserveProviderModels(input, previous.config);
         assert(
           key ||
             (input.baseUrl === normalizeProviderBaseUrl(previous.config.baseUrl) &&
@@ -148,22 +150,32 @@ export class ProviderService {
   }
   async beginUse(identity: Identity, id: string, direct: boolean): Promise<ModelConfig> {
     requireScope(identity, direct ? 'client:direct' : 'chats:write');
+    const selection = parseModelSelection(id);
     const row = (
       await this.database.query<ProviderRow>(
         'SELECT * FROM provider_configs WHERE id=$1 AND user_id=$2 AND enabled=true',
-        [id, identity.userId],
+        [selection.providerId, identity.userId],
       )
     ).rows[0];
     assert(row, 'PROVIDER_NOT_FOUND', '模型配置不存在或已停用。');
+    const modelId =
+      id === selection.providerId ? (row.config.defaultModelId ?? 'default') : selection.modelId;
+    const model = providerModels(row.config).find((m) => m.id === modelId && m.enabled);
+    assert(model, 'PROVIDER_NOT_FOUND', '模型不存在或已停用。');
     return {
       id,
       revision: row.revision,
       ...(row.config.adapter ? { adapter: row.config.adapter } : {}),
       baseUrl: row.config.baseUrl,
-      model: row.config.model,
-      contextWindow: row.config.contextWindow,
-      maxOutputTokens: row.config.maxOutputTokens,
-      apiKey: this.cipher.decrypt(row.encrypted_key, identity.userId, id, row.revision),
+      model: model.model,
+      contextWindow: model.contextWindow,
+      maxOutputTokens: model.maxOutputTokens,
+      apiKey: this.cipher.decrypt(
+        row.encrypted_key,
+        identity.userId,
+        selection.providerId,
+        row.revision,
+      ),
     };
   }
 }

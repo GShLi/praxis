@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { providerModelChoices } from '@praxis/model-core/provider-models';
 import type { Provider } from '../client-types.ts';
 import { Row } from './controls.tsx';
 
 export function General({ providers }: { providers: Provider[] }) {
   const [sendMode, setSendMode] = useState(localStorage.getItem('praxis-send-mode') ?? 'enter');
   const [model, setModel] = useState(localStorage.getItem('praxis-default-provider') ?? '');
+  const models = providerModelChoices(providers).filter((p) => p.enabled);
   return (
     <>
       <section className="settings-section">
@@ -16,20 +18,18 @@ export function General({ providers }: { providers: Provider[] }) {
           <Row title="默认模型" description="开始新对话时优先选择此配置。">
             <select
               aria-label="默认模型"
-              value={model}
+              value={models.some((p) => p.id === model) ? model : ''}
               onChange={(e) => {
                 setModel(e.target.value);
                 localStorage.setItem('praxis-default-provider', e.target.value);
               }}
             >
               <option value="">首个可用模型</option>
-              {providers
-                .filter((p) => p.enabled)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+              {models.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
             </select>
           </Row>
         </div>

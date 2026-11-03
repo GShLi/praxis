@@ -115,7 +115,7 @@ export function useAppController(injected?: PraxisClient) {
     if (!draft.trim() || sending) return;
     if (!providerId) {
       openSettings('models');
-      setError('请先配置模型提供商。');
+      setError('请先配置模型供应商。');
       return;
     }
     if (kind === 'agent' && !selected && !workspace) {

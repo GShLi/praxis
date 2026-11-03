@@ -1,145 +1,125 @@
-import type { AvailableModel } from '@praxis/model-core/provider';
+import { normalizeProviderBaseUrl } from '@praxis/model-core/provider';
+import {
+  providerModels,
+  providerModelSchema,
+  type ProviderModel,
+} from '@praxis/model-core/provider-models';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { PraxisClient, Provider } from '../client-types.ts';
 import { errorText } from './controls.tsx';
+import { useProviderCatalog } from './useProviderCatalog.ts';
+
+function initialDraft(provider?: Provider) {
+  return {
+    name: provider?.name ?? 'DeepSeek',
+    adapter: provider?.adapter ?? 'openai-compatible',
+    baseUrl: provider?.baseUrl ?? 'https://api.deepseek.com',
+    key: '',
+    pendingModel: '',
+    enabled: provider?.enabled ?? true,
+    models: provider ? providerModels(provider) : ([] as ProviderModel[]),
+  };
+}
+function endpoint(value: string) {
+  try {
+    return normalizeProviderBaseUrl(value);
+  } catch {
+    return '';
+  }
+}
+
 export function useProviderEditor(
   provider: Provider | undefined,
   client: PraxisClient,
-  saved: () => Promise<void>,
+  saved: () => void,
 ) {
-  const [name, setName] = useState(provider?.name ?? 'DeepSeek'),
-    [adapter, setAdapter] = useState(provider?.adapter ?? 'openai-compatible'),
-    [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? 'https://api.deepseek.com'),
-    [model, setModel] = useState(provider?.model ?? ''),
-    [key, setKey] = useState('');
-  const [windowSize, setWindowSize] = useState(provider?.contextWindow ?? 128000),
-    [output, setOutput] = useState(provider?.maxOutputTokens ?? 4096),
-    [enabled, setEnabled] = useState(provider?.enabled ?? true);
+  const [draft, setDraft] = useState(() => initialDraft(provider));
+  const initial = useRef(JSON.stringify(draft));
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  const [models, setModels] = useState<AvailableModel[]>([]),
-    [catalogState, setCatalogState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle'),
-    [catalogError, setCatalogError] = useState(''),
-    [manual, setManual] = useState(
-      Boolean(provider?.adapter && provider.adapter !== 'openai-compatible'),
-    );
-  const queryVersion = useRef(0);
-  useEffect(
-    () => () => {
-      queryVersion.current++;
-    },
-    [],
-  );
-  const normalizedUrl = (value: string) => {
-    try {
-      const url = new URL(value.trim());
-      return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
-        ? url.href.replace(/\/+$/, '')
-        : '';
-    } catch {
-      return '';
-    }
-  };
-  const endpoint = normalizedUrl(baseUrl);
+  const active = useRef(true),
+    saving = useRef(false);
+  const catalog = useProviderCatalog(client);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const baseUrl = endpoint(draft.baseUrl);
   const canUseSavedKey = Boolean(
     provider?.keyConfigured &&
-      endpoint &&
-      endpoint === normalizedUrl(provider.baseUrl) &&
-      adapter === (provider.adapter ?? 'openai-compatible'),
+      baseUrl &&
+      baseUrl === endpoint(provider.baseUrl) &&
+      draft.adapter === (provider.adapter ?? 'openai-compatible'),
   );
-  const fetching = catalogState === 'loading';
-  const resetCatalog = () => {
-    queryVersion.current++;
-    setModels([]);
-    setCatalogState('idle');
-    setCatalogError('');
-    setModel('');
+  const change = (patch: Partial<typeof draft>) => {
+    if (saving.current) return;
+    if ('key' in patch || 'baseUrl' in patch || 'adapter' in patch) catalog.invalidate();
+    setDraft((previous) => ({ ...previous, ...patch }));
   };
-  const fetchModels = async () => {
-    if (!endpoint || adapter !== 'openai-compatible' || (!key.trim() && !canUseSavedKey)) return;
-    const version = ++queryVersion.current;
-    setCatalogState('loading');
-    setCatalogError('');
+  const fetchModels = () =>
+    catalog.fetch({
+      baseUrl,
+      adapter: draft.adapter,
+      ...(draft.key.trim() ? { apiKey: draft.key.trim() } : {}),
+      ...(provider ? { id: provider.id, expectedRevision: provider.revision } : {}),
+    });
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving.current) return;
+    setError('');
     try {
-      const available = await client.discoverModels({
-        baseUrl: endpoint,
-        ...(key.trim() ? { apiKey: key.trim() } : {}),
+      if (!baseUrl || !draft.name.trim() || (!draft.key.trim() && !canUseSavedKey))
+        throw new Error('请填写名称、有效的 HTTPS 地址及对应的 API Key。');
+      if (draft.pendingModel.trim()) throw new Error('请先添加或清空手动输入的模型 ID。');
+      if (!draft.models.length) throw new Error('请至少添加一个模型。');
+      const models = draft.models.map((model) => {
+        const parsed = providerModelSchema.safeParse(model);
+        if (!parsed.success)
+          throw new Error(`${model.model}: ${parsed.error.issues[0]?.message ?? '模型参数无效。'}`);
+        return parsed.data;
+      });
+      if (new Set(models.map((model) => model.model)).size !== models.length)
+        throw new Error('模型 ID 不能重复。');
+      const primary =
+        models.find((m) => m.id === (provider?.defaultModelId ?? 'default')) ?? models[0]!;
+      saving.current = true;
+      setBusy(true);
+      await client.saveProvider({
+        config: {
+          name: draft.name.trim(),
+          adapter: draft.adapter,
+          baseUrl,
+          enabled: draft.enabled,
+          model: primary.model,
+          contextWindow: primary.contextWindow,
+          maxOutputTokens: primary.maxOutputTokens,
+          defaultModelId: primary.id,
+          models,
+        },
+        ...(draft.key.trim() ? { apiKey: draft.key.trim() } : {}),
         ...(provider ? { id: provider.id, expectedRevision: provider.revision } : {}),
       });
-      if (version !== queryVersion.current) return;
-      setModels(available);
-      setCatalogState('success');
-      setModel((current) => current || available[0]?.id || '');
+      if (active.current) saved();
     } catch (failure) {
-      if (version !== queryVersion.current) return;
-      setModels([]);
-      setCatalogState('error');
-      setCatalogError(errorText(failure));
+      if (active.current) setError(errorText(failure));
+    } finally {
+      saving.current = false;
+      if (active.current) setBusy(false);
     }
-  };
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!endpoint || !model.trim()) {
-      setError('请填写有效的 Base URL，并选择或输入模型。');
-      return;
-    }
-
-    if (output >= windowSize / 2) {
-      setError('最大输出必须小于上下文窗口的一半。');
-      return;
-    }
-    setBusy(true);
-    void client
-      .saveProvider({
-        config: {
-          name,
-          adapter,
-          model,
-          baseUrl: endpoint,
-          contextWindow: windowSize,
-          maxOutputTokens: output,
-          enabled,
-        },
-        ...(key.trim() ? { apiKey: key.trim() } : {}),
-        ...(provider ? { id: provider.id, expectedRevision: provider.revision } : {}),
-      })
-      .then(async () => {
-        setKey('');
-        await saved();
-      })
-      .catch((e) => setError(errorText(e)))
-      .finally(() => setBusy(false));
   };
   return {
-    name,
-    setName,
-    adapter,
-    setAdapter,
-    baseUrl,
-    setBaseUrl,
-    model,
-    setModel,
-    key,
-    setKey,
-    windowSize,
-    setWindowSize,
-    output,
-    setOutput,
-    enabled,
-    setEnabled,
+    draft,
+    change,
     busy,
     error,
-    models,
-    catalogState,
-    catalogError,
-    manual,
-    setManual,
-    endpoint,
+    dirty: JSON.stringify(draft) !== initial.current,
+    catalog,
     canUseSavedKey,
-    fetching,
-    resetCatalog,
+    baseUrl,
     fetchModels,
     submit,
   };
 }
+export type ProviderEditorState = ReturnType<typeof useProviderEditor>;

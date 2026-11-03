@@ -1,23 +1,13 @@
 // Development-only fixture. It never contacts a model or mutates a workspace.
 import { createRoot } from 'react-dom/client';
 import { App } from '@praxis/ui';
-import type { PraxisClient, Provider } from '@praxis/ui/client';
+import type { PraxisClient } from '@praxis/ui/client';
 import type { Event } from '@praxis/contracts';
+import { providerFixture } from './provider-fixture.ts';
 
 let approvalPending = true;
 const approvalListeners = new Set<(event: Event) => void>();
 
-const provider: Provider = {
-  id: 'fixture',
-  revision: 1,
-  name: 'DeepSeek',
-  model: 'fixture',
-  baseUrl: 'https://api.deepseek.com',
-  contextWindow: 128000,
-  maxOutputTokens: 4096,
-  enabled: true,
-  keyConfigured: true,
-};
 const client: PraxisClient = {
   desktop: new URLSearchParams(location.search).get('client') === 'desktop',
   async profile() {
@@ -59,17 +49,7 @@ const client: PraxisClient = {
   },
   async login() {},
   async logout() {},
-  async providers() {
-    return [provider];
-  },
-  async discoverModels(input) {
-    if (input.baseUrl.endsWith('/unsupported')) throw new Error('界面样例：供应商不支持模型列表。');
-    if (input.baseUrl.endsWith('/empty')) return [];
-    return [{ id: 'fixture-chat' }, { id: 'fixture-reasoner' }, { id: 'fixture-code' }];
-  },
-  async saveProvider() {
-    throw new Error('开发样例不能保存模型配置。');
-  },
+  ...providerFixture(),
   async list() {
     return [
       {

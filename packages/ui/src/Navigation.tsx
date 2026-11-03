@@ -144,7 +144,7 @@ export function AppRail({
             </button>
             <button onClick={() => navigate('models')}>
               <Icon name="model" />
-              模型提供商
+              模型供应商
             </button>
             <button onClick={() => navigate('general')}>
               <Icon name="settings" />

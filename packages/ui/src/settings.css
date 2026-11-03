@@ -8,4 +8,6 @@
 @import './settings/styles/account.css';
 @import './settings/styles/about.css';
 @import './settings/styles/responsive.css';
-@import './settings/styles/model-picker.css';
+@import './settings/styles/provider-workspace.css';
+@import './settings/styles/provider-details.css';
+@import './settings/styles/provider-dialog.css';

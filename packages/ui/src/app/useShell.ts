@@ -6,18 +6,30 @@ export function useShell(authenticated: boolean) {
     [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
     [panel, setPanel] = useState(false);
   const openSettings = (tab: SettingsTab) => {
+    if (!window.dispatchEvent(new Event('praxis:before-navigate', { cancelable: true }))) return;
     location.hash = `settings/${tab}`;
     setSettings(tab);
   };
   const closeSettings = () => {
+    if (!window.dispatchEvent(new Event('praxis:before-navigate', { cancelable: true }))) return;
     location.hash = '';
     setSettings(null);
   };
   useEffect(() => {
-    const changed = () => setSettings(settingsFromHash());
+    const changed = () => {
+      if (!window.dispatchEvent(new Event('praxis:before-navigate', { cancelable: true }))) {
+        history.replaceState(
+          null,
+          '',
+          `${location.pathname}${location.search}${settings ? `#settings/${settings}` : ''}`,
+        );
+        return;
+      }
+      setSettings(settingsFromHash());
+    };
     window.addEventListener('hashchange', changed);
     return () => window.removeEventListener('hashchange', changed);
-  }, []);
+  }, [settings]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (!authenticated || settings) return;

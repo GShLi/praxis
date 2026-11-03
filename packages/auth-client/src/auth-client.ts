@@ -1,4 +1,5 @@
 import type { ModelConfig } from '@praxis/contracts';
+import { providerModelChoices, type ProviderModel } from '@praxis/model-core/provider-models';
 import { assert, PraxisError } from '@praxis/contracts';
 import { discoverModels } from '@praxis/model-core/catalog';
 import type { ModelDiscoveryInput } from '@praxis/model-core/provider';
@@ -106,16 +107,25 @@ export class AuthClient {
   async beginUse(providerId: string | undefined, signal: AbortSignal): Promise<ModelConfig> {
     assert(this.apiKey, 'UNAUTHENTICATED', '请先登录 Praxis。');
     if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);
-    const selected = providerId ?? (await this.providers(signal)).find((p) => p.enabled)?.id;
+    const selected =
+      providerId ?? providerModelChoices(await this.providers(signal)).find((p) => p.enabled)?.id;
     assert(selected, 'PROVIDER_NOT_FOUND', '请先配置模型提供商。');
     return modelSchema.parse(
       await this.request('/v1/client/provider-uses', 'POST', { providerId: selected }, signal),
     );
   }
-  async providers(
-    signal: AbortSignal,
-  ): Promise<
-    Array<{ id: string; name: string; model: string; enabled: boolean; revision: number }>
+  async providers(signal: AbortSignal): Promise<
+    Array<{
+      id: string;
+      name: string;
+      model: string;
+      enabled: boolean;
+      revision: number;
+      contextWindow: number;
+      maxOutputTokens: number;
+      models?: ProviderModel[];
+      defaultModelId?: string;
+    }>
   > {
     if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);
     return this.request('/v1/providers', 'GET', undefined, signal);

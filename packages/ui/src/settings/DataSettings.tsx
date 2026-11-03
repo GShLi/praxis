@@ -83,7 +83,7 @@ export function DataSettings({
         <div className="settings-group">
           <Row
             title="发送给模型的内容"
-            description="回答所需的消息与上下文会发送给你选择的模型提供商。"
+            description="回答所需的消息与上下文会发送给你选择的模型供应商。"
           >
             <span className="setting-value">按请求发送</span>
           </Row>

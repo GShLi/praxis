@@ -9,6 +9,7 @@ import type {
 } from '@praxis/contracts';
 import type { Event, UserCommand, EffectiveConfig, Permission } from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
+import type { ProviderModel } from '@praxis/model-core/provider-models';
 import type { ApprovalRequest } from '@praxis/permissions';
 
 export interface Provider {
@@ -22,6 +23,8 @@ export interface Provider {
   maxOutputTokens: number;
   enabled: boolean;
   keyConfigured: boolean;
+  models?: ProviderModel[];
+  defaultModelId?: string;
 }
 
 export interface ViewSession {

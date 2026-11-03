@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./provider": "./src/provider.ts",
+    "./provider-models": "./src/provider-models.ts",
     "./catalog": "./src/catalog.ts"
   },
   "dependencies": {

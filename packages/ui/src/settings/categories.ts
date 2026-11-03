@@ -22,7 +22,7 @@ export const categories = [
   },
   {
     id: 'models',
-    title: '模型提供商',
+    title: '模型供应商',
     description: '管理模型与密钥，供 ChatBot 和 Agent 共同使用。',
     group: '个人',
     icon: 'model',
