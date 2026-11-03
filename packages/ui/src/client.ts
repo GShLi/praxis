@@ -16,3 +16,4 @@ export type {
 } from './client-types.ts';
 export { LocalClient } from './clients/LocalClient.ts';
 export { WebClient } from './clients/WebClient.ts';
+export { desktopReply, readDesktopReply } from './clients/desktop-reply.ts';

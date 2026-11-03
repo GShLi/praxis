@@ -1,5 +1,6 @@
 import type { startHost } from '@praxis/client-host';
-import { assert, safeError } from '@praxis/contracts';
+import { assert } from '@praxis/contracts';
+import { desktopReply } from '@praxis/ui/client';
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 const allowed = new Set([
   'auth/bind',
@@ -61,28 +62,27 @@ export function installBridge(window: BrowserWindow, host: Awaited<ReturnType<ty
       'FORBIDDEN',
       '不可信窗口调用。',
     );
-  ipcMain.handle('praxis:call', async (event, method: unknown, params: unknown) => {
-    trusted(event);
-    assert(
-      typeof method === 'string' && allowed.has(method),
-      'METHOD_NOT_FOUND',
-      '此界面方法不可用。',
-    );
-    try {
+  ipcMain.handle('praxis:call', (event, method: unknown, params: unknown) =>
+    desktopReply(async () => {
+      trusted(event);
+      assert(
+        typeof method === 'string' && allowed.has(method),
+        'METHOD_NOT_FOUND',
+        '此界面方法不可用。',
+      );
       return await host.rpc.request(method, params);
-    } catch (error) {
-      const safe = safeError(error);
-      throw new Error(`${safe.code}: ${safe.safeMessage}`);
-    }
-  });
-  ipcMain.handle('praxis:select-workspace', async (event) => {
-    trusted(event);
-    const result = await dialog.showOpenDialog(window, {
-      title: '选择 Agent 工作区',
-      properties: ['openDirectory'],
-    });
-    return result.canceled ? null : (result.filePaths[0] ?? null);
-  });
+    }),
+  );
+  ipcMain.handle('praxis:select-workspace', (event) =>
+    desktopReply(async () => {
+      trusted(event);
+      const result = await dialog.showOpenDialog(window, {
+        title: '选择 Agent 工作区',
+        properties: ['openDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    }),
+  );
   const notification = (method: string, payload: unknown) => {
     if (!window?.isDestroyed() && ['session/event', 'session/delta'].includes(method))
       window?.webContents.send('praxis:event', method, payload);

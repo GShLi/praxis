@@ -32,19 +32,27 @@ pnpm test:linux-credentials
 - 验证失败事务的前序写入一起回滚、不发事件、序号不前进；提高容量后可继续提交，重新打开后记录完整且 integrity_check 为 ok。Agent 在工具派发前写库失败时停止，不创建目标文件、不重试模型，恢复不会自动执行该写入。
 - 修复后 macOS（Node 22.15.0）和 Linux（Node 24.22.2）各 222 项核心、30 项 PostgreSQL/HTTP/CLI 集成、结构/类型检查和应用构建全部通过，无跳过。这是 SQLite 容量错误路径验收，不代替文件系统 ENOSPC、断电和长期压力验收。
 
+## 2026-11-04：桌面 MCP 与 IPC 错误
+
+- 实际操作 Electron 新建临时 MCP 连接，验证保存后需检查再启用、2026-07-28 协商、1 个兼容工具、停用、编辑端点后重新检查，以及退出后配置保留。服务均为本机临时 fixture，不使用用户真实 MCP 配置或凭据。
+- 提示词目录→参数预览→确认入队→模型回复通过；第二个 fixture 返回 input_required，界面正确让出补充表单，填写后展示完整续交参数和目标，批准一次后回到预览并提交。退出后数据库核对到 2 次 prompt-applied、1 次 question/answered 和 1 次 approval/consumed；会话 completed。
+- 连接中断复现界面显示 Electron 内部 `Error invoking remote method` 前缀。主进程现在返回仅含 safeError 的结构化结果，preload 验证并还原业务错误，传输故障使用固定安全文案；窗口/方法校验保持原位置和效力。针对性回归覆盖已知业务错误、未知私有错误脱敏、空成功值和非法响应。
+- 重新构建并实际重开后，同一失败操作只显示“MCP 协议请求失败；未自动重放业务请求。”。重新登录、配置/历史读取、目录对话框取消和真实文件创建均通过；文件内容 `<h1>Hello World！！！</h1>` 已核对。两次 Electron 退出均返回 0，fixture 关闭后临时目录不存在。
+- 两端各 224 项核心回归、结构/类型和应用构建通过，无跳过；PostgreSQL/HTTP/CLI 的 30 项结果沿用上一存储修复批次，没有为此桌面桥接变更重复运行。完整 OAuth 浏览器授权和桌面 MCP 工具/资源业务调用仍未经过本轮界面验收。
+
 ## 当前验收汇总与剩余项
 
 | 项目 | macOS | Ubuntu 22.04.5 |
 | --- | --- | --- |
-| 核心自动回归 | 222/222 | 222/222 |
+| 核心自动回归 | 224/224 | 224/224 |
 | 真实 PostgreSQL/HTTP/CLI 集成 | 30/30 | 30/30 |
 | 系统隔离机制原型 | Seatbelt 4/4 | Bubblewrap 5/5 |
 | 系统凭据 | 核心套件含真实 Keychain 读写/删除 | 私有 Keyring/服务故障 5/5 |
 | 已配置 DeepSeek | 6 请求完成 Chat、创建与修改 | 6 请求完成相同场景 |
-| Electron 实际界面 | 主要流程通过，范围见上文 | 未提供图形显示服务，未运行 |
+| Electron 实际界面 | 主要流程及 MCP 配置/模板/表单通过，范围见上文 | 未提供图形显示服务，未运行 |
 | 结构、类型及应用构建 | 通过 | 通过 |
 
-仍未完成的验收：生产命令沙箱及 MCP stdio（执行后端尚未接通，含 macOS 脱离进程组后的子孙回收）、完整 MCP/OAuth 桌面交互和外部服务互操作、Linux 桌面实际交互、安装包/签名/升级、真实模型长任务压缩、长期压力及真实文件系统写满。只有当前机器的 OS/架构得到上述证据，不扩展为其他版本或架构已支持。
+仍未完成的验收：生产命令沙箱及 MCP stdio（执行后端尚未接通，含 macOS 脱离进程组后的子孙回收）、桌面 MCP 工具/资源业务调用和 OAuth、外部服务互操作、Linux 桌面实际交互、安装包/签名/升级、真实模型长任务压缩、长期压力及真实文件系统写满。只有当前机器的 OS/架构得到上述证据，不扩展为其他版本或架构已支持。
 
 ## 可重复入口
 
@@ -57,6 +65,9 @@ node --import tsx tests/manual/live-model.ts .runtime/local-dev/login.local.json
 # 隔离桌面 fixture：需指定测试 PostgreSQL，运行后打印临时入口和一次性测试登录信息。
 PRAXIS_TEST_PG_BIN=/path/to/postgresql/bin \
   node --import tsx tests/manual/desktop-fixture.ts
+
+# 可选：独立本机 MCP 测试服务；--form 使模板请求补充表单。
+node --import tsx tests/manual/mcp-fixture.ts --form
 ```
 
 启动 Electron 时使用 fixture 打印的 `entry`。先关闭 Electron，再向 fixture 发 SIGTERM；fixture 会回收测试账号所在数据库和整个临时目录。它最多运行一小时，不使用用户原有桌面 profile。便携 PostgreSQL 可另设 `PRAXIS_TEST_PG_SHARE`。
