@@ -1,3 +1,4 @@
+import { McpCredential } from './McpCredential.tsx';
 import { useState } from 'react';
 import type { PraxisClient } from '../client-types.ts';
 import { Empty, SettingsIcon, Status } from './controls.tsx';
@@ -37,6 +38,14 @@ export function McpSettings({ client }: { client: PraxisClient }) {
               <span className="settings-badge">{server.enabled ? '已启用' : '未启用'}</span>
             </h3>
             <p>{server.transport.endpoint ?? server.transport.executable}</p>
+            {client.setMcpBearer && client.clearMcpCredential && (
+              <McpCredential
+                server={server}
+                busy={busy}
+                save={(token) => settings.setBearer(server.id, server.revision, token)}
+                clear={() => settings.clearCredential(server.id, server.revision)}
+              />
+            )}
           </div>
           <button
             className="secondary-button"
@@ -76,8 +85,9 @@ export function McpSettings({ client }: { client: PraxisClient }) {
         <SettingsIcon name="info" />
         <p>
           保存配置不会连接服务器。检查连接会访问地址并读取目录，检查后可明确启用工具。 启用后，Agent
-          可按需读取目录；每次业务调用和资源读取均需确认参数和目标地址。当前支持无认证 HTTP
-          工具与文本资源，暂不支持 stdio、OAuth 与提示词。
+          可按需读取目录；每次业务调用和资源读取均需确认参数和目标地址。当前支持无认证或 Bearer HTTP
+          工具、文本资源与提示词。系统凭据存储不可用时只保留本次运行的内存凭据；stdio、OAuth
+          尚未接入。
         </p>
       </div>
     </>

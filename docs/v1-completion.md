@@ -20,7 +20,7 @@
 | V01–V04、V06–V08、V10–V18、V26–V29 | 核心自动测试、真实 PostgreSQL/HTTP 集成、文件闭环 | 真实模型、完整客户端验收及各项边界复核         |
 | V05、V09、V19–V25、T07–T10         | 命令接口和拒绝路径、Host 生命周期                 | 原生命令隔离、执行域清理、输出管理、各 OS 实测 |
 | T01–T06、T11–T15                   | 文件、版本、审批、计划、提问、产物测试            | 路径竞态、完整命令案例及真实模型               |
-| V30–V32、M01–M20                   | 无认证 HTTP 工具/资源/Prompts、表单、审批、恢复测试   | stdio、认证、互操作及 OS 测试                |
+| V30–V32、M01–M20                   | HTTP/Bearer 工具/资源/Prompts、表单、审批、恢复测试   | stdio、OAuth、互操作及 OS 测试                |
 | 插件与交付                         | 可信工具/上下文/生命周期、构建与本机启动          | 凭据存储、备份恢复、发行包和跨平台验证         |
 
 ## 实施记录
@@ -63,3 +63,11 @@
 
 - 失败路径复查：新增回归复现工具扩展初始化失败时 ProcessService 泄漏，现于所有权转移前清理已获取资源；同步抛错的 close 不再阻止另一资源清理。清理无法确认时记录 cleanup_unknown 并以 interrupted 结束。插件最终响应检查按 JSON 编码比较 Key，覆盖含引号和反斜杠的凭据。
 - 修复验证：129 项核心测试、结构/类型检查和全部应用构建通过；三种部分初始化/清理故障与编码凭据泄漏都有回归测试。
+
+- 凭据切片边界：MCP client 下独立 credentials 模块拥有 OS helper/内存密钥与关闭状态，Host 拥有用户/客户端/服务器绑定及设置入口。macOS 使用 Keychain、Windows 使用 Credential Manager、Linux 使用 Secret Service 的 secret-tool；不可用时明确返回 memory 状态。原生 helper 仅通过私有 stdin/stdout 交换秘密，配置只记录随机引用、存储类型和认证 epoch。Bearer 接通后再扩展 OAuth 控制流程；未实测平台不标记完成。
+
+- Bearer 凭据：已接通系统/内存 SecretStore、用户+客户端+Praxis 服务地址+MCP 端点+随机引用隔离、凭据轮换 epoch、配置后重新检查/启用、失效取消和本地清除。系统秘密通过 helper 的私有管道传输；配置只存随机引用。写入取消时尝试清理未发布项，超时不会假装内存保存成功。
+- OS 证据：macOS 原生 Keychain helper 编译通过，实际写入→读回→删除与再次读取不存在均通过，未出现认证 UI。Windows Credential Manager 源码和 Linux secret-tool 适配已编写，但未在目标系统运行；继续单独记录为待验证。
+- MCP 凭据边界：目录/资源/模板和最终响应在进入存储或模型前检查已知秘密；服务端业务 401 不自动重放。凭据改变使运行范围失效，旧目录 hash 与 authEpoch 不再可用。
+- 用户入口：桌面独立密码字段和存储状态；CLI auth/clear-auth 以及 run --mcp-bearer-server 前台入口，一次性环境 Token 在启动 Host 前移除。后者支持系统存储不可用的机器，凭据退出失效。添加连接表单补齐 Prompts 能力选择。
+- 本批验证：134 项核心测试全部通过（包括真实 macOS Keychain 测试），结构/类型检查、原生 helper 和全部应用构建通过；12 项真实 PostgreSQL 集成通过，新增 CLI/Host 测试完成临时凭据设置、前台 Agent 运行、退出后确认缺失。OAuth、stdio、原生执行沙箱、交付与平台验收仍未完成。

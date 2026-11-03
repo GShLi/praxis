@@ -42,12 +42,14 @@ export async function resourceCatalog(
   try {
     for (let page = 0; page < 20; page++) {
       signal.throwIfAborted();
-      const raw = await connection.client.request(
-        {
-          method: kind === 'resources' ? 'resources/list' : 'resources/templates/list',
-          params: cursor ? { cursor } : {},
-        },
-        { signal, timeout: 10_000, maxTotalTimeout: 10_000, resetTimeoutOnProgress: false },
+      const raw = connection.safeResult(
+        await connection.client.request(
+          {
+            method: kind === 'resources' ? 'resources/list' : 'resources/templates/list',
+            params: cursor ? { cursor } : {},
+          },
+          { signal, timeout: 10_000, maxTotalTimeout: 10_000, resetTimeoutOnProgress: false },
+        ),
       );
       bytes += Buffer.byteLength(JSON.stringify(raw));
       assert(bytes <= 8 * 1024 * 1024, 'MCP_CATALOG_LIMIT', '资源目录超过 8 MiB。');
@@ -84,7 +86,7 @@ export async function resourceCatalog(
 
 function snapshot(connection: McpConnection, kind: ResourceKind, entries: ResourceEntry[]) {
   const binding = connection.binding;
-  const instructions = connection.client.getInstructions() ?? '';
+  const instructions = connection.safeResult(connection.client.getInstructions() ?? '');
   const protocol = connection.client.getNegotiatedProtocolVersion();
   assert(protocol, 'MCP_NOT_CONNECTED', 'MCP 尚未连接。');
   assert(Buffer.byteLength(instructions) <= 8192, 'MCP_CATALOG_LIMIT', '服务器说明超过 8 KiB。');

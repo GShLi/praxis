@@ -1,3 +1,4 @@
+import { containsSecret } from './form.ts';
 import { McpInteraction, type McpInteractionOptions, type Continuation } from './interaction.ts';
 import type { FetchLike, Transport } from '@modelcontextprotocol/client';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -13,6 +14,7 @@ export class McpConnection {
   readonly client: Client;
   private interaction: McpInteraction;
   private closed = false;
+  private sensitiveValues: string[];
   private signal: AbortSignal;
   private lifetime = new AbortController();
   private closeTransport: (() => void) | undefined;
@@ -23,6 +25,7 @@ export class McpConnection {
     interaction?: McpInteractionOptions,
   ) {
     validateConfig(config);
+    this.sensitiveValues = [...(interaction?.sensitiveValues ?? [])];
     assert(
       config.id === binding.serverId && config.revision === binding.configRevision,
       'MCP_CONFIG_CHANGED',
@@ -70,6 +73,7 @@ export class McpConnection {
   async connect(options: { transport?: Transport; fetch?: FetchLike; bearer?: string } = {}) {
     this.signal.throwIfAborted();
     assert(!this.closed, 'MCP_CONNECTION_CLOSED', 'MCP 连接已关闭。');
+    if (options.bearer) this.sensitiveValues.push(options.bearer);
     let transport = options.transport;
     if (!transport) {
       const config = this.config.transport;
@@ -117,6 +121,7 @@ export class McpConnection {
         timeout: 20_000,
         maxTotalTimeout: 20_000,
       });
+      this.safeResult(this.client.getInstructions());
       const protocol = this.client.getNegotiatedProtocolVersion();
       assert(
         protocol === '2026-07-28' || protocol === '2025-11-25',
@@ -129,8 +134,16 @@ export class McpConnection {
       throw failure;
     }
   }
-  interact(send: (continuation: Continuation) => Promise<unknown>) {
-    return this.interaction.run(send);
+  async interact(send: (continuation: Continuation) => Promise<unknown>) {
+    return this.safeResult(await this.interaction.run(send));
+  }
+  safeResult<T>(value: T): T {
+    assert(
+      !containsSecret(value, this.sensitiveValues),
+      'MCP_SECRET_EXPOSURE',
+      '服务器返回了已知凭据，未保存或交给模型。',
+    );
+    return value;
   }
   async catalog() {
     const protocol = this.client.getNegotiatedProtocolVersion();
@@ -149,9 +162,11 @@ export class McpConnection {
         this.client.getInstructions() ?? '',
         async (_method, params, signal) => {
           if (!this.config.capabilities.tools || !capabilities?.tools) return { tools: [] };
-          return this.client.request(
-            { method: 'tools/list', params },
-            { signal, timeout: 10_000, maxTotalTimeout: 10_000, resetTimeoutOnProgress: false },
+          return this.safeResult(
+            await this.client.request(
+              { method: 'tools/list', params },
+              { signal, timeout: 10_000, maxTotalTimeout: 10_000, resetTimeoutOnProgress: false },
+            ),
           );
         },
         this.signal,

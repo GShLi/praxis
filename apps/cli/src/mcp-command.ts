@@ -1,3 +1,4 @@
+import { configureMcpBearer, clearMcpCredential } from './mcp-auth.ts';
 import type { CliOptions } from './options.ts';
 import { mcpPromptCommand } from './mcp-prompts.ts';
 import type { startHost } from '@praxis/client-host';
@@ -26,10 +27,20 @@ export async function mcpCommand(
   host: Awaited<ReturnType<typeof startHost>>,
   positionals: string[],
   values: CliOptions,
+  bearer?: string,
 ) {
   const action = positionals[1] ?? 'list',
     target = positionals[2];
   if (await mcpPromptCommand(host, positionals, values.arguments)) return;
+  if (action === 'auth' || action === 'clear-auth') {
+    assert(target, 'INVALID_ARGUMENT', '需要服务器 ID。');
+    const result =
+      action === 'auth'
+        ? await configureMcpBearer(host, target, bearer)
+        : await clearMcpCredential(host, target);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
   const state = await host.rpc.request<{
     revision: number;
     value: Array<{ id: string; revision: number }>;

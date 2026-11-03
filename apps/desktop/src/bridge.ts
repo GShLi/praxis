@@ -12,6 +12,8 @@ const allowed = new Set([
   'plugin/set-enabled',
   'plugin/commands',
   'plugin/run-command',
+  'mcp/credential-set',
+  'mcp/credential-clear',
   'mcp/server-list',
   'mcp/server-upsert',
   'mcp/server-disable',

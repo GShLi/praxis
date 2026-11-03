@@ -1,3 +1,4 @@
+import { McpCredentials, NativeSecretBackend, SecretStore } from '@praxis/mcp-client/credentials';
 import { McpPrompts } from '@praxis/mcp-client/prompts';
 import { AgentRuntime } from '@praxis/agent-runtime';
 import { AuthClient } from '@praxis/auth-client';
@@ -22,6 +23,7 @@ export class HostIdentity {
   dataLease: Awaited<ReturnType<typeof acquireLease>> | undefined;
   selectedProvider: string | undefined;
   mcpConfig: McpConfigService | undefined;
+  mcpCredentials: McpCredentials | undefined;
   mcpMaintenance: McpMaintenance | undefined;
   mcpRuntime: McpRuntime | undefined;
   mcpPrompts: McpPrompts | undefined;
@@ -49,6 +51,8 @@ export class HostIdentity {
     this.runtime = undefined;
     await this.mcpRuntime?.close();
     this.mcpRuntime = undefined;
+    await this.mcpCredentials?.close();
+    this.mcpCredentials = undefined;
     if (this.pluginHosts)
       await Promise.all(Object.values(this.pluginHosts).map((host) => host.dispose()));
     this.mcpConfig = undefined;
@@ -89,7 +93,7 @@ export class HostIdentity {
       this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
       this.store.recover();
       this.selectedProvider = input.providerId;
-      this.setupMcp(directory, candidate.userId);
+      this.setupMcp(directory, candidate.userId, input.serverUrl, input.praxisApiKey);
       this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
       this.pluginHosts = {
         chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
@@ -139,14 +143,29 @@ export class HostIdentity {
       this.binding = false;
     }
   }
-  private setupMcp(directory: string, owner: string) {
+  private setupMcp(directory: string, owner: string, serverUrl: string, praxisKey: string) {
     const store = this.store;
     assert(store, 'STORAGE_UNAVAILABLE', '会话存储尚未初始化。');
     this.mcpConfig = new McpConfigService(directory, (id) => {
       this.mcpMaintenance?.cancel(id);
       this.mcpRuntime?.invalidate(id);
     });
-    this.mcpMaintenance = new McpMaintenance(this.mcpConfig, store, owner, this.clientKind());
+    this.mcpCredentials = new McpCredentials(
+      this.mcpConfig,
+      new SecretStore(new NativeSecretBackend()),
+      owner,
+      `${this.clientKind()}:${hash(new URL(serverUrl).href)}`,
+      [praxisKey],
+    );
+    const credentials = this.mcpCredentials.resolve.bind(this.mcpCredentials);
+    this.mcpMaintenance = new McpMaintenance(
+      this.mcpConfig,
+      store,
+      owner,
+      this.clientKind(),
+      undefined,
+      credentials,
+    );
     this.mcpRuntime = new McpRuntime(
       this.mcpConfig,
       store,
@@ -156,6 +175,7 @@ export class HostIdentity {
         assert(this.runtime, 'INPUT_UNAVAILABLE', 'Runtime 尚未初始化。');
         return this.runtime.interaction(owner, session.id);
       },
+      credentials,
     );
   }
   private async loadPlugins() {

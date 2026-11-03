@@ -40,6 +40,14 @@ export function useMcpSettings(client: PraxisClient) {
       return current === generation.current;
     } catch (error) {
       if (current === generation.current) setMessage(errorText(error));
+      if (refresh) {
+        try {
+          const next = await client.mcpServers?.();
+          if (next && current === generation.current) setState(next);
+        } catch {
+          // Keep the original failure; reconnecting/reopening settings reloads the authoritative state.
+        }
+      }
       return false;
     } finally {
       if (current === generation.current) setBusy(false);
@@ -72,6 +80,16 @@ export function useMcpSettings(client: PraxisClient) {
       run(async () => {
         await client.disableMcp!(id, state!.revision);
         return '已停用，相关操作已取消。';
+      }, true),
+    setBearer: (id: string, revision: number, token: string) =>
+      run(async () => {
+        await client.setMcpBearer!(id, state!.revision, revision, token);
+        return '凭据已保存。请重新检查连接，再启用服务器。';
+      }, true),
+    clearCredential: (id: string, revision: number) =>
+      run(async () => {
+        await client.clearMcpCredential!(id, state!.revision, revision);
+        return '本地凭据已清除，连接已停用。远端 Token 未撤销。';
       }, true),
     save: (config: unknown) =>
       run(async () => {

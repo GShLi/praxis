@@ -1,3 +1,4 @@
+import type { ResolveCredentials } from './credentials/service.ts';
 import type { Ask } from '@praxis/tools';
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { assert, type Session } from '@praxis/contracts';
@@ -23,6 +24,7 @@ export class McpRuntime {
     private client: string,
     private fetch?: FetchLike,
     private interaction?: (session: Session) => UserInteraction,
+    private credentials?: ResolveCredentials,
   ) {}
   async create(
     session: Session,
@@ -40,6 +42,7 @@ export class McpRuntime {
     assert(!this.closed, 'MCP_UNAVAILABLE', 'MCP 已关闭。');
     const scope = new McpTurnScope(configs, {
       configs: this.configs,
+      ...(this.credentials ? { credentials: this.credentials } : {}),
       owner: session.ownerUserId,
       client: this.client,
       signal,
@@ -71,6 +74,7 @@ export class McpRuntime {
     const interaction = this.interaction?.(session);
     const scope = new McpTurnScope(configs, {
       configs: this.configs,
+      ...(this.credentials ? { credentials: this.credentials } : {}),
       owner: session.ownerUserId,
       client: this.client,
       signal: AbortSignal.any([

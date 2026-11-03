@@ -1,3 +1,4 @@
+import { installProvider } from './prompt-provider.ts';
 import { serve } from '@hono/node-server';
 import { startHost } from '@praxis/client-host';
 import { createApp } from '@praxis/server/app';
@@ -5,7 +6,7 @@ import { uuid } from '@praxis/storage-local';
 import { mcpPromptPreviewSchema } from '@praxis/contracts';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -14,44 +15,6 @@ import { chatFixture } from './chat-fixture.ts';
 import { provider } from './fixture.ts';
 import { mcpHttpFixture } from '../fixtures/mcp-http.ts';
 const execute = promisify(execFile);
-
-async function installProvider(host: Awaited<ReturnType<typeof startHost>>, root: string) {
-  const source = path.join(root, 'plugin');
-  await mkdir(source);
-  await writeFile(
-    path.join(source, 'praxis-plugin.json'),
-    JSON.stringify({
-      id: 'fixture.prompt',
-      version: '1.0.0',
-      sdkVersion: '^1.0.0',
-      entry: 'plugin.mjs',
-      runtimes: ['local-host'],
-      modes: ['agent'],
-      platforms: ['darwin', 'linux', 'win32'],
-      capabilities: ['model-provider'],
-    }),
-  );
-  await writeFile(
-    path.join(source, 'plugin.mjs'),
-    `export default {activate(ctx){ctx.registerProvider('model',{async complete(request){
-    const message=request.messages.findLast(m=>m.role==='user');
-    if(!message.content.includes('外部模板') || !message.content.includes('Create a hello page')) throw new Error('missing selected material');
-    request.onDelta('Template applied');
-    return {message:{id:'fixture',role:'assistant',content:'Template applied'},usage:{input:1,output:1},finishReason:'stop'};
-  }});}}`,
-  );
-  const review = await host.rpc.request<{ digest: string }>('plugin/inspect', { source });
-  await host.rpc.request('plugin/install', {
-    source,
-    expectedDigest: review.digest,
-    expectedRevision: 0,
-  });
-  await host.rpc.request('plugin/set-enabled', {
-    id: 'fixture.prompt',
-    enabled: true,
-    expectedRevision: 1,
-  });
-}
 
 test('real CLI previews a remote prompt, restarts and applies its exact snapshot through an installed model adapter', async () => {
   const f = await chatFixture();

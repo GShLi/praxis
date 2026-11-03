@@ -170,6 +170,21 @@ export class LocalClient implements PraxisClient {
   async cancelMcpPrompt(sessionId: string) {
     await this.bridge.call('mcp/prompt-cancel', { sessionId });
   }
+  async setMcpBearer(id: string, storeRevision: number, revision: number, token: string) {
+    await this.bridge.call('mcp/credential-set', {
+      serverId: id,
+      expectedStoreRevision: storeRevision,
+      expectedRevision: revision,
+      token,
+    });
+  }
+  async clearMcpCredential(id: string, storeRevision: number, revision: number) {
+    await this.bridge.call('mcp/credential-clear', {
+      serverId: id,
+      expectedStoreRevision: storeRevision,
+      expectedRevision: revision,
+    });
+  }
   mcpServers() {
     return this.bridge.call<McpState>('mcp/server-list');
   }

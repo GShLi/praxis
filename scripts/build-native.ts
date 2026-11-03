@@ -34,3 +34,45 @@ if (result.status !== 0) {
   console.error('Native lease helper build failed. Install the platform C toolchain.');
   process.exitCode = 1;
 }
+
+if (process.exitCode !== 1 && process.platform !== 'linux') {
+  const secret =
+    process.platform === 'win32'
+      ? spawnSync(
+          'cl',
+          [
+            '/nologo',
+            '/W4',
+            '/O2',
+            'native/secret-store-win.c',
+            `/Fe:${path.join(directory, 'praxis-secret.exe')}`,
+            `/Fo:${path.join(directory, 'secret.obj')}`,
+            'Advapi32.lib',
+          ],
+          { stdio: 'inherit' },
+        )
+      : spawnSync(
+          'cc',
+          [
+            '-Wall',
+            '-Wextra',
+            '-Werror',
+            '-O2',
+            '-fobjc-arc',
+            'native/secret-store.m',
+            '-framework',
+            'Foundation',
+            '-framework',
+            'Security',
+            '-framework',
+            'LocalAuthentication',
+            '-o',
+            path.join(directory, 'praxis-secret'),
+          ],
+          { stdio: 'inherit' },
+        );
+  if (secret.status !== 0) {
+    console.error('Native credential helper build failed. Install the platform SDK.');
+    process.exitCode = 1;
+  }
+}

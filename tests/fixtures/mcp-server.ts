@@ -12,6 +12,7 @@ export async function mcpFixture(
   resources = false,
   prompts = false,
   interaction?: ConstructorParameters<typeof McpRuntime>[4],
+  credentials?: ConstructorParameters<typeof McpRuntime>[5],
 ) {
   const root = await mkdtemp(path.join(tmpdir(), 'praxis-mcp-business-'));
   const store = new SessionStore(':memory:');
@@ -36,8 +37,8 @@ export async function mcpFixture(
     maintenance.cancel(id);
     mcp.invalidate(id);
   });
-  const maintenance = new McpMaintenance(configs, store, 'alice', 'cli');
-  const mcp = new McpRuntime(configs, store, 'cli', undefined, interaction);
+  const maintenance = new McpMaintenance(configs, store, 'alice', 'cli', undefined, credentials);
+  const mcp = new McpRuntime(configs, store, 'cli', undefined, interaction, credentials);
   const session = store.create('alice', 'agent', root);
   await configs.upsert(config, 0, null);
   return {

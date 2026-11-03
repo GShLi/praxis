@@ -69,7 +69,7 @@ Web 只使用部署者在服务端安装的纯 Provider 插件。可通过 `PRAX
 
 ### MCP 远程工具
 
-桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证 Streamable HTTP 工具与文本资源；每次业务调用或资源读取展示实际参数与目标地址并等待单次审批。添加时勾选资源能力（或配置 `capabilities.resources: true`）后才开放资源目录与读取。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
+桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证或 Bearer 认证的 Streamable HTTP 工具与文本资源；每次业务调用或资源读取展示实际参数与目标地址并等待单次审批。添加时勾选资源能力（或配置 `capabilities.resources: true`）后才开放资源目录与读取。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
 
 CLI 与桌面使用独立 profile，可通过以下命令管理 CLI 的服务器：
 
@@ -101,7 +101,7 @@ pnpm cli mcp disable SERVER_ID
 }
 ```
 
-使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、Bearer/OAuth 尚未接入。提示词与表单交互见下文；当前验收缺口见 [V1 台账](docs/v1-completion.md)。
+使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、OAuth 尚未接入。提示词与表单交互见下文；当前验收缺口见 [V1 台账](docs/v1-completion.md)。
 
 ## 用户主动执行插件命令
 
@@ -138,3 +138,24 @@ pnpm cli run --resume SESSION_ID --provider PROVIDER_ID --apply-prompt PREVIEW_I
 每轮最多 12 个字段、每个操作最多 8 次续交；支持文本、数值、布尔、字符串数组及枚举，Schema 中未实现的约束会明确拒绝。跳过必填项表示拒绝表单；取消、退出或停用服务器会关闭等待。Key、密码和支付秘密不得通过表单填写，已知凭据会在保存/发送前拦截。服务器私有 requestState 仅在当前操作内原样续交，不写入 Session 或恢复 checkpoint。
 
 CLI 获取预览期间仍可回答问题、`/approve`、`/deny` 或 `/cancel`。桌面预览等待输入时会让出对话里的回答/审批卡片。重复提交相同回答或审批决定只返回已保存的回执，不产生第二份执行授权。
+
+### MCP Bearer 凭据
+
+桌面端在“设置 → MCP 连接”展开服务器的“设置 Bearer Token”。Token 只用于当前用户/客户端的固定服务器端点；保存或更换后连接停用，需要重新检查并启用。设置页分别显示系统存储、仅本次运行有效和凭据缺失。清除只删除本地凭据，不代表远端撤销 Token。
+
+macOS 使用 Keychain（已在本机完成真实读写/删除测试）；Windows Credential Manager 和 Linux Secret Service（需 `secret-tool`）适配代码仍待目标系统实测。系统存储不可用时明确使用当前 Host 内存，不写入 JSON、Session、日志或 checkpoint。`PRAXIS_SECRET_STORE=memory` 可显式选择临时存储。退出后内存凭据失效。
+
+CLI 从 `PRAXIS_MCP_BEARER` 一次性读取专用 Token，并在启动 Host 前从继承环境移除；不要将 Token 放在命令行参数中。设置后状态输出不含 Token：
+
+```sh
+pnpm cli mcp auth SERVER_ID
+pnpm cli mcp clear-auth SERVER_ID
+```
+
+使用临时存储时，在同一次前台运行内设置、检查并启用服务器：
+
+```sh
+pnpm cli run --workspace /absolute/path/project --mcp-bearer-server SERVER_ID
+```
+
+认证版本与配置版本绑定目录；更换凭据取消旧操作。业务调用收到 401 不自动重放，服务器回显已知凭据会在保存和交给模型前拒绝。`pnpm native:build` 构建本机 Keychain/Credential Manager helper；秘密经私有管道传输，不放入 helper 参数。

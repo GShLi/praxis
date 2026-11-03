@@ -50,9 +50,9 @@
     "validation": "context-model 重复压缩、摘要失败、协议分组测试"
   },
   "packages/mcp-client/src/connection.ts#connect:1": {
-    "maxLines": 62,
-    "reason": "单个 MCP 连接的受控 HTTP 装配、协议协商及失败清理，网络策略和错误映射已移出。",
-    "validation": "mcp-client 协议、取消、网络边界测试"
+    "maxLines": 64,
+    "reason": "单连接启动生命周期保持协议协商、受控 HTTP、凭据注入与失败关闭对应；秘密检查不改写远端数据。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/mcp-core/src/catalog.ts#refresh:1": {
     "maxLines": 74,
@@ -215,14 +215,14 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/settings/McpEditor.tsx#McpEditor:1": {
-    "reason": "单一 MCP 配置表单的连续 JSX 与局部输入状态，新增文本资源能力选择；网络、异步结果和启停由 useMcpSettings 管理。",
-    "validation": "TypeScript、Web/桌面构建；本轮无浏览器访问，不声称视觉点击已验证。",
-    "maxLines": 102
+    "maxLines": 111,
+    "reason": "连续服务器表单 JSX 新增提示词能力选择；无外部 I/O。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/McpSettings.tsx#McpSettings:1": {
-    "maxLines": 79,
-    "reason": "MCP 配置表单与列表 JSX，各异步操作短回调委托客户端；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
+    "maxLines": 88,
+    "reason": "连续 MCP 设置页面 JSX，凭据子表单已提取；数据与异步动作由 Hook 管理。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/Models.tsx#Models:1": {
     "maxLines": 121,
@@ -240,9 +240,9 @@
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/ui/src/settings/useMcpSettings.ts#useMcpSettings:1": {
-    "reason": "同一设置页异步状态所有者，包含客户端切换/卸载代次、加载、检查凭据和动作结果；各网络请求经 PraxisClient，未在 hook 内实现 MCP 协议。",
-    "validation": "类型检查及构建；底层启停/检查/版本绑定通过真实 HTTP MCP 用例。UI 生命周期尚无真实浏览器复查。",
-    "maxLines": 78
+    "maxLines": 96,
+    "reason": "单设置页的版本快照、异步过期保护和操作表；凭据提交失败后仍刷新权威配置，避免提交成功但回执丢失造成旧版本循环。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/useProviderEditor.ts#useProviderEditor:1": {
     "maxLines": 141,
@@ -325,9 +325,9 @@
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
   "tests/fixtures/mcp-http.ts#handle:1": {
-    "maxLines": 95,
-    "reason": "本地协议 fixture 同时验证 JSON 与旧版 POST SSE 请求/回答；路由分发与响应绑定保持完整。",
-    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+    "maxLines": 103,
+    "reason": "同一真实 HTTP/SSE 协议 fixture 路由和响应配对；新增业务 401，验证 SDK 不自动重放。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "apps/server/src/server-process.ts#runServer:1": {
     "maxLines": 62,
@@ -340,9 +340,9 @@
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "apps/cli/src/run-cli.ts#runCli:1": {
-    "maxLines": 67,
-    "reason": "CLI 分发入口维持同一个 Host try/finally 生命周期，新增参数互斥和 MCP 命令调用；提示词解析与执行委托独立模块。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 74,
+    "reason": "CLI 入口 owns Host 和前台 Session；一次性 MCP 环境输入在启动 Host 前删除，认证步骤在 mcp-auth。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/conversation/PluginCommands.tsx#PluginCommands:1": {
     "maxLines": 81,
@@ -395,9 +395,9 @@
     "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/mcp-client/src/turn-scope.ts#perform:1": {
-    "maxLines": 75,
-    "reason": "同一 MCP 操作拥有连接、审批、续交配置、事件和 finally 关闭，不能拆成独立生命周期。",
-    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+    "maxLines": 87,
+    "reason": "单逻辑操作持有连接、认证版本、人工续交、授权票据和 finally 关闭；保留一次操作边界避免不同生命周期间传递可变资源。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/permissions/src/approval-gate.ts#wait:1": {
     "maxLines": 63,
@@ -428,5 +428,40 @@
     "maxLines": 79,
     "reason": "同一完整 Runtime 夹具验证初始化失败、异步清理失败、同步清理失败三种路径；检查一次释放、无模型调用和终态。",
     "validation": "runtime-initialization、plugin-provider 回归及全量检查/构建。"
+  },
+  "apps/agent-host/src/mcp-rpc.ts#mcpRoutes:1": {
+    "maxLines": 83,
+    "reason": "MCP 控制路由表；凭据持久化由独立 service 负责，路由只做校验/身份和调用。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "packages/mcp-client/src/credentials/secret-process.ts#secretProcess:1": {
+    "maxLines": 69,
+    "reason": "单一可信 helper 子进程的管道、大小限制、取消、超时升级 kill 和退出清理拥有同一 Promise 生命周期。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "packages/mcp-client/src/maintenance.ts#perform:1": {
+    "maxLines": 63,
+    "reason": "连接检查在固定配置/认证 epoch 下启动并保存统一终态；凭据解析在独立 service。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "packages/ui/src/settings/McpCredential.tsx#McpCredential:1": {
+    "maxLines": 91,
+    "reason": "单一凭据编辑器的连续 JSX；密码仅组件状态且提交后清除，传输由传入回调负责。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "tests/integration/mcp-auth.test.ts#test(CLI consumes a one-time Bearer input, reports memory fallback, and enables it for a foreground run):1": {
+    "maxLines": 125,
+    "reason": "一组真实 PostgreSQL/HTTP/Host/CLI 生命周期验证临时凭据跨进程消失与前台运行接通；Provider 安装已提取共享夹具。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "tests/mcp-bearer.test.ts#test(Bearer authentication reaches only its endpoint, rejects reflected secrets and invalidates active operations on rotation):1": {
+    "maxLines": 84,
+    "reason": "真实 HTTP 操作顺序验证 Token、返回值泄漏、401 不重试和轮换取消，共享服务器和持久事实。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "tests/mcp-credentials.test.ts#test(Bearer references bind profile and exact endpoint, rotate epoch, and keep configuration free of secrets):1": {
+    "maxLines": 93,
+    "reason": "同一凭据生命周期验证保存、不同身份/端点隔离、轮换、旧引用失效及删除，保留对象和清理对应。",
+    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   }
 }

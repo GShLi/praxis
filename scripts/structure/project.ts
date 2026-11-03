@@ -40,5 +40,5 @@ export function owner(file: string, workspace: Package[]) {
 export function sourceFiles() {
   return ['apps', 'packages', 'scripts', 'tests', 'native']
     .flatMap(files)
-    .filter((file) => /\.(tsx?|css|c)$/.test(file));
+    .filter((file) => /\.(tsx?|css|c|m)$/.test(file));
 }

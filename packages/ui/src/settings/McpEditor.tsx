@@ -13,7 +13,8 @@ export function McpEditor({
     [namespace, setNamespace] = useState('');
   const [endpoint, setEndpoint] = useState(''),
     [privateHost, setPrivateHost] = useState(false);
-  const [resources, setResources] = useState(false);
+  const [resources, setResources] = useState(false),
+    [prompts, setPrompts] = useState(false);
   return (
     <form
       className="settings-editor"
@@ -32,7 +33,7 @@ export function McpEditor({
             allowPrivateDestination: privateHost,
             auth: { type: 'none' },
           },
-          capabilities: { tools: true, resources, prompts: false },
+          capabilities: { tools: true, resources, prompts },
         }).then((saved) => {
           if (saved) cancel();
         });
@@ -90,6 +91,14 @@ export function McpEditor({
           onChange={(e) => setResources(e.target.checked)}
         />
         允许 Agent 读取文本资源（每次读取需要确认）
+      </label>
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={prompts}
+          onChange={(event) => setPrompts(event.target.checked)}
+        />
+        允许用户选择并预览提示词模板
       </label>
       <div className="settings-form-footer">
         <button type="button" className="secondary-button" onClick={cancel}>

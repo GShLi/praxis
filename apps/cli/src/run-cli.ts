@@ -1,3 +1,4 @@
+import { configureMcpBearer } from './mcp-auth.ts';
 import { CLI_HELP } from './help.ts';
 import { startHost } from '@praxis/client-host';
 import { assert } from '@praxis/contracts';
@@ -23,6 +24,13 @@ export async function runCli() {
     ['doctor', 'run', 'sessions', 'providers', 'plugins', 'mcp'].includes(command),
     'INVALID_COMMAND',
     '未知命令，使用 --help 查看帮助。',
+  );
+  const mcpBearer = process.env.PRAXIS_MCP_BEARER;
+  delete process.env.PRAXIS_MCP_BEARER;
+  assert(
+    !values['mcp-bearer-server'] || command === 'run',
+    'INVALID_COMMAND',
+    '--mcp-bearer-server 仅用于 run。',
   );
   const host = await startHost('cli');
   let session: CliSession | undefined;
@@ -51,7 +59,7 @@ export async function runCli() {
       return;
     }
     if (command === 'mcp') {
-      await mcpCommand(host, positionals, values);
+      await mcpCommand(host, positionals, values, mcpBearer);
       return;
     }
     if (command === 'sessions' || command === 'providers') {
@@ -64,6 +72,8 @@ export async function runCli() {
       );
       return;
     }
+    if (values['mcp-bearer-server'])
+      await configureMcpBearer(host, values['mcp-bearer-server'], mcpBearer, true);
     const sessionId = await prepareSession(host, values);
     session = new CliSession(host, sessionId, values);
     await session.run();

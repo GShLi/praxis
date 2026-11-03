@@ -1,3 +1,4 @@
+import type { ResolveCredentials, McpAuthentication } from './credentials/service.ts';
 import type { Ask } from '@praxis/tools';
 import { containsSecret } from './form.ts';
 import type { FetchLike } from '@modelcontextprotocol/client';
@@ -21,6 +22,7 @@ export interface TurnScopeOptions {
   artifact(kind: string, content: string): string;
   fetch?: FetchLike;
   ask?: Ask;
+  credentials?: ResolveCredentials;
 }
 export interface RemoteOperation {
   connection: McpConnection;
@@ -87,7 +89,16 @@ export class McpTurnScope {
     action: (operation: RemoteOperation) => Promise<T>,
     policy: OperationPolicy,
   ): Promise<T> {
-    const { config, signal } = await this.prepare(serverId, policy.capability);
+    const { config, signal, authentication } = await this.prepare(serverId, policy.capability);
+    const sensitiveValues = [
+      ...this.options.sensitiveValues,
+      ...(authentication.bearer ? [authentication.bearer] : []),
+    ];
+    assert(
+      !containsSecret(parameters, sensitiveValues),
+      'MCP_SECRET_DENIED',
+      '请求参数包含已知凭据。',
+    );
     const operationId = randomUUID();
     const details = { operationId, callId, serverId, configRevision: config.revision, toolId };
     const connection = new McpConnection(
@@ -97,12 +108,12 @@ export class McpTurnScope {
         client: this.options.client,
         serverId,
         configRevision: config.revision,
-        authEpoch: 0,
+        authEpoch: authentication.authEpoch,
       },
       signal,
       {
         server: config.displayName,
-        sensitiveValues: this.options.sensitiveValues,
+        sensitiveValues,
         ...(!policy.metadataOnly && this.options.ask ? { ask: this.options.ask } : {}),
         record: (type, data) => this.record(type, { ...details, ...data }),
         beforeContinue: async (responses) => {
@@ -129,7 +140,10 @@ export class McpTurnScope {
         ? undefined
         : await this.approval(config, callId, toolId, parameters, signal);
       await this.current(config, signal);
-      await connection.connect(this.options.fetch ? { fetch: this.options.fetch } : {});
+      await connection.connect({
+        ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
+        ...(authentication.bearer ? { bearer: authentication.bearer } : {}),
+      });
       const result = await action({
         connection,
         signal,
@@ -165,9 +179,9 @@ export class McpTurnScope {
       '此服务器未启用所需能力。',
     );
     assert(
-      config.transport.type === 'streamable-http' && config.transport.auth.type === 'none',
+      config.transport.type === 'streamable-http',
       'MCP_TRANSPORT_UNAVAILABLE',
-      '当前业务执行仅支持无认证 HTTP 服务器。',
+      '当前业务执行仅支持 HTTP 服务器。',
     );
     const server = this.servers.get(serverId) ?? new AbortController();
     this.servers.set(serverId, server);
@@ -178,7 +192,13 @@ export class McpTurnScope {
       AbortSignal.timeout(300_000),
     ]);
     await this.current(config, signal);
-    return { config, signal };
+    let authentication: McpAuthentication = { authEpoch: 0 };
+    if (config.transport.auth.type !== 'none') {
+      assert(this.options.credentials, 'MCP_AUTH_REQUIRED', '此服务器需要本地凭据。');
+      authentication = await this.options.credentials(config, signal);
+      await this.current(config, signal);
+    }
+    return { config, signal, authentication };
   }
   private approval(
     config: McpConfig,

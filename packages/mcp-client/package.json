@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./credentials": "./src/credentials/index.ts",
     ".": "./src/index.ts",
     "./maintenance": "./src/maintenance.ts",
     "./runtime": "./src/runtime.ts",

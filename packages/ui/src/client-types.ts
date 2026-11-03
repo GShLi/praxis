@@ -63,6 +63,8 @@ export type HostMethod =
   | 'plugin/set-enabled'
   | 'plugin/commands'
   | 'plugin/run-command'
+  | 'mcp/credential-set'
+  | 'mcp/credential-clear'
   | 'mcp/server-list'
   | 'mcp/server-upsert'
   | 'mcp/server-disable'
@@ -149,6 +151,7 @@ export interface McpState {
     enabled: boolean;
     protocol: string;
     transport: { type: string; endpoint?: string; executable?: string };
+    credential?: { type: 'none' | 'bearer' | 'oauth'; storage: 'os' | 'memory' | 'missing' | null };
   }>;
 }
 
@@ -230,6 +233,8 @@ export interface PraxisClient {
   installPlugin?(source: string, digest: string, revision: number): Promise<void>;
   enablePlugin?(id: string, enabled: boolean, revision: number): Promise<void>;
   mcpServers?(): Promise<McpState>;
+  setMcpBearer?(id: string, storeRevision: number, revision: number, token: string): Promise<void>;
+  clearMcpCredential?(id: string, storeRevision: number, revision: number): Promise<void>;
   mcpPrompts?(sessionId: string, serverId: string): Promise<McpPromptList>;
   previewMcpPrompt?(input: McpPromptGet): Promise<McpPromptPreview>;
   applyMcpPrompt?(input: McpPromptApply, providerId: string): Promise<void>;

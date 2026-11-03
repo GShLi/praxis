@@ -11,6 +11,7 @@ interface RemoteFixture {
   isError: boolean;
   invalidOutput: boolean;
   disconnect: boolean;
+  unauthorizedBusiness: boolean;
   inputRequired: boolean;
   repeatInput: boolean;
   stateOnly: boolean;
@@ -34,6 +35,7 @@ export async function mcpHttpFixture(legacy = false, resources = false, prompts 
     isError: false,
     invalidOutput: false,
     disconnect: false,
+    unauthorizedBusiness: false,
     inputRequired: false,
     repeatInput: false,
     stateOnly: false,
@@ -104,6 +106,14 @@ async function handle(
     params: rpc.params,
     headers: request.headers,
   });
+  if (
+    remote.unauthorizedBusiness &&
+    ['tools/call', 'prompts/get', 'resources/read'].includes(rpc.method)
+  ) {
+    response.writeHead(401, { 'www-authenticate': 'Bearer' });
+    response.end();
+    return;
+  }
   if (rpc.method === 'notifications/initialized') {
     response.writeHead(202);
     response.end();

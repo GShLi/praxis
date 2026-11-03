@@ -11,6 +11,7 @@ export function parseOptions() {
       command: { type: 'string' },
       'apply-prompt': { type: 'string' },
       'content-hash': { type: 'string' },
+      'mcp-bearer-server': { type: 'string' },
       arguments: { type: 'string' },
       digest: { type: 'string' },
       json: { type: 'boolean' },

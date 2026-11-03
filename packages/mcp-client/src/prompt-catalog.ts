@@ -18,9 +18,11 @@ export async function promptCatalog(connection: McpConnection, signal: AbortSign
   let cursor: string | undefined,
     bytes = 0;
   for (let page = 0; page < 20; page++) {
-    const raw = await connection.client.request(
-      { method: 'prompts/list', params: cursor ? { cursor } : {} },
-      { signal, timeout: 10000, maxTotalTimeout: 10000, resetTimeoutOnProgress: false },
+    const raw = connection.safeResult(
+      await connection.client.request(
+        { method: 'prompts/list', params: cursor ? { cursor } : {} },
+        { signal, timeout: 10000, maxTotalTimeout: 10000, resetTimeoutOnProgress: false },
+      ),
     );
     bytes += Buffer.byteLength(JSON.stringify(raw));
     assert(bytes <= 2 * 1024 * 1024, 'MCP_CATALOG_LIMIT', '提示词目录超过 2 MiB。');

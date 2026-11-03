@@ -1,3 +1,4 @@
+import type { ResolveCredentials } from './credentials/service.ts';
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { assert, PraxisError } from '@praxis/contracts';
 import type { McpConfigService } from '@praxis/mcp-core';
@@ -25,6 +26,7 @@ export class McpMaintenance {
     private owner: string,
     private client: string,
     private fetch?: FetchLike,
+    private credentials?: ResolveCredentials,
   ) {}
   test(serverId: string, expectedRevision: number) {
     assert(!this.closed, 'MCP_CLOSED', 'MCP 已关闭。');
@@ -40,6 +42,11 @@ export class McpMaintenance {
   private async perform(serverId: string, expectedRevision: number, cancellation: AbortSignal) {
     const signal = AbortSignal.any([cancellation, AbortSignal.timeout(60_000)]);
     const config = await this.checkedConfig(serverId, expectedRevision, signal);
+    const authentication =
+      config.transport.type === 'streamable-http' && config.transport.auth.type !== 'none'
+        ? await this.credentials?.(config, signal)
+        : { authEpoch: 0 };
+    assert(authentication, 'MCP_AUTH_REQUIRED', '此服务器需要本地凭据。');
     const operationId = randomUUID();
     this.store.startMaintenance(operationId, this.owner, serverId, config.revision);
     const connection = new McpConnection(
@@ -49,13 +56,16 @@ export class McpMaintenance {
         client: this.client,
         serverId,
         configRevision: config.revision,
-        authEpoch: 0,
+        authEpoch: authentication.authEpoch,
       },
       signal,
     );
     let result: McpTestResult | undefined, failure: PraxisError | undefined;
     try {
-      await connection.connect(this.fetch ? { fetch: this.fetch } : {});
+      await connection.connect({
+        ...(this.fetch ? { fetch: this.fetch } : {}),
+        ...(authentication.bearer ? { bearer: authentication.bearer } : {}),
+      });
       const catalog = await connection.catalog();
       const capabilities = connection.client.getServerCapabilities();
       const current = (await this.configs.file.read()).value.find((c) => c.id === serverId);
@@ -105,7 +115,7 @@ export class McpMaintenance {
       '本地 stdio 服务需要已验证的原生沙箱。',
     );
     assert(
-      config.transport.auth.type === 'none',
+      config.transport.auth.type === 'none' || this.credentials,
       'MCP_AUTH_REQUIRED',
       '此连接需要先配置本地 MCP 凭据。',
     );
