@@ -35,11 +35,11 @@ export const isolationArgs = [
   '/tmp',
 ];
 
-export function runIsolated(program: string, args: string[] = []) {
+export function runIsolated(program: string, args: string[] = [], mounts: string[] = []) {
   assert.equal(process.platform, 'linux', 'Run this suite on native Linux.');
   const result = spawnSync(
     '/usr/bin/bwrap',
-    [...isolationArgs, '/usr/bin/python3', '-c', program, ...args],
+    [...isolationArgs, ...mounts, '/usr/bin/python3', '-c', program, ...args],
     {
       env: { PRAXIS_PROBE_FAKE_SECRET: 'disposable-test-value' },
       input: '',
@@ -83,7 +83,7 @@ export async function startIsolatedHost(program: string) {
     child.once('exit', () => process.exit(0));`;
   const host = spawn(process.execPath, ['-e', source], {
     env: {},
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['pipe', 'pipe', 'pipe'],
   });
   const closed = once(host, 'close');
   // Attach immediately: startup errors must not leave an unhandled rejection.

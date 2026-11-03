@@ -58,7 +58,7 @@ sudo apt-get install --no-install-recommends build-essential libsecret-tools
 
 原生命令隔离另需 Bubblewrap 和可用的用户 namespace。缺少 Bubblewrap 时可由管理员安装 `bubblewrap`；探测失败须保留失败结果，不能自动以普通宿主进程代替。编译、命令隔离、凭据和桌面交互分别记录验收状态。
 
-`pnpm test:linux-isolation` 在原生 Linux 上用 Bubblewrap 和 `/usr/bin/python3` 验证最小挂载/环境隔离、宿主 TCP 与抽象 Unix socket 不可达，以及模拟 Host 强杀后的双重 fork/setsid 子孙清理。它使用临时假数据和本地测试监听，不读取系统凭据；不是生产策略实现，也不会启用 Praxis 的命令工具。此专用套件不包含在跨平台 `pnpm check` 中，不能用 macOS/Windows 上的跳过结果计为通过。
+`pnpm test:linux-isolation` 在原生 Linux 上用 Bubblewrap 和 `/usr/bin/python3` 验证最小挂载/环境隔离、宿主 TCP 与抽象 Unix socket 不可达、模拟 Host 强杀和命令正常退出后的双重 fork/setsid 子孙清理，以及工作区只读/可写挂载和指向未挂载宿主文件的符号链接不可达。它使用临时假数据和本地测试监听，不读取系统凭据；不是生产策略实现，也不会启用 Praxis 的命令工具。此专用套件不包含在跨平台 `pnpm check` 中，不能用 macOS/Windows 上的跳过结果计为通过。
 
 `pnpm test:linux-credentials` 要求安装真实 `secret-tool`，通过独立测试进程连接不存在的私有 D-Bus 地址，验证服务故障不会被误判为凭据不存在或删除成功，MCP 配置保留清理引用，新凭据仍可显式降级到内存。它不连接真实凭据服务、不弹出解锁界面，也不能作为系统凭据持久化成功的证据。
 

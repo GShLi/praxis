@@ -78,11 +78,10 @@ os.close(w)
 os.read(r,1)
 os.close(r)
 print(os.readlink('/proc/self/ns/pid'), flush=True)
-time.sleep(10)
 `;
 
 test('Linux Host SIGKILL removes the namespace including double-fork setsid descendants', async () => {
-  const fixture = await startIsolatedHost(descendants);
+  const fixture = await startIsolatedHost(descendants + '\ntime.sleep(10)');
   try {
     assert((await namespaceMembers(fixture.namespace)).length >= 3);
     fixture.host.kill('SIGKILL');
@@ -95,6 +94,19 @@ test('Linux Host SIGKILL removes the namespace including double-fork setsid desc
     assert.deepEqual(members, [], 'Detached processes must not survive Host death.');
     // close also waits for stdout/stderr EOF from every process that inherited the pipes.
     await fixture.closed;
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('Linux command exit removes detached descendants while the Host exits normally', async () => {
+  const fixture = await startIsolatedHost(descendants + '\nimport sys\nsys.stdin.buffer.read(1)');
+  try {
+    assert((await namespaceMembers(fixture.namespace)).length >= 3);
+    fixture.host.stdin.end();
+    // SIGKILL from the fixture deadline must fail, not masquerade as command completion.
+    assert.deepEqual(await fixture.closed, [0, null]);
+    assert.deepEqual(await namespaceMembers(fixture.namespace), []);
   } finally {
     await fixture.close();
   }
