@@ -1,6 +1,5 @@
 import { assert, PraxisError } from '@praxis/contracts';
 import { hash } from '@praxis/storage-local';
-import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { absent, WorkspacePathPolicy } from './policy.ts';
 import type { Loaded, Observation } from './types.ts';
@@ -9,28 +8,14 @@ const DISPLAY_LIMIT = 12 * 1024;
 export class FileContent {
   private observations = new Map<string, Observation>();
   constructor(private paths: WorkspacePathPolicy) {}
-  async load(input: string, writing = false): Promise<Loaded> {
+  async load(input: string, writing = false, signal?: AbortSignal): Promise<Loaded> {
     const target = await this.paths.resolve(input, writing);
-    let handle;
     try {
-      // Resolve authorized links, then open with NOFOLLOW to detect a switched final link.
+      // Resolve allowed links, then open every component relative to the pinned native root.
       const real = await fs.realpath(target);
       await this.paths.resolve(real, writing);
-      handle = await fs.open(real, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-      const before = await handle.stat();
-      assert(before.nlink === 1, 'ACCESS_DENIED', '拒绝读取来源不明确的多硬链接文件。');
-      assert(before.isFile(), 'UNSUPPORTED_FILE', '只支持普通文本文件。');
-      assert(before.size <= FILE_LIMIT, 'FILE_TOO_LARGE', '文件超过 2 MiB。');
-      const buffer = await handle.readFile();
-      const after = await handle.stat();
-      assert(buffer.length <= FILE_LIMIT, 'FILE_TOO_LARGE', '文件超过 2 MiB。');
-      assert(
-        before.mtimeMs === after.mtimeMs &&
-          before.ctimeMs === after.ctimeMs &&
-          before.size === after.size,
-        'FILE_CHANGED_DURING_READ',
-        '读取期间文件发生变化。',
-      );
+      const after = await this.paths.io.read(real, signal);
+      const buffer = after.buffer;
       assert(!buffer.includes(0), 'UNSUPPORTED_ENCODING', '不支持二进制文件。');
       let text: string;
       try {
@@ -38,7 +23,7 @@ export class FileContent {
       } catch {
         throw new PraxisError('UNSUPPORTED_ENCODING', '文件不是有效 UTF-8。');
       }
-      const identity = `${after.dev}:${after.ino}`;
+      const identity = after.identity;
       return {
         target,
         text,
@@ -50,12 +35,10 @@ export class FileContent {
     } catch (error) {
       if (absent(error)) throw new PraxisError('FILE_NOT_FOUND', '文件不存在。');
       throw error;
-    } finally {
-      await handle?.close();
     }
   }
-  async read(input: { path: string; startLine: number; lineCount: number }) {
-    const file = await this.load(input.path);
+  async read(input: { path: string; startLine: number; lineCount: number }, signal?: AbortSignal) {
+    const file = await this.load(input.path, false, signal);
     const matches = Array.from(file.text.matchAll(/[^\r\n]*(?:\r\n|\n|\r|$)/g)).filter(
       (m) => m[0] !== '',
     );

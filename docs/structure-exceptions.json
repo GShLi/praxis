@@ -89,16 +89,6 @@
     "reason": "工具执行用例协调参数验证、权限、附加审批和适配器派发；插件调用、文件/进程/会话操作及结果失败映射已独立。",
     "validation": "runtime、permissions、plugins-mcp 测试"
   },
-  "packages/tools/src/files/search.ts#scan:1": {
-    "maxLines": 64,
-    "reason": "原有有界目录遍历保留忽略规则继承；每个目录新增一次受控指令发现回调，不在遍历中处理上下文。",
-    "validation": "instructions、instruction-concurrency、file-search、核心测试及构建。"
-  },
-  "packages/tools/src/files/search.ts#search:1": {
-    "maxLines": 71,
-    "reason": "有界文件遍历/搜索循环，在同一扫描范围维护 ignore、结果数、字节预算和取消；不是多个业务服务。",
-    "validation": "runtime 的文件路径/观察版本测试；类型与入口构建"
-  },
   "packages/tools/src/session-tools.ts#executeSessionTool:1": {
     "maxLines": 65,
     "reason": "同一 Session 工具分发器，计划、问题和产物各分支短小；共享 ToolResult 合同。",

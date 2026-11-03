@@ -1,6 +1,7 @@
 import { assert } from '@praxis/contracts';
 import * as fs from 'node:fs/promises';
 import path from 'node:path';
+import { NativeWorkspaceIo } from './native/io.ts';
 export const protectedParts = new Set(['.git', '.hg', '.svn', '.ssh', '.aws', '.gnupg', '.praxis']);
 export function sensitive(name: string) {
   return (
@@ -20,10 +21,14 @@ export function absent(error: unknown) {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
 export class WorkspacePathPolicy {
+  readonly io: NativeWorkspaceIo;
   constructor(
     readonly root: string,
     private protectedPaths: string[],
-  ) {}
+    rootIdentity: string,
+  ) {
+    this.io = new NativeWorkspaceIo(root, rootIdentity);
+  }
   async resolve(input: string, writing = false): Promise<string> {
     assert(!input.includes('\0'), 'INVALID_ARGUMENT', '路径包含非法字符。');
     const target = path.resolve(this.root, input);

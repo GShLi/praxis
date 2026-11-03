@@ -42,6 +42,7 @@ jobs:
         with:
           node-version: 24
       - run: pnpm install --frozen-lockfile
+      - run: pnpm native:build
       - run: pnpm test:postgres
         env:
           PRAXIS_TEST_DATABASE_URL: postgresql://postgres:praxis_test@127.0.0.1:5432/postgres

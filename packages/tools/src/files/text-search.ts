@@ -61,8 +61,9 @@ export async function searchContent(
         continue;
       let file;
       try {
-        file = await content.load(path.join(source.root, relative));
+        file = await content.load(path.join(source.root, relative), false, signal);
       } catch {
+        signal.throwIfAborted();
         incomplete = true;
         continue;
       }

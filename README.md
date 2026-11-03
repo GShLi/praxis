@@ -201,3 +201,9 @@ pnpm cli data restore /absolute/path/praxis-backup-... --client cli --confirm SH
 新建 profile 按 Praxis 服务来源、客户端类型和用户 ID 隔离，同一 ID 在不同服务上不会共享会话、MCP 配置或插件。旧版目录没有来源信息，首次使用新版时会报 `PROFILE_BINDING_REQUIRED`，不会自动猜测归属。
 
 确认 `PRAXIS_SERVER_URL` 指向原服务、API Key 属于原账号，关闭对应客户端后，在自己的终端执行 `pnpm cli data bind-legacy --confirm https://原服务地址 --client cli`；桌面端使用 `--client desktop`。这只为旧目录写入不可变来源标记，不移动或删除会话、配置、插件文件。重复确认同一来源可重试；其他来源或已存在的新数据冲突会明确拒绝合并。不要把旧数据绑定到新建的同名账号或不同服务。
+
+## 原生文件组件
+
+文件读取、目录遍历与写入现在依赖 `pnpm native:build` 生成的 `praxis-files`。它固定根目录身份，通过原生目录句柄逐段访问；写入准备完成后再次向 Host 获取权限确认。组件缺失时明确失败，不自动降低文件访问边界。目录列表超过单目录 10,000 项会标明 `incomplete`，搜索继续使用总遍历预算。
+
+当前 macOS ARM64 已完成真实文件回归。Linux 与 Windows 的源码和构建入口已提供，目标系统验证仍待完成；Windows 仅设计支持本地盘符路径。实现边界见 [原生组件说明](native/files/README.md)，命令执行沙箱仍未开放。

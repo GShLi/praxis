@@ -10,7 +10,7 @@ export async function executeFilesTool(
 ) {
   switch (name) {
     case 'fs_list':
-      result.data = await files.list(schemas.fs_list.parse(raw));
+      result.data = await files.list(schemas.fs_list.parse(raw), signal);
       break;
     case 'fs_find':
       result.data = await files.find(schemas.fs_find.parse(raw), signal);
@@ -19,7 +19,7 @@ export async function executeFilesTool(
       result.data = await files.search(schemas.fs_search.parse(raw), signal);
       break;
     case 'fs_read':
-      result.data = await files.read(schemas.fs_read.parse(raw));
+      result.data = await files.read(schemas.fs_read.parse(raw), signal);
       break;
     case 'fs_write':
       result.data = await files.write(schemas.fs_write.parse(raw), signal);

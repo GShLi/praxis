@@ -17,8 +17,9 @@ export class WorkspaceFiles {
     artifact: (kind: string, text: string) => string,
     protectedPaths: string[],
     beforeWrite: () => void,
+    rootIdentity: string,
   ) {
-    this.paths = new WorkspacePathPolicy(root, protectedPaths);
+    this.paths = new WorkspacePathPolicy(root, protectedPaths, rootIdentity);
     this.content = new FileContent(this.paths);
     this.writer = new FileWriter(this.paths, this.content, artifact, beforeWrite);
     this.searcher = new FileSearch(this.paths, this.content);
@@ -30,7 +31,7 @@ export class WorkspaceFiles {
     beforeWrite: () => void = () => {},
   ) {
     const canonical = await fs.realpath(root);
-    const stat = await fs.stat(canonical);
+    const stat = await fs.stat(canonical, { bigint: true });
     assert(stat.isDirectory(), 'INVALID_WORKSPACE', '工作区必须是目录。');
     const protectedRoots = await Promise.all(
       protectedPaths.map(async (p) => {
@@ -46,7 +47,13 @@ export class WorkspaceFiles {
       'ACCESS_DENIED',
       '不能使用 Praxis 内部目录作为工作区。',
     );
-    return new WorkspaceFiles(canonical, artifact, protectedRoots, beforeWrite);
+    return new WorkspaceFiles(
+      canonical,
+      artifact,
+      protectedRoots,
+      beforeWrite,
+      `${stat.dev}:${stat.ino}`,
+    );
   }
   async readText(input: string, maxBytes: number): Promise<string> {
     const file = await this.content.load(input);

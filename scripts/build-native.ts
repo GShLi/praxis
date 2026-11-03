@@ -35,6 +35,52 @@ if (result.status !== 0) {
   process.exitCode = 1;
 }
 
+if (process.exitCode !== 1) {
+  const files =
+    process.platform === 'win32'
+      ? spawnSync(
+          'cl',
+          [
+            '/nologo',
+            '/W4',
+            '/O2',
+            '/D_CRT_SECURE_NO_WARNINGS',
+            '/D_WIN32_WINNT=0x0A00',
+            'native/files/main.c',
+            'native/files/protocol.c',
+            'native/files/win-handles.c',
+            'native/files/win-path.c',
+            'native/files/win-read.c',
+            'native/files/win-write.c',
+            `/Fe:${path.join(directory, 'praxis-files.exe')}`,
+            `/Fo:${directory}${path.sep}`,
+            'Bcrypt.lib',
+          ],
+          { stdio: 'inherit' },
+        )
+      : spawnSync(
+          'cc',
+          [
+            '-Wall',
+            '-Wextra',
+            '-Werror',
+            '-O2',
+            'native/files/main.c',
+            'native/files/protocol.c',
+            'native/files/path.c',
+            'native/files/read.c',
+            'native/files/write.c',
+            '-o',
+            path.join(directory, 'praxis-files'),
+          ],
+          { stdio: 'inherit' },
+        );
+  if (files.status !== 0) {
+    console.error('Native file helper build failed. Install the platform C toolchain.');
+    process.exitCode = 1;
+  }
+}
+
 if (process.exitCode !== 1 && process.platform !== 'linux') {
   const secret =
     process.platform === 'win32'
