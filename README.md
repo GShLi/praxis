@@ -112,3 +112,7 @@ pnpm cli mcp disable SERVER_ID
 ## 文件搜索语法
 
 `fs_search` 支持 `literal`（默认）和 `regex`。正则使用 Node 的 Unicode 单行表达式，不接受 `/pattern/flags` 包装；大小写由 `caseSensitive` 控制，每行返回首次命中，列号从 1 开始按 Unicode 码点计数。支持字符类、分组、量词、断言等当前 Node 引擎语法；实际换行不能用于表达式。每个文件的匹配限时 1 秒，超时报 `SEARCH_TIMEOUT`；32 MiB 扫描文本或遍历预算用尽会标记 `incomplete`，命中数量超限标记 `truncated`。搜索遵守原有工作区、敏感路径、忽略文件和符号链接限制。
+
+## 项目指令
+
+Agent 在创建会话时记录根 `AGENTS.md`，访问子目录或遍历搜索时发现更具体规则；不向工作区外自动扫描。每次模型请求刷新已发现的文件，最多 32 个文件、累计 64 KiB，超限明确报错。指令快照保留来源、范围、摘要与完整文本产物，修改或删除不会抹去旧版本。若生成写入后才发现新规则或规则已变，工具返回 `INSTRUCTIONS_CHANGED` 并等待模型下一步重新决定。项目规则不能扩大权限；Chat 不读取这些文件。

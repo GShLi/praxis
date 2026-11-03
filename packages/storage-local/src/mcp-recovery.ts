@@ -1,6 +1,7 @@
 import { eventSchema } from '@praxis/contracts';
 import { z } from 'zod';
 import type { StoreAccess } from './store-access.ts';
+import { mcpOperationEvents } from './mcp-operation-events.ts';
 
 const operation = z.object({
   operationId: z.string(),
@@ -13,14 +14,7 @@ const operation = z.object({
 /** Restore facts only. Transport state and authorization are never reconstructed. */
 export function recoverMcpOperations(store: Pick<StoreAccess, 'db' | 'append'>, sessionId: string) {
   const pending = new Map<string, { details: z.infer<typeof operation>; dispatched: boolean }>();
-  const records = store.db
-    .prepare(
-      `SELECT document FROM events WHERE session_id=?
-    AND json_extract(document, '$.type') IN ('mcp/operation-started','mcp/dispatch','mcp/operation-finished')
-    ORDER BY seq`,
-    )
-    .iterate(sessionId);
-  for (const row of records) {
+  for (const row of mcpOperationEvents(store.db, sessionId)) {
     const event = eventSchema.parse(JSON.parse(String(row.document)));
     if (event.type === 'mcp/operation-started') {
       const details = operation.parse(event.payload);

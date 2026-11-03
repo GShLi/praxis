@@ -48,6 +48,18 @@ export class WorkspaceFiles {
     );
     return new WorkspaceFiles(canonical, artifact, protectedRoots, beforeWrite);
   }
+  async readText(input: string, maxBytes: number): Promise<string> {
+    const file = await this.content.load(input);
+    assert(
+      Buffer.byteLength(file.text) <= maxBytes,
+      'INSTRUCTIONS_LIMIT',
+      '项目指令超过读取限制。',
+    );
+    return file.text;
+  }
+  observeSearchDirectories(observer: (directory: string) => Promise<void>) {
+    this.searcher.beforeDirectory = observer;
+  }
   resolve(...args: Parameters<WorkspacePathPolicy['resolve']>) {
     return this.paths.resolve(...args);
   }

@@ -100,9 +100,9 @@
     "validation": "runtime、permissions、plugins-mcp 测试"
   },
   "packages/tools/src/files/search.ts#scan:1": {
-    "maxLines": 63,
-    "reason": "有界文件遍历/搜索循环，在同一扫描范围维护 ignore、结果数、字节预算和取消；不是多个业务服务。",
-    "validation": "runtime 的文件路径/观察版本测试；类型与入口构建"
+    "maxLines": 64,
+    "reason": "原有有界目录遍历保留忽略规则继承；每个目录新增一次受控指令发现回调，不在遍历中处理上下文。",
+    "validation": "instructions、instruction-concurrency、file-search、核心测试及构建。"
   },
   "packages/tools/src/files/search.ts#search:1": {
     "maxLines": 71,
@@ -373,5 +373,10 @@
     "maxLines": 76,
     "reason": "真实隔离 PostgreSQL、HTTP、Host 安装启用与子进程 CLI 的单一端到端场景；所有资源在 finally 释放。",
     "validation": "真实 PostgreSQL 集成 10 项通过，包括无厂商配置执行插件命令。"
+  },
+  "tests/instruction-concurrency.test.ts#test(concurrent plugin reads retain both directory instruction scopes):1": {
+    "maxLines": 93,
+    "reason": "并行插件读两个真实目录的单一生命周期测试，同时检查持久快照及下一次模型输入，finally 释放全部资源。",
+    "validation": "instructions、instruction-concurrency、file-search、核心测试及构建。"
   }
 }

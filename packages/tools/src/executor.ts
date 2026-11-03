@@ -36,6 +36,11 @@ export class ToolExecutor {
     readonly approve?: Approve,
     private consumeDelegatedTool?: () => void,
     private extension?: ToolExtension,
+    private beforeCore?: (
+      name: string,
+      parameters: Record<string, unknown>,
+      writing: boolean,
+    ) => Promise<void>,
   ) {
     this.coreDefinitions = (Object.keys(schemas) as Array<keyof typeof schemas>).map((name) => ({
       id: ids[name],
@@ -163,6 +168,8 @@ export class ToolExecutor {
       if ('path' in parsed) await this.files.resolve(parsed.path, writing);
     }
     await this.enforcePluginPolicy(call, result, raw, signal);
+    if (!plugin && !extension) await this.beforeCore?.(name, schemas[name].parse(raw), writing);
+    signal.throwIfAborted();
     return { plugin, extension, name, raw, writing };
   }
   private async enforcePluginPolicy(

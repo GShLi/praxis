@@ -55,6 +55,7 @@ export class TurnSteps {
         model: config.model,
         ...turn.providerDescriptor,
         contextVersion: this.store.context(id).version,
+        instructionRevision: turn.instructions?.revision ?? 0,
       });
       this.store.append(id, 'step/started', { turnId: turn.id, stepId, ordinal: turn.steps });
       const response = await this.options.model.complete({

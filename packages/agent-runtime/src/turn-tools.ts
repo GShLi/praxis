@@ -1,3 +1,4 @@
+import { ProjectInstructions } from './instructions.ts';
 import { assert, type Session, type ModelConfig } from '@praxis/contracts';
 import type { ActivePlugin } from '@praxis/plugin-host';
 import type { ApprovalGate } from '@praxis/permissions';
@@ -31,6 +32,11 @@ export async function createTurnTools(
         '当前权限禁止写入。',
       ),
   );
+  if (!turn.command) {
+    const instructions = new ProjectInstructions(files, store, session.id, signal);
+    turn.instructions = instructions;
+    files.observeSearchDirectories((directory) => instructions.discoverDirectory(directory));
+  }
   return new ToolExecutor(
     session.id,
     store,
@@ -51,5 +57,6 @@ export async function createTurnTools(
           signal,
         )
       : undefined,
+    turn.instructions?.beforeTool.bind(turn.instructions),
   );
 }

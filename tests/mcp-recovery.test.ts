@@ -51,3 +51,37 @@ test('restart records interrupted MCP operations once without restoring network 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('recovery preserves operation state across multiple bounded event pages', () => {
+  const store = new SessionStore(':memory:');
+  try {
+    const session = store.create('u', 'agent', '/fixture');
+    store.update(session.id, { status: 'running' });
+    const serverId = uuid();
+    store.transaction(() => {
+      for (let index = 0; index < 510; index++)
+        store.append(session.id, 'mcp/operation-started', {
+          operationId: `operation-${index}`,
+          callId: uuid(),
+          toolId: 'fixture',
+          serverId,
+          configRevision: 1,
+        });
+      for (let index = 0; index < 509; index++)
+        store.append(session.id, 'mcp/operation-finished', {
+          operationId: `operation-${index}`,
+          status: 'succeeded',
+        });
+      store.append(session.id, 'mcp/dispatch', { operationId: 'operation-509' });
+    });
+    store.recover();
+    const result = store.latestEvent(session.id, 'mcp/operation-finished');
+    assert.equal(result?.payload.operationId, 'operation-509');
+    assert.equal(result?.payload.effectState, 'unknown');
+    assert.equal(result?.payload.status, 'interrupted');
+    store.recover();
+    assert.equal(store.latestEvent(session.id, 'mcp/operation-finished')?.eventId, result?.eventId);
+  } finally {
+    store.close();
+  }
+});

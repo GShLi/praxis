@@ -1,4 +1,6 @@
-import { assert, promptSchema, userCommandSchema } from '@praxis/contracts';
+import { saveInstructionSnapshot } from './instruction-snapshot.ts';
+import { prepareSessionInstructions } from './session-instructions.ts';
+import { assert, promptSchema, userCommandSchema, type Kind } from '@praxis/contracts';
 import { findPluginCommand } from '@praxis/plugin-host';
 import { ApprovalGate } from '@praxis/permissions';
 import { SessionStore, uuid } from '@praxis/storage-local';
@@ -45,6 +47,19 @@ export class AgentRuntime extends EventEmitter {
   getTurn(id: string) {
     const turn = this.active.get(id);
     return turn?.finishing ? undefined : turn?.id;
+  }
+  async create(owner: string, kind: Kind, workspace?: string) {
+    assert(!this.closing, 'HOST_CLOSING', 'Host 正在退出。');
+    const prepared =
+      kind === 'agent'
+        ? await prepareSessionInstructions(workspace, this.options.protectedPaths)
+        : undefined;
+    assert(!this.closing, 'HOST_CLOSING', 'Host 正在退出。');
+    return this.store.transaction(() => {
+      const session = this.store.create(owner, kind, prepared?.root);
+      if (prepared?.source) saveInstructionSnapshot(this.store, session.id, 1, [prepared.source]);
+      return this.store.get(session.id, owner);
+    });
   }
   prompt(owner: string, raw: unknown) {
     const input = promptSchema.parse(raw);

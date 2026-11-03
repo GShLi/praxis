@@ -21,7 +21,7 @@ export function sessionsRoutes(
       return { id, canonicalRoot: root };
     },
     'session/create': async (params: unknown) => {
-      const { store, owner } = identity.require();
+      const { runtime, owner } = identity.require();
       const input = z
         .strictObject({ kind: z.enum(['agent', 'chat']), workspaceId: idSchema.optional() })
         .parse(params);
@@ -31,7 +31,7 @@ export function sessionsRoutes(
         'CLI 只支持 Agent。',
       );
       const workspace = input.workspaceId ? identity.workspaces.get(input.workspaceId) : undefined;
-      return store.create(owner, input.kind, workspace);
+      return runtime.create(owner, input.kind, workspace);
     },
     'session/list': async (params: unknown) => {
       const { store, owner } = identity.require();

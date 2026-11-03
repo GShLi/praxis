@@ -8,6 +8,7 @@ import { FileContent } from './content.ts';
 import { sensitive, WorkspacePathPolicy } from './policy.ts';
 import { searchContent, type SearchInput } from './text-search.ts';
 export class FileSearch {
+  beforeDirectory: ((directory: string) => Promise<void>) | undefined;
   private snapshots = new Map<string, { key: string; entries: unknown[]; offset: number }>();
   constructor(
     private paths: WorkspacePathPolicy,
@@ -84,6 +85,7 @@ export class FileSearch {
         incomplete = true;
         return;
       }
+      await this.beforeDirectory?.(directory);
       let entries;
       try {
         entries = await fs.readdir(directory, { withFileTypes: true });

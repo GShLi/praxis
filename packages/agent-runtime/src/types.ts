@@ -1,3 +1,4 @@
+import type { ProjectInstructions } from './instructions.ts';
 import type { Message, ModelConfig, Session } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
 import type { ActivePlugin } from '@praxis/plugin-host';
@@ -31,6 +32,7 @@ export interface RuntimeOptions {
 }
 
 export interface Active {
+  instructions?: ProjectInstructions;
   command?: boolean;
   id: string;
   controller: AbortController;
