@@ -15,6 +15,9 @@
     "@praxis/plugin-host": "workspace:*",
     "@praxis/storage-server": "workspace:*",
     "hono": "4.13.14",
-    "zod": "4.3.6"
+    "zod": "4.3.6",
+    "@praxis/diagnostics": "workspace:*",
+    "@praxis/config": "workspace:*",
+    "@praxis/workspace": "workspace:*"
   }
 }

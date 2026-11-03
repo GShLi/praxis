@@ -1,11 +1,13 @@
 import { serve } from '@hono/node-server';
 import type { AuthService } from '@praxis/auth';
-import { assert } from '@praxis/contracts';
 import type { PostgresDatabase } from '@praxis/storage-server';
 import { createApp } from './app.ts';
 import { createChatService } from './chat-service.ts';
 import { serverConfig } from './config.ts';
 import { serverModels } from './model-plugins.ts';
+import { ServerDiagnostics } from './diagnostics.ts';
+import { waitForListener } from './http-listener.ts';
+import { acquireServerLease } from './server-lease.ts';
 
 /** One lifetime owns the database lease, HTTP listener and Chat runtime. */
 export async function runServer(database: PostgresDatabase, auth: AuthService, webRoot: string) {
@@ -18,33 +20,20 @@ export async function runServer(database: PostgresDatabase, auth: AuthService, w
   );
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);
-  const connect = () => database.pool.connect();
-  let lease: Awaited<ReturnType<typeof connect>> | undefined;
+  let lease: Awaited<ReturnType<typeof acquireServerLease>> | undefined;
   let server: ReturnType<typeof serve> | undefined;
+  let diagnostics: ServerDiagnostics | undefined;
   const chat = createChatService(database, auth, providers.model);
-  let locked = false;
   try {
-    lease = await database.pool.connect();
-    lease.on('error', stop);
-    const result = await lease.query<{ acquired: boolean }>(
-      'SELECT pg_try_advisory_lock(707261786974) AS acquired',
-    );
-    locked = result.rows[0]?.acquired === true;
-    assert(locked, 'SERVER_ALREADY_RUNNING', '数据库已有 Praxis 服务实例。');
+    lease = await acquireServerLease(database, stop);
+    if (controller.signal.aborted) return;
+    diagnostics = await ServerDiagnostics.open(chat, config.origin, stop);
     if (controller.signal.aborted) return;
     await chat.recover();
     if (controller.signal.aborted) return;
-    const app = createApp(auth, chat, config.origin, webRoot);
+    const app = createApp(auth, chat, config.origin, webRoot, undefined, diagnostics);
     server = serve({ fetch: app.fetch, port: config.port, hostname: config.hostname });
-    const listener = server;
-    await new Promise<void>((resolve, reject) => {
-      const listening = () => {
-        server?.off('error', reject);
-        resolve();
-      };
-      listener.once('error', reject);
-      listener.once('listening', listening);
-    });
+    await waitForListener(server, controller.signal);
     server.on('error', stop);
     console.log(`Praxis Server: ${config.origin}`);
     await shutdown;
@@ -58,13 +47,13 @@ export async function runServer(database: PostgresDatabase, auth: AuthService, w
     try {
       await chat.close();
     } finally {
-      await providers.close();
-      if (lease) {
-        lease.off('error', stop);
+      try {
+        await diagnostics?.close();
+      } finally {
         try {
-          if (locked) await lease.query('SELECT pg_advisory_unlock(707261786974)');
+          await providers.close();
         } finally {
-          lease.release();
+          await lease?.close();
         }
       }
     }

@@ -1,7 +1,8 @@
 import { mcpPromptsRoutes } from './mcp-prompts-rpc.ts';
 import { mcpOAuthRoutes } from './mcp-oauth-rpc.ts';
-import { assert, initializeSchema, PraxisError, PROTOCOL } from '@praxis/contracts';
+import { assert, initializeSchema, PraxisError, PROTOCOL, safeError } from '@praxis/contracts';
 import { JsonLines, serveRpc } from '@praxis/transport';
+import { diagnosticCode } from '@praxis/diagnostics';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { HostIdentity } from './identity.ts';
@@ -80,25 +81,48 @@ export class HostProcess {
     serveRpc(this.channel, (method, params) => this.dispatch(method, params));
   }
   private async dispatch(method: string, params: unknown) {
-    if (method === 'host/initialize') {
-      assert(!this.initialized, 'ALREADY_INITIALIZED', 'Host 已初始化。');
-      const input = initializeSchema.parse(params);
-      assert(
-        input.protocolMajor === PROTOCOL.major,
-        'PROTOCOL_MISMATCH',
-        'Host 协议主版本不兼容。',
-      );
-      this.initialized = true;
-      this.clientKind = input.clientKind;
-      this.lastHeartbeat = performance.now();
-      return {
-        ...PROTOCOL,
-        hostInstanceId: this.instanceId,
-        nonce: input.nonce,
-        capabilities: ['sessions', 'files', 'context', 'questions', 'chat'],
-        storageVersion: 2,
-      };
+    const started = performance.now();
+    try {
+      const result = await this.handle(method, params);
+      if (method !== 'host/ping')
+        this.identity.diagnostics?.record({
+          component: 'host',
+          kind: 'request',
+          phase: 'finished',
+          durationMs: Math.round(performance.now() - started),
+        });
+      return result;
+    } catch (error) {
+      this.identity.diagnostics?.record({
+        component: 'host',
+        kind: 'request',
+        phase: 'error',
+        code: diagnosticCode(safeError(error).code),
+        durationMs: Math.round(performance.now() - started),
+      });
+      throw error;
     }
+  }
+  private async handle(method: string, params: unknown) {
+    if (method === 'host/initialize') return this.initialize(params);
+    return this.handleInitialized(method, params);
+  }
+  private initialize(params: unknown) {
+    assert(!this.initialized, 'ALREADY_INITIALIZED', 'Host 已初始化。');
+    const input = initializeSchema.parse(params);
+    assert(input.protocolMajor === PROTOCOL.major, 'PROTOCOL_MISMATCH', 'Host 协议主版本不兼容。');
+    this.initialized = true;
+    this.clientKind = input.clientKind;
+    this.lastHeartbeat = performance.now();
+    return {
+      ...PROTOCOL,
+      hostInstanceId: this.instanceId,
+      nonce: input.nonce,
+      capabilities: ['sessions', 'files', 'context', 'questions', 'chat', 'diagnostics-export'],
+      storageVersion: 2,
+    };
+  }
+  private async handleInitialized(method: string, params: unknown) {
     assert(this.initialized && !this.closing, 'NOT_INITIALIZED', 'Host 尚未初始化或正在退出。');
     if (method === 'host/ping') {
       noArgs.parse(params);
@@ -120,6 +144,7 @@ export class HostProcess {
         agentAvailable: Boolean(this.identity.auth),
         commandExecution: 'unavailable: native isolation not yet verified',
         authenticated: Boolean(this.identity.auth),
+        logging: this.identity.diagnostics?.status ?? { available: false },
       };
     }
     if (method === 'auth/bind') return this.identity.bind(params);
@@ -130,6 +155,11 @@ export class HostProcess {
       return { ok: true };
     }
     this.identity.require();
+    if (method === 'host/diagnostics-export') {
+      noArgs.parse(params);
+      assert(this.identity.diagnostics, 'DIAGNOSTICS_UNAVAILABLE', '诊断范围尚未打开。');
+      return this.identity.diagnostics.export();
+    }
     const handler = Object.hasOwn(this.routes, method) ? this.routes[method] : undefined;
     if (!handler) throw new PraxisError('METHOD_NOT_FOUND', '此 Host 不支持该方法。');
     return handler(params);

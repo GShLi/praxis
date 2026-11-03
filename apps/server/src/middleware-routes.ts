@@ -1,10 +1,17 @@
 import { AuthService } from '@praxis/auth';
 import { safeError } from '@praxis/contracts';
+import { diagnosticCode, type DiagnosticLog } from '@praxis/diagnostics';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import type { HttpApp } from './http-types.ts';
+import { registerRequestDiagnostics } from './http-diagnostics.ts';
 
-export function registerMiddleware(app: HttpApp, auth: AuthService) {
+export function registerMiddleware(
+  app: HttpApp,
+  auth: AuthService,
+  diagnostics?: Pick<DiagnosticLog, 'record'>,
+) {
+  registerRequestDiagnostics(app, diagnostics);
   app.use('*', secureHeaders());
   app.use(
     '/v1/*',
@@ -24,6 +31,12 @@ export function registerMiddleware(app: HttpApp, auth: AuthService) {
   app.onError((error, c) => {
     const safe = safeError(error);
     const code = safe.code;
+    diagnostics?.record({
+      component: 'server',
+      kind: 'request',
+      phase: 'error',
+      code: diagnosticCode(code),
+    });
     const status =
       code === 'UNAUTHENTICATED' || code === 'AUTH_FAILED'
         ? 401

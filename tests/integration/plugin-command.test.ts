@@ -9,6 +9,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 import { chatFixture } from './chat-fixture.ts';
+import { checkDiagnosticExport } from './diagnostic-assertions.ts';
 const execute = promisify(execFile);
 
 async function commandPackage(root: string) {
@@ -105,6 +106,8 @@ test('CLI authenticates over HTTP, reloads an installed command and creates a re
     );
     assert.match(result.stdout, /completed/);
     assert.ok(!result.stdout.includes(key.key));
+    const report = await checkDiagnosticExport(root, env);
+    assert.ok(report.records.some((record) => record.kind === 'tool'));
   } finally {
     await host?.close();
     server.close();

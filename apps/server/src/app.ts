@@ -1,5 +1,6 @@
 import type { AuthService, Identity } from '@praxis/auth';
 import type { ChatRuntime } from '@praxis/chat-runtime';
+import type { DiagnosticLog } from '@praxis/diagnostics';
 import { discoverModels } from '@praxis/model-core/catalog';
 import { Hono } from 'hono';
 import { registerAccount } from './account-routes.ts';
@@ -18,10 +19,11 @@ export function createApp(
   publicOrigin: string,
   webRoot?: string,
   catalog: typeof discoverModels = discoverModels,
+  diagnostics?: Pick<DiagnosticLog, 'record'>,
 ) {
   const security = webSecurity(new URL(publicOrigin).origin);
   const app = new Hono<{ Variables: { identity: Identity } }>();
-  registerMiddleware(app, auth);
+  registerMiddleware(app, auth, diagnostics);
   registerPublicAuth(app, auth, security);
   registerIdentity(app, auth, security);
   registerAccount(app, auth, security.secure);

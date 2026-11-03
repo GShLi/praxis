@@ -8,6 +8,7 @@ pnpm cli data backup DIRECTORY [--client cli|desktop]
 pnpm cli data inspect BACKUP_DIRECTORY [--client cli|desktop]
 pnpm cli data restore BACKUP_DIRECTORY --confirm SHA256 [--client cli|desktop]
 pnpm cli data bind-legacy --confirm ORIGINAL_SERVER_URL [--client cli|desktop]
+pnpm cli data export-diagnostics DIRECTORY [--client cli|desktop]
 pnpm cli plugins [list|inspect PATH|install PATH --digest SHA256|enable ID|disable ID]
 pnpm cli mcp [list|import FILE|test ID|enable ID|disable ID|remove ID]
 pnpm cli mcp list-prompts SESSION_ID SERVER_ID

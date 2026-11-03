@@ -15,10 +15,12 @@ import { acquireLease, acquireWorkspaceLease } from '@praxis/workspace';
 import path from 'node:path';
 import { z } from 'zod';
 import { baseData, commonData } from './paths.ts';
+import { HostDiagnostics } from './diagnostics.ts';
 export class HostIdentity {
   binding = false;
   discoveryScope = new AbortController();
   auth: AuthClient | undefined;
+  diagnostics: HostDiagnostics | undefined;
   store: SessionStore | undefined;
   runtime: AgentRuntime | undefined;
   dataLease: Awaited<ReturnType<typeof acquireLease>> | undefined;
@@ -63,6 +65,8 @@ export class HostIdentity {
     this.pluginFailures = [];
     this.store?.close();
     this.store = undefined;
+    await this.diagnostics?.close();
+    this.diagnostics = undefined;
     await this.dataLease?.release();
     this.dataLease = undefined;
     await this.auth?.clear();
@@ -142,6 +146,8 @@ export class HostIdentity {
     this.dataLease.onLost(this.shutdown);
     assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
     this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
+    this.diagnostics = await HostDiagnostics.open(directory, this.store, this.shutdown);
+    assert(!this.isClosing(), 'HOST_CLOSING', 'Host 正在退出。');
     this.store.recover();
     this.setupMcp(directory, candidate.userId, candidate.origin, praxisKey);
     this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));

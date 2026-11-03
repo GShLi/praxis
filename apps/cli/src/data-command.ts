@@ -2,6 +2,7 @@ import { AuthClient } from '@praxis/auth-client';
 import { baseData } from '@praxis/config/paths';
 import { bindLegacyProfile, profilePaths, resolveProfileDirectory } from '@praxis/config/profile';
 import { assert } from '@praxis/contracts';
+import { saveDiagnosticExport } from '@praxis/diagnostics';
 import {
   BackupRestoreError,
   createLocalBackup,
@@ -44,19 +45,24 @@ async function authenticatedDataAction(
   const identity: BackupIdentity = { ownerUserId: auth.userId, serverUrl: auth.origin, clientKind };
   if (action === 'inspect') {
     assert(target, 'INVALID_COMMAND', '缺少备份目录。');
-    console.log(
-      JSON.stringify(
-        await inspectLocalBackup(path.resolve(target), identity, scope.signal),
-        null,
-        2,
-      ),
-    );
+    const manifest = await inspectLocalBackup(path.resolve(target), identity, scope.signal);
+    console.log(JSON.stringify(manifest, null, 2));
     return;
   }
   const directory =
     action === 'bind-legacy'
       ? profilePaths(baseData, profile).legacy
       : await resolveProfileDirectory(baseData, profile);
+  if (action === 'export-diagnostics') {
+    assert(target, 'INVALID_COMMAND', '缺少诊断导出目录。');
+    const report = await saveDiagnosticExport(
+      path.join(directory, 'diagnostics'),
+      path.resolve(target),
+      scope.signal,
+    );
+    console.log(JSON.stringify(report));
+    return;
+  }
   const lease = await acquireLease(path.join(directory, 'writer.lock'));
   lease.onLost(() => scope.abort());
   try {
@@ -125,9 +131,10 @@ function parseDataRequest(
     target = positionals[2];
   assert(
     action &&
-      (action === 'bind-legacy' || (['backup', 'inspect', 'restore'].includes(action) && target)),
+      (action === 'bind-legacy' ||
+        (['backup', 'inspect', 'restore', 'export-diagnostics'].includes(action) && target)),
     'INVALID_COMMAND',
-    'data 支持 backup DIRECTORY / inspect BACKUP / restore BACKUP --confirm SHA256 / bind-legacy --confirm 原服务地址。',
+    'data 支持 backup DIRECTORY / inspect BACKUP / restore BACKUP --confirm SHA256 / export-diagnostics DIRECTORY / bind-legacy --confirm 原服务地址。',
   );
   const clientKind = values.client ?? 'cli';
   assert(

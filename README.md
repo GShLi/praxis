@@ -180,6 +180,14 @@ Token 使用与 Bearer 相同的系统凭据存储。没有系统存储时，使
 
 连接可在桌面设置中编辑或删除，CLI 用 `mcp import FILE` 更新已有 ID、用 `mcp remove SERVER_ID` 删除。编辑后需要重新检查并启用；同一端点保留当前客户端的凭据，换地址或传输会先停用并清理旧凭据。导入文件里的 HTTP 凭据引用不会作为授权来源。删除或更换地址时若系统凭据清理失败，旧配置保持停用并保留引用，刷新设置后可重试。
 
+## 诊断导出
+
+桌面“设置 → 关于”可以显式导出诊断包；CLI 可使用 `pnpm cli data export-diagnostics /absolute/path/existing-directory --client cli`（或 `desktop`），运行中的目标客户端也可只读导出。诊断包仅含运行标识、固定错误分类、耗时和计数，不含对话、文件正文、Key、路径或 URL，不会自动上传。最多 2 MiB / 5000 条，截断及无效行会在包中标明。
+
+服务端运维人员可运行 `pnpm server export-diagnostics /absolute/path/existing-directory`，需要本机日志目录的读取权限，不需要连接数据库。`PRAXIS_SERVER_LOG_DIR` 可指定服务日志目录；默认在 Praxis 数据目录的 `server/<公共来源摘要>/diagnostics/`。服务端日志包含多账号运行标识，不通过用户 HTTP 接口导出。
+
+诊断日志默认单文件 50 MiB、最多 5 个、保留 14 天，在启动和写入时轮换清理；停止后不启动后台清理进程。诊断不替代以下会话备份。
+
 ## 本地会话备份与恢复
 
 配置通常使用的 `PRAXIS_SERVER_URL`、`PRAXIS_API_KEY`，关闭要维护的 CLI 或桌面客户端后执行：

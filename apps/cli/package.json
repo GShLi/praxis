@@ -10,7 +10,8 @@
     "@praxis/workspace": "workspace:*",
     "@praxis/client-host": "workspace:*",
     "@praxis/contracts": "workspace:*",
-    "@praxis/permissions": "workspace:*"
+    "@praxis/permissions": "workspace:*",
+    "@praxis/diagnostics": "workspace:*"
   },
   "exports": {
     "./mcp-prompts": "./src/mcp-prompts.ts"

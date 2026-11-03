@@ -5,9 +5,14 @@ import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createAdmin } from './admin.ts';
 import { runServer } from './server-process.ts';
+import { exportServerDiagnostics } from './diagnostics-export.ts';
 
 async function main() {
   const command = process.argv[2];
+  if (command === 'export-diagnostics') {
+    await exportServerDiagnostics(process.argv[3]);
+    return;
+  }
   if (command === 'keygen') {
     console.log(randomBytes(32).toString('base64'));
     return;

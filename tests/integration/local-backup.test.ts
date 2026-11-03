@@ -9,6 +9,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 import { chatFixture } from './chat-fixture.ts';
+import { checkDiagnosticExport } from './diagnostic-assertions.ts';
 const execute = promisify(execFile);
 
 test('offline CLI backup verifies identity and writer lease, requires exact confirmation and restores a closed profile', async () => {
@@ -51,6 +52,7 @@ test('offline CLI backup verifies identity and writer lease, requires exact conf
     host = await bind();
     const workspace = await host.rpc.request<{ id: string }>('workspace/open', { path: root });
     await host.rpc.request('session/create', { kind: 'agent', workspaceId: workspace.id });
+    await checkDiagnosticExport(root, env, host);
     await assert.rejects(cli('data', 'backup', root), /WORKSPACE_BUSY/);
     await host.close();
     host = undefined;

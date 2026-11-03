@@ -60,6 +60,7 @@ export type HostMethod =
   | 'auth/me'
   | 'provider/delete'
   | 'host/diagnostics'
+  | 'host/diagnostics-export'
   | 'plugin/list'
   | 'plugin/inspect'
   | 'plugin/install'
@@ -240,6 +241,7 @@ export interface PraxisClient {
   keys?(): Promise<ApiKeyInfo[]>;
   revokeKey?(id: string): Promise<void>;
   diagnostics?(): Promise<Record<string, unknown>>;
+  exportDiagnostics?(): Promise<Record<string, unknown>>;
   plugins?(): Promise<PluginState>;
   inspectPlugin?(source: string): Promise<PluginReview>;
   installPlugin?(source: string, digest: string, revision: number): Promise<void>;

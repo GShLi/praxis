@@ -1,0 +1,13 @@
+{
+  "name": "@praxis/diagnostics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@praxis/contracts": "workspace:*",
+    "zod": "4.3.6"
+  }
+}

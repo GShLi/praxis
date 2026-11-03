@@ -319,11 +319,6 @@
     "reason": "固定本机 MCP 协议 fixture 增加 OAuth 资源元数据；连接和请求生命周期仍由 fixture 统一释放。",
     "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
   },
-  "apps/server/src/server-process.ts#runServer:1": {
-    "maxLines": 62,
-    "reason": "服务生命周期新增已固定的部署插件 Provider 注册表，统一按 Chat→Provider→DB 释放；不引入请求业务。",
-    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
-  },
   "packages/ui/src/settings/ModelCapacity.tsx#ModelCapacity:1": {
     "maxLines": 65,
     "reason": "高级设置的连续 JSX，增加用户选择插件适配器；不包含 I/O 或异步状态。",
@@ -350,9 +345,9 @@
     "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "tests/integration/plugin-command.test.ts#test(CLI authenticates over HTTP, reloads an installed command and creates a real file without model configuration):1": {
-    "maxLines": 76,
-    "reason": "真实隔离 PostgreSQL、HTTP、Host 安装启用与子进程 CLI 的单一端到端场景；所有资源在 finally 释放。",
-    "validation": "真实 PostgreSQL 集成 10 项通过，包括无厂商配置执行插件命令。"
+    "maxLines": 78,
+    "reason": "真实隔离 PostgreSQL、HTTP、Host 安装启用与子进程 CLI 的单一端到端场景；所有资源在 finally 释放。 在同一真实 CLI/Host 身份与生命周期内验证诊断导出，断言已提取到 diagnostic-assertions。",
+    "validation": "真实 PostgreSQL/HTTP/CLI 集成：活动 Host 只读导出、退出后工具元数据、私有文件权限及 Key/路径/正文排除；全量 check 与应用构建。"
   },
   "tests/instruction-concurrency.test.ts#test(concurrent plugin reads retain both directory instruction scopes):1": {
     "maxLines": 93,
@@ -495,8 +490,8 @@
     "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "tests/integration/local-backup.test.ts#test(offline CLI backup verifies identity and writer lease, requires exact confirmation and restores a closed profile):1": {
-    "maxLines": 80,
-    "reason": "同一个真实 profile 的 CLI 备份、锁冲突、检查、摘要确认、恢复和重新打开共用认证服务器与清理边界。",
-    "validation": "真实 PostgreSQL/HTTP/CLI 备份恢复集成；全量结构、类型、核心测试和应用构建。"
+    "maxLines": 81,
+    "reason": "同一个真实 profile 的 CLI 备份、锁冲突、检查、摘要确认、恢复和重新打开共用认证服务器与清理边界。 在同一真实 CLI/Host 身份与生命周期内验证诊断导出，断言已提取到 diagnostic-assertions。",
+    "validation": "真实 PostgreSQL/HTTP/CLI 集成：活动 Host 只读导出、退出后工具元数据、私有文件权限及 Key/路径/正文排除；全量 check 与应用构建。"
   }
 }

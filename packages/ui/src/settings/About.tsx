@@ -1,16 +1,8 @@
-import { useEffect, useState } from 'react';
 import type { PraxisClient } from '../client-types.ts';
-import { CopyValue, errorText, Row, Status } from './controls.tsx';
+import { Row } from './controls.tsx';
+import { DiagnosticSettings } from './DiagnosticSettings.tsx';
 
 export function About({ client }: { client: PraxisClient }) {
-  const [diagnostics, setDiagnostics] = useState<Record<string, unknown> | null>(null),
-    [message, setMessage] = useState('');
-  useEffect(() => {
-    void client
-      .diagnostics?.()
-      .then(setDiagnostics)
-      .catch((e) => setMessage(errorText(e)));
-  }, [client]);
   return (
     <>
       <div className="settings-about">
@@ -27,25 +19,8 @@ export function About({ client }: { client: PraxisClient }) {
             {client.desktop ? '桌面端 · ChatBot + Agent' : 'Web · ChatBot'}
           </span>
         </Row>
-        {diagnostics && (
-          <>
-            <Row title="运行系统">
-              <span className="setting-value">
-                {String(diagnostics.platform)} · {String(diagnostics.arch)}
-              </span>
-            </Row>
-            <Row title="Node.js">
-              <span className="setting-value">{String(diagnostics.node)}</span>
-            </Row>
-            <details className="settings-diagnostics">
-              <summary>查看诊断信息</summary>
-              <pre>{JSON.stringify(diagnostics, null, 2)}</pre>
-              <CopyValue value={JSON.stringify(diagnostics, null, 2)} />
-            </details>
-          </>
-        )}
       </section>
-      <Status message={message} />
+      <DiagnosticSettings client={client} />
     </>
   );
 }

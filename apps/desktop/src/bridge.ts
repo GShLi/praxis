@@ -6,6 +6,7 @@ const allowed = new Set([
   'auth/me',
   'provider/delete',
   'host/diagnostics',
+  'host/diagnostics-export',
   'plugin/list',
   'plugin/inspect',
   'plugin/install',

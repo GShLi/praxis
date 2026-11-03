@@ -72,6 +72,9 @@ importers:
       '@praxis/contracts':
         specifier: workspace:*
         version: link:packages/contracts
+      '@praxis/diagnostics':
+        specifier: workspace:*
+        version: link:packages/diagnostics
       '@praxis/mcp-client':
         specifier: workspace:*
         version: link:packages/mcp-client
@@ -159,6 +162,9 @@ importers:
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@praxis/diagnostics':
+        specifier: workspace:*
+        version: link:../../packages/diagnostics
       '@praxis/mcp-client':
         specifier: workspace:*
         version: link:../../packages/mcp-client
@@ -204,6 +210,9 @@ importers:
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@praxis/diagnostics':
+        specifier: workspace:*
+        version: link:../../packages/diagnostics
       '@praxis/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
@@ -240,9 +249,15 @@ importers:
       '@praxis/chat-runtime':
         specifier: workspace:*
         version: link:../../packages/chat-runtime
+      '@praxis/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@praxis/diagnostics':
+        specifier: workspace:*
+        version: link:../../packages/diagnostics
       '@praxis/model-core':
         specifier: workspace:*
         version: link:../../packages/model-core
@@ -252,6 +267,9 @@ importers:
       '@praxis/storage-server':
         specifier: workspace:*
         version: link:../../packages/storage-server
+      '@praxis/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
       hono:
         specifier: 4.13.14
         version: 4.13.14
@@ -381,6 +399,15 @@ importers:
 
   packages/contracts:
     dependencies:
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
+
+  packages/diagnostics:
+    dependencies:
+      '@praxis/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       zod:
         specifier: 4.3.6
         version: 4.3.6
