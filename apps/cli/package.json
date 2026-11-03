@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@praxis/auth-client": "workspace:*",
+    "@praxis/config": "workspace:*",
+    "@praxis/storage-local": "workspace:*",
+    "@praxis/workspace": "workspace:*",
     "@praxis/client-host": "workspace:*",
     "@praxis/contracts": "workspace:*",
     "@praxis/permissions": "workspace:*"

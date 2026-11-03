@@ -4,10 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./backup": "./src/backup/index.ts"
   },
   "dependencies": {
     "@praxis/contracts": "workspace:*",
     "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "tsx": "4.22.3"
   }
 }

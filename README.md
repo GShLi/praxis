@@ -11,7 +11,7 @@
 
 ## 当前状态
 
-已实现多轮 Agent、版本化文件工具、上下文压缩、服务端身份/模型配置与 Web/桌面界面。真实命令沙箱、MCP 和插件仍在开发，第一版尚未完成全部验收。阶段进度和验证限制见[实现记录](docs/implementation.md)。
+已实现多轮 Agent、版本化文件工具、上下文压缩、服务端身份/模型配置、Web/桌面界面、HTTP MCP 与可信插件。真实命令沙箱和发行交付仍在开发，第一版尚未完成全部验收。最新进度和验证限制见 [V1 台账](docs/v1-completion.md)。
 
 设计入口：[文档索引](docs/README.md)。[UI 基线](docs/superpowers/specs/2026-11-03-praxis-ui-design.md)参考 ChatGPT、Codex，保留 Praxis 的产品名称和模式边界；[开发计划](docs/superpowers/plans/2026-11-03-praxis-development-plan.md)规定工程基座、核心闭环、三端交付及平台验证的顺序。
 
@@ -101,7 +101,7 @@ pnpm cli mcp disable SERVER_ID
 }
 ```
 
-使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、OAuth 尚未接入。提示词与表单交互见下文；当前验收缺口见 [V1 台账](docs/v1-completion.md)。
+使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio 尚未接入。OAuth、提示词与表单交互见下文；当前验收缺口见 [V1 台账](docs/v1-completion.md)。
 
 ## 用户主动执行插件命令
 
@@ -179,3 +179,19 @@ pnpm cli mcp oauth SERVER_ID \
 Token 使用与 Bearer 相同的系统凭据存储。没有系统存储时，使用 `run --mcp-oauth-server SERVER_ID` 加上上述参数，可在同一次前台运行中授权并使用内存 Token。关闭客户端会取消授权并关闭回调；内存凭据随进程退出失效。刷新按凭据引用合并并发请求；原子保存轮换结果后更新认证版本，旧目录和执行范围失效。刷新结果未确认时要求重新授权，不重放工具调用。清除本地凭据不会撤销远端授权，远端撤销须在服务商账户中操作。
 
 连接可在桌面设置中编辑或删除，CLI 用 `mcp import FILE` 更新已有 ID、用 `mcp remove SERVER_ID` 删除。编辑后需要重新检查并启用；同一端点保留当前客户端的凭据，换地址或传输会先停用并清理旧凭据。导入文件里的 HTTP 凭据引用不会作为授权来源。删除或更换地址时若系统凭据清理失败，旧配置保持停用并保留引用，刷新设置后可重试。
+
+## 本地会话备份与恢复
+
+配置通常使用的 `PRAXIS_SERVER_URL`、`PRAXIS_API_KEY`，关闭要维护的 CLI 或桌面客户端后执行：
+
+```sh
+pnpm cli data backup /absolute/path/existing-backup-parent --client cli
+pnpm cli data inspect /absolute/path/praxis-backup-... --client cli
+pnpm cli data restore /absolute/path/praxis-backup-... --client cli --confirm SHA256
+```
+
+`--client desktop` 管理桌面端的数据。备份目录由程序唯一命名；输出清单列出账号、Praxis 服务地址、客户端类型、记录数量与 SHA256。恢复必须使用 `inspect` 得到的精确摘要，并绑定原账号、服务地址及客户端；它会替换该客户端的全部会话。运行中的客户端持有写入锁时拒绝备份或恢复。
+
+备份保存完整会话历史、工具记录、所有上下文版本、checkpoint 和数据库内的文本产物；不包含模型/MCP 凭据存储、插件安装文件或工作区实际文件。会话正文可能包含用户输入的敏感信息，请妥善保存备份。当前支持格式 v1、数据库 v2，单库上限 2 GiB。
+
+恢复前自动在 profile 的 `recovery-backups/` 下创建当前数据的回退备份，随后事务替换。程序拒绝身份、摘要、数据库结构或记录校验不符的备份。若提交结果无法确认，会报告 `BACKUP_RESTORE_UNKNOWN` 和回退路径；先检查当前数据，不自动重试。重新打开客户端后，未完成任务标为中断，待处理输入保持暂停，需要显式继续。恢复历史不会恢复项目文件，也不会重放工具调用。

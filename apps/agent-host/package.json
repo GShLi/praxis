@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@praxis/config": "workspace:*",
     "@praxis/agent-runtime": "workspace:*",
     "@praxis/auth": "workspace:*",
     "@praxis/auth-client": "workspace:*",

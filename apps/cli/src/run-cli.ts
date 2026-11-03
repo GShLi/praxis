@@ -5,6 +5,7 @@ import { startHost } from '@praxis/client-host';
 import { assert } from '@praxis/contracts';
 import { parseOptions, validateMcpOptions } from './options.ts';
 import { bindCliIdentity } from './login-cli.ts';
+import { dataCommand } from './data-command.ts';
 import { pluginCommand } from './plugin-command.ts';
 import { mcpCommand } from './mcp-command.ts';
 import { prepareSession } from './session-setup.ts';
@@ -23,13 +24,17 @@ export async function runCli() {
     return;
   }
   assert(
-    ['doctor', 'run', 'sessions', 'providers', 'plugins', 'mcp'].includes(command),
+    ['doctor', 'run', 'sessions', 'providers', 'plugins', 'mcp', 'data'].includes(command),
     'INVALID_COMMAND',
     '未知命令，使用 --help 查看帮助。',
   );
   const mcpBearer = process.env.PRAXIS_MCP_BEARER;
   delete process.env.PRAXIS_MCP_BEARER;
   validateMcpOptions(values, command);
+  if (command === 'data') {
+    await dataCommand(values, positionals);
+    return;
+  }
   const host = await startHost('cli');
   let session: CliSession | undefined;
   try {

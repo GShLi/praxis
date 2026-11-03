@@ -153,6 +153,9 @@ importers:
       '@praxis/auth-client':
         specifier: workspace:*
         version: link:../../packages/auth-client
+      '@praxis/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -189,15 +192,27 @@ importers:
 
   apps/cli:
     dependencies:
+      '@praxis/auth-client':
+        specifier: workspace:*
+        version: link:../../packages/auth-client
       '@praxis/client-host':
         specifier: workspace:*
         version: link:../../packages/client-host
+      '@praxis/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@praxis/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@praxis/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
+      '@praxis/storage-local':
+        specifier: workspace:*
+        version: link:../../packages/storage-local
+      '@praxis/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
 
   apps/desktop:
     dependencies:
@@ -492,6 +507,10 @@ importers:
       zod:
         specifier: 4.3.6
         version: 4.3.6
+    devDependencies:
+      tsx:
+        specifier: 4.22.3
+        version: 4.22.3
 
   packages/storage-server:
     dependencies:

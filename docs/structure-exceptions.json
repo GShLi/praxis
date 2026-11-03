@@ -503,5 +503,10 @@
     "maxLines": 111,
     "reason": "从设置页提取单个连接视图，集中显示凭据、授权和操作按钮，删除确认仅是局部视图状态。",
     "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
+  },
+  "tests/integration/local-backup.test.ts#test(offline CLI backup verifies identity and writer lease, requires exact confirmation and restores a closed profile):1": {
+    "maxLines": 80,
+    "reason": "同一个真实 profile 的 CLI 备份、锁冲突、检查、摘要确认、恢复和重新打开共用认证服务器与清理边界。",
+    "validation": "真实 PostgreSQL/HTTP/CLI 备份恢复集成；全量结构、类型、核心测试和应用构建。"
   }
 }

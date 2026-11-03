@@ -5,6 +5,8 @@ export function parseOptions() {
     allowPositionals: true,
     options: {
       server: { type: 'string' },
+      client: { type: 'string' },
+      confirm: { type: 'string' },
       workspace: { type: 'string' },
       provider: { type: 'string' },
       resume: { type: 'string' },

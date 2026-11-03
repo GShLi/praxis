@@ -9,6 +9,7 @@ await build({
     host: 'apps/agent-host/src/main.ts',
     cli: 'apps/cli/src/main.ts',
     server: 'apps/server/src/main.ts',
+    'backup-worker': 'packages/storage-local/src/backup/worker-main.ts',
   },
   outdir: 'dist/node',
   bundle: true,
