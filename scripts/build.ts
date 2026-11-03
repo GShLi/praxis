@@ -39,6 +39,7 @@ await build({
   platform: 'node',
   target: 'node22',
   format: 'cjs',
+  outExtension: { '.js': '.cjs' },
   external: ['electron'],
   sourcemap: true,
 });
