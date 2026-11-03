@@ -72,8 +72,8 @@ export class ManagedProcesses implements ProcessService {
       const run = this.register(prepared, callId);
       const executionId = run.record.executionId;
       transferred = true;
-      await run.start(signal, Math.min(prepared.plan.timeoutMs, deadline - Date.now()));
       void run.finished.then(() => this.executions.delete(executionId));
+      await run.start(signal, Math.min(prepared.plan.timeoutMs, deadline - Date.now()));
       await run.wait(input.yieldMs, signal);
       return { ...run.record, ...run.output.read() };
     } finally {

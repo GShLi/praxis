@@ -38,6 +38,13 @@ export class CommandExecution {
     return !this.record.finishedAt;
   }
   async start(signal: AbortSignal, timeoutMs: number) {
+    if (signal.aborted || timeoutMs <= 0) {
+      this.reason = signal.aborted ? 'cancelled' : 'timed_out';
+      await this.complete({ exitCode: null, signal: null, cleanup: 'complete' });
+      this.resolveFinished();
+      signal.throwIfAborted();
+      throw new PraxisError('BUDGET_EXHAUSTED', '命令启动前执行时间已用完。');
+    }
     const aborted = () => this.requestStop('cancelled');
     signal.addEventListener('abort', aborted, { once: true });
     this.detach = () => signal.removeEventListener('abort', aborted);
