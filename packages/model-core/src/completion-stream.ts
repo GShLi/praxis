@@ -1,5 +1,6 @@
 import { assert } from '@praxis/contracts';
 import { CompletionAccumulator } from './completion-accumulator.ts';
+import { ModelOutputGuard } from './output-guard.ts';
 import type { Completion, ModelRequest } from './types.ts';
 
 export async function readCompletion(
@@ -11,7 +12,8 @@ export async function readCompletion(
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let buffer = '';
-  const accumulator = new CompletionAccumulator(request.onDelta);
+  const output = new ModelOutputGuard(request.config.apiKey, request.onDelta);
+  const accumulator = new CompletionAccumulator((text) => output.push(text));
   let total = 0;
   try {
     for (;;) {
@@ -29,7 +31,10 @@ export async function readCompletion(
     }
     buffer += decoder.decode();
     if (buffer.trim()) accumulator.consume(buffer);
-    return accumulator.finish();
+    const completion = accumulator.finish();
+    output.validate(completion);
+    output.finish();
+    return completion;
   } finally {
     await reader.cancel().catch(() => {
       /* Preserve the primary stream result/error while releasing its lock. */

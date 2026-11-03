@@ -1,9 +1,9 @@
 import { assert, PraxisError, type ModelConfig } from '@praxis/contracts';
 import type { ModelClient, ModelRequest } from '@praxis/model-core';
+import { ModelOutputGuard } from '@praxis/model-core';
 import { z } from 'zod';
 import { hookOperation } from './hook-operation.ts';
 import type { ActivePlugin } from './types.ts';
-import { ProviderStream } from './provider-stream.ts';
 
 const responseSchema = z
   .strictObject({
@@ -73,7 +73,7 @@ class PluginModel implements ModelClient {
   async complete(request: ModelRequest) {
     return hookOperation(
       async (signal) => {
-        const stream = new ProviderStream(request.config.apiKey, request.onDelta);
+        const stream = new ModelOutputGuard(request.config.apiKey, request.onDelta);
         let raw: unknown;
         try {
           raw = await this.client.complete({
@@ -92,18 +92,7 @@ class PluginModel implements ModelClient {
         signal.throwIfAborted();
         const response = responseSchema.safeParse(raw);
         assert(response.success, 'MODEL_PROTOCOL_ERROR', '插件模型返回了无效响应。');
-        const encoded = JSON.stringify(response.data);
-        assert(
-          Buffer.byteLength(encoded) <= 2 * 1024 * 1024,
-          'MODEL_RESPONSE_LIMIT',
-          '模型输出超过限制。',
-        );
-        assert(
-          !request.config.apiKey ||
-            !encoded.includes(JSON.stringify(request.config.apiKey).slice(1, -1)),
-          'MODEL_SECRET_EXPOSURE',
-          '模型输出包含受保护凭据，已拒绝显示。',
-        );
+        stream.validate(response.data);
         stream.finish();
         return response.data;
       },
