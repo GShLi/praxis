@@ -7,6 +7,13 @@
 - macOS Node 22.15 与 Ubuntu Node 24.22 各 239 项核心测试通过，无跳过；结构、类型、原生 helper 和全部应用构建通过。新增 15 项命令输出、生命周期、真实审批门与 SQLite 重开测试，详见 [实现记录](command-execution.md)。
 - 这批后端为可控生命周期夹具，未宣称生产隔离已通过。此前 4 项 macOS / 5 项 Linux 原生机制测试的范围保持不变；生产命令、stdio、Linux 图形界面及签名/安装/升级验收仍待完成。
 
+## 2026-11-04：Linux 过滤视图与崩溃清理
+
+- 新增 5 项真实 FUSE/namespace 测试全部通过；C helper 以 Wall/Wextra/Werror 编译，两端结构/类型检查通过。测试专用 libfuse3 开发包解压在用户验证目录，系统运行库未替换，无 sudo 操作。
+- 验证普通文件可读、保护名称与大小写变体隐藏、多硬链接和符号链接拒绝、只读不修改源文件、私有目录改名与替换导致视图拒绝访问、已打开文件复核、工作区目录句柄固定和错误身份拒绝。
+- 初次强杀实测发现系统 fusermount3 3.10.5 的自动卸载不可靠。最终崩溃方案把视图与受信任监督流程放入独立 user/pid/mount namespace；分别强杀模拟 Host 与视图进程，等待管道 EOF，确认 PID namespace 无成员、宿主没有新增测试挂载。故障调查的临时挂载已显式清理。
+- 此 helper 是只读原型，未装配到生产 Host；固定测试 Worker 的宿主只读视图与 namespace 内 CAP_SYS_ADMIN 只供构建/挂载测试使用，不是用户命令的运行权限。生产命令需要另一个受限执行视图、去能力及网络/系统调用/资源策略。详见 [原型边界](../native/workspace-view/README.md)。
+
 ## 2026-11-04：桌面操作与真实模型
 
 - macOS：通过 CUA 实际操作编译后的 Electron 应用，使用独立 PostgreSQL、临时桌面 profile、一次性账号和明确标注的测试 Provider。
