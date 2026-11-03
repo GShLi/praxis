@@ -28,7 +28,7 @@ pnpm check
 pnpm cli doctor
 ```
 
-`doctor` 启动独立 Host，检查协议和环境后关闭 Host。`pnpm host` 是内部 JSON 行协议入口，不是交互聊天命令。本机 macOS ARM64 已通过核心回归；Ubuntu 22.04.5 x64 已通过隔离机制原型、结构/类型检查和应用构建，原生文件、完整命令后端与桌面运行仍待验证。CI 已配置三平台检查，但尚未运行远端 CI。
+`doctor` 启动独立 Host，检查协议和环境后关闭 Host。`pnpm host` 是内部 JSON 行协议入口，不是交互聊天命令。macOS ARM64 与 Ubuntu 22.04.5 x64 已通过核心回归、原生文件测试、结构/类型检查和应用构建；Linux 另通过隔离机制原型，完整命令后端与桌面运行仍待验证。CI 已配置三平台检查，但尚未运行远端 CI。
 
 服务端使用 PostgreSQL，先复制 `.env.example` 为私有 `.env`，设置数据库连接和独立主密钥（可用 `pnpm server:keygen` 在自己的终端生成），再运行：
 
@@ -147,7 +147,7 @@ CLI 获取预览期间仍可回答问题、`/approve`、`/deny` 或 `/cancel`。
 
 桌面端在“设置 → MCP 连接”展开服务器的“设置 Bearer Token”。Token 只用于当前用户/客户端的固定服务器端点；保存或更换后连接停用，需要重新检查并启用。设置页分别显示系统存储、仅本次运行有效和凭据缺失。清除只删除本地凭据，不代表远端撤销 Token。
 
-macOS 使用 Keychain（已在本机完成真实读写/删除测试）；Windows Credential Manager 和 Linux Secret Service（需 `secret-tool`）适配代码仍待目标系统实测。系统存储不可用时明确使用当前 Host 内存，不写入 JSON、Session、日志或 checkpoint。`PRAXIS_SECRET_STORE=memory` 可显式选择临时存储。退出后内存凭据失效。
+macOS 使用 Keychain（已在本机完成真实读写/删除测试）；Windows Credential Manager 适配仍待目标系统实测。Linux 使用 Secret Service，需要 `secret-tool` 及用户可访问的凭据服务；目前已验证服务不可用时的错误处理和内存降级，系统凭据持久化仍待验收。新设置的凭据在系统存储不可用时明确使用当前 Host 内存，不写入 JSON、Session、日志或 checkpoint。读取、删除旧系统凭据失败会报错并保留清理引用，不伪报不存在或删除成功。`PRAXIS_SECRET_STORE=memory` 可显式选择临时存储。退出后内存凭据失效。
 
 CLI 从 `PRAXIS_MCP_BEARER` 一次性读取专用 Token，并在启动 Host 前从继承环境移除；不要将 Token 放在命令行参数中。设置后状态输出不含 Token：
 
@@ -228,7 +228,7 @@ pnpm cli data restore /absolute/path/praxis-backup-... --client cli --confirm SH
 
 文件读取、目录遍历与写入现在依赖 `pnpm native:build` 生成的 `praxis-files`。它固定根目录身份，通过原生目录句柄逐段访问；写入准备完成后再次向 Host 获取权限确认。组件缺失时明确失败，不自动降低文件访问边界。目录列表超过单目录 10,000 项会标明 `incomplete`，搜索继续使用总遍历预算。
 
-当前 macOS ARM64 已完成真实文件回归。Linux 与 Windows 的源码和构建入口已提供，目标系统验证仍待完成；Windows 仅设计支持本地盘符路径。实现边界见 [原生组件说明](native/files/README.md)，命令执行沙箱仍未开放。
+当前 macOS ARM64 和 Ubuntu 22.04.5 x64 已完成真实文件回归。Windows 的源码和构建入口已提供，目标系统验证仍待完成；Windows 仅设计支持本地盘符路径。实现边界见 [原生组件说明](native/files/README.md)，命令执行沙箱仍未开放。
 
 ## 工作区配置与生效快照
 

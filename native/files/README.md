@@ -10,4 +10,4 @@ Windows 后端用 NtCreateFile 的 RootDirectory 逐个名称打开，指定 FIL
 
 写入先生成完整临时内容并 fsync/FlushFileBuffers，返回 ready；Host 再检查取消及当前权限，发送单次提交字节。helper 发布前重新检查原文件身份及完整原文。EOF、取消或权限拒绝清除未发布临时文件。发布后 Host 重新读取并校验结果；路径变化或结果无法确认时报告 FILE_PUBLISH_UNKNOWN。强杀或磁盘故障可能遗留临时文件，不承诺已发布内容回滚，也不宣称外部编辑器参与了原子比较交换事务。
 
-本机 macOS ARM64 已编译并执行真实回归；Linux POSIX 路线和 Windows 源码仍须分别在目标系统编译、运行和验收。这不是命令执行沙箱，不能据此开放 shell 或 MCP stdio。
+macOS ARM64 和 Ubuntu 22.04.5 x64（GCC 11.4、内核 5.15）已编译并执行真实回归，包括 UTF-8、目录句柄/路径替换、版本冲突、取消、父进程退出和打包组件定位。Windows 源码仍须在目标系统编译、运行和验收。这不是命令执行沙箱，不能据此开放 shell 或 MCP stdio。

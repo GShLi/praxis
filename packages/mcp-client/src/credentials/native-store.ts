@@ -46,7 +46,10 @@ export class NativeSecretBackend implements SecretBackend {
         ]
       : [action, key];
     const result = await secretProcess(this.executable, args, value, signal);
-    if (action !== 'set' && result.code === (linux ? 1 : 44)) return undefined;
+    // secret-tool uses exit 1 both for absence and service errors; only quiet, empty output is absence.
+    const absent = action !== 'set' && result.code === (linux ? 1 : 44);
+    if (absent && (!linux || (!result.stderrPresent && result.output.length === 0)))
+      return undefined;
     assert(result.code === 0, 'SECRET_STORE_UNAVAILABLE', '系统凭据存储不可用。');
     return linux ? result.output.replace(/\n$/, '') : result.output;
   }

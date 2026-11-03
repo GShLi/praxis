@@ -60,6 +60,8 @@ sudo apt-get install --no-install-recommends build-essential libsecret-tools
 
 `pnpm test:linux-isolation` 在原生 Linux 上用 Bubblewrap 和 `/usr/bin/python3` 验证最小挂载/环境隔离、宿主 TCP 与抽象 Unix socket 不可达，以及模拟 Host 强杀后的双重 fork/setsid 子孙清理。它使用临时假数据和本地测试监听，不读取系统凭据；不是生产策略实现，也不会启用 Praxis 的命令工具。此专用套件不包含在跨平台 `pnpm check` 中，不能用 macOS/Windows 上的跳过结果计为通过。
 
+`pnpm test:linux-credentials` 要求安装真实 `secret-tool`，通过独立测试进程连接不存在的私有 D-Bus 地址，验证服务故障不会被误判为凭据不存在或删除成功，MCP 配置保留清理引用，新凭据仍可显式降级到内存。它不连接真实凭据服务、不弹出解锁界面，也不能作为系统凭据持久化成功的证据。
+
 ## Windows
 
 需要 Windows 的 **OpenSSH Server**，并配置从这台 Mac 到 Windows 账号的公钥登录。账号和 IP 与 Linux 一样填写，另外提供 Windows 形式的专用测试目录。

@@ -19,7 +19,7 @@
 | ---------------------------------- | ------------------------------------------------- | ---------------------------------------------- |
 | V01–V04、V06–V08、V10–V18、V26–V29 | 核心自动测试、真实 PostgreSQL/HTTP 集成、文件闭环 | 真实模型、完整客户端验收及各项边界复核         |
 | V05、V09、V19–V25、T07–T10         | 命令接口和拒绝路径、Host 生命周期                 | 原生命令隔离、执行域清理、输出管理、各 OS 实测 |
-| T01–T06、T11–T15                   | 文件、版本、审批、计划、提问、产物及 macOS 原生路径竞态测试 | Windows/Linux 文件路径验收、完整命令案例及真实模型 |
+| T01–T06、T11–T15                   | 文件、版本、审批、计划、提问、产物及 macOS/Linux 原生路径竞态测试 | Windows 文件路径验收、完整命令案例及真实模型 |
 | V30–V32、M01–M20                   | HTTP/Bearer/OAuth、工具/资源/Prompts、表单、审批与恢复测试   | stdio、真实互操作及 OS 测试                |
 | 插件与交付                         | Provider/命令/上下文插件、本地 CLI 备份恢复、诊断轮换与导出、构建 | 桌面备份维护、服务端备份、发行包和跨平台验证 |
 
@@ -149,3 +149,6 @@
 - Linux 预检已整理成 `pnpm test:linux-isolation` 三项可重复测试并全部通过，无跳过：最小挂载/环境、宿主 TCP 和抽象 Unix socket 隔离、真实 Host 强杀与脱离 session 的子孙清理。它不实现或开放生产命令后端。测试 Node 为 24.22.2、pnpm 为锁定的 11.9.0；Node 官方 SHA256 与 pnpm registry integrity 均在传输前校验。
 - 干净安装修复：Linux 类型检查复现测试中的 `import('@praxis/plugin-sdk')` 缺少根包直接依赖。本机已有链接掩盖了声明缺失；现补齐 manifest/lockfile，并扩展结构检查以识别内联类型导入和 `typeof import`。新增回归先失败后通过，检查仍包含类型依赖边，不新增规模例外。
 - 本批验证：macOS 220 项核心测试全部通过（含真实 Keychain），结构/类型检查通过；Linux 三项隔离原型测试、结构/类型检查及 Web/CLI/Host/服务端/桌面代码构建通过。Linux C 编译器和 secret-tool 尚缺，系统依赖由用户手动 sudo 安装；未运行 Linux 原生文件和完整核心套件，也未安装 Electron 可执行文件或启动桌面。新增源码以原提交快照加明确文件覆盖验证，没有上传真实运行数据。PostgreSQL 与真实厂商调用未因本批工程变更重复执行。
+- Linux 原生验收：用户安装系统依赖后，确认 build-essential 12.9ubuntu3、GCC 11.4、Make 4.3 和 libsecret-tools 0.20.5。锁与文件 helper 按 Wall/Wextra/Werror 编译成功，11 项文件/路径竞态/父退出/锁/凭据测试通过，随后 220 项完整核心回归通过。系统 D-Bus 当前没有 org.freedesktop.secrets owner，gnome-keyring 未安装；凭据测试验证的是明确的内存降级，不是系统持久化。
+- Linux 凭据错误修复：真实 secret-tool 在 D-Bus 连接失败时，lookup/clear 同时返回 exit 1 和 stderr；原适配器仅按 exit 1 判断不存在，误报删除成功。依据 [libsecret 0.20.5 源码](https://github.com/GNOME/libsecret/blob/0.20.5/tool/secret-tool.c)，现只有 exit 1 且 stderr/stdout 均为空才判断缺失；helper 只保留 stderr 是否有内容的布尔值，不保存诊断正文。新独立 Linux 回归先复现旧错误，再验证 OS 读取/删除失败、保留 MCP 清理引用和新凭据内存降级；测试固定连接不存在的私有 D-Bus 地址，不接触真实凭据。
+- 修复后验证：macOS 和 Linux 各 220 项核心测试全部通过，均无跳过；Linux 两项真实 secret-tool 故障回归通过。两端结构/类型检查及全部应用代码构建通过，Web 保留现有约 516 KiB chunk 提示。Linux 系统凭据持久化、桌面运行、完整命令策略/执行管理与 Windows 验收仍未闭合；本次没有因此开放命令工具或 stdio。

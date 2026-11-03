@@ -25,7 +25,8 @@
     "ui:preview": "node --import tsx scripts/preview-ui.ts",
     "structure": "node --import tsx scripts/check-structure.ts",
     "test:postgres": "node --import tsx scripts/test-postgres.ts",
-    "test:linux-isolation": "node --import tsx --test tests/platform/linux-isolation.test.ts"
+    "test:linux-isolation": "node --import tsx --test tests/platform/linux-isolation.test.ts",
+    "test:linux-credentials": "node --import tsx --test tests/platform/linux-credentials.test.ts"
   },
   "dependencies": {
     "ignore": "7.0.5",

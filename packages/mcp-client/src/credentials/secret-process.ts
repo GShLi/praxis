@@ -1,6 +1,12 @@
 import { assert, PraxisError } from '@praxis/contracts';
 import { spawn } from 'node:child_process';
 
+interface SecretProcessResult {
+  code: number;
+  output: string;
+  stderrPresent: boolean;
+}
+
 /** Fixed trusted helper only. Secret values travel in pipes, never argv or inherited environment. */
 export function secretProcess(
   executable: string,
@@ -9,23 +15,14 @@ export function secretProcess(
   signal: AbortSignal,
 ) {
   signal.throwIfAborted();
-  const env: NodeJS.ProcessEnv = {};
-  for (const name of [
-    'SYSTEMROOT',
-    'WINDIR',
-    'USERPROFILE',
-    'HOME',
-    'DBUS_SESSION_BUS_ADDRESS',
-    'XDG_RUNTIME_DIR',
-  ])
-    if (process.env[name]) env[name] = process.env[name];
   const child = spawn(executable, args, {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env,
+    env: secretEnvironment(),
     windowsHide: true,
   });
-  return new Promise<{ code: number; output: string }>((resolve, reject) => {
+  return new Promise<SecretProcessResult>((resolve, reject) => {
     let failure: Error | undefined;
+    let stderrPresent = false;
     let bytes = 0;
     const chunks: Buffer[] = [];
     let killTimer: ReturnType<typeof setTimeout> | undefined;
@@ -40,7 +37,10 @@ export function secretProcess(
       10000,
     );
     signal.addEventListener('abort', abort, { once: true });
-    child.stderr.resume();
+    // Keep only the presence bit; helper diagnostics may contain sensitive information.
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderrPresent ||= chunk.length > 0;
+    });
     child.stdin.on('error', () => {
       /* A rejected/closed helper owns the terminal error. */
     });
@@ -60,7 +60,7 @@ export function secretProcess(
       else {
         try {
           assert(code !== null, 'SECRET_STORE_UNAVAILABLE', '系统凭据进程已中止。');
-          resolve({ code, output: Buffer.concat(chunks).toString('utf8') });
+          resolve({ code, output: Buffer.concat(chunks).toString('utf8'), stderrPresent });
         } catch (error) {
           reject(error);
         }
@@ -70,4 +70,18 @@ export function secretProcess(
     child.stdin.end(input);
     if (signal.aborted) abort();
   });
+}
+
+function secretEnvironment() {
+  const env: NodeJS.ProcessEnv = {};
+  for (const name of [
+    'SYSTEMROOT',
+    'WINDIR',
+    'USERPROFILE',
+    'HOME',
+    'DBUS_SESSION_BUS_ADDRESS',
+    'XDG_RUNTIME_DIR',
+  ])
+    if (process.env[name]) env[name] = process.env[name];
+  return env;
 }
