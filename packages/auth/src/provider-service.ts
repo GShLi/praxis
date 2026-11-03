@@ -69,9 +69,12 @@ export class ProviderService {
           '配置已被修改，请重新加载。',
         );
         assert(
-          key || input.baseUrl === normalizeProviderBaseUrl(previous.config.baseUrl),
+          key ||
+            (input.baseUrl === normalizeProviderBaseUrl(previous.config.baseUrl) &&
+              (input.adapter ?? 'openai-compatible') ===
+                (previous.config.adapter ?? 'openai-compatible')),
           'KEY_REQUIRED',
-          'Base URL 已改变，请重新填写此地址对应的 API Key。',
+          'Base URL 或模型适配器已改变，请重新填写对应的 API Key。',
         );
         revision = previous.revision + 1;
         secret ??= this.cipher.decrypt(
@@ -109,6 +112,11 @@ export class ProviderService {
       requireScope(identity, 'client:direct');
     }
     const input = modelDiscoverySchema.parse(raw);
+    assert(
+      !input.adapter || input.adapter === 'openai-compatible',
+      'MODEL_CATALOG_UNSUPPORTED',
+      '插件模型请按插件说明手动填写模型 ID。',
+    );
     let key = input.apiKey;
     if (input.id) {
       const row = (
@@ -118,6 +126,11 @@ export class ProviderService {
         )
       ).rows[0];
       assert(row, 'PROVIDER_NOT_FOUND', '模型配置不存在。');
+      assert(
+        !row.config.adapter || row.config.adapter === 'openai-compatible' || input.apiKey,
+        'MODEL_CATALOG_UNSUPPORTED',
+        '不能将已保存的插件凭据用于通用模型发现。',
+      );
       assert(
         row.revision === input.expectedRevision,
         'CONFIG_CONFLICT',
@@ -145,6 +158,7 @@ export class ProviderService {
     return {
       id,
       revision: row.revision,
+      ...(row.config.adapter ? { adapter: row.config.adapter } : {}),
       baseUrl: row.config.baseUrl,
       model: row.config.model,
       contextWindow: row.config.contextWindow,

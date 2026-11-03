@@ -5,10 +5,15 @@ import { modelIdSchema, providerEndpoint, providerKeySchema } from './provider.t
 
 /** A read-only catalog request. No configuration is saved and no completion is generated. */
 export async function discoverModels(
-  input: { baseUrl: string; apiKey: string },
+  input: { baseUrl: string; apiKey: string; adapter?: string },
   signal: AbortSignal,
   fetcher?: typeof fetch,
 ): Promise<AvailableModel[]> {
+  assert(
+    !input.adapter || input.adapter === 'openai-compatible',
+    'MODEL_CATALOG_UNSUPPORTED',
+    '插件模型请按插件说明手动填写模型 ID。',
+  );
   const endpoint = providerEndpoint(input.baseUrl, 'models');
   const key = providerKeySchema.parse(input.apiKey);
   const bounded = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);

@@ -1,10 +1,14 @@
 import type { Dispatch, SetStateAction } from 'react';
 export function ModelCapacity({
+  adapter,
+  setAdapter,
   windowSize,
   setWindowSize,
   output,
   setOutput,
 }: {
+  adapter: string;
+  setAdapter: (value: string) => void;
   windowSize: number;
   output: number;
   setWindowSize: Dispatch<SetStateAction<number>>;
@@ -18,6 +22,20 @@ export function ModelCapacity({
       }}
     >
       <summary>高级设置</summary>
+      <label>
+        模型适配器
+        <input
+          value={adapter}
+          onChange={(e) => setAdapter(e.target.value)}
+          required
+          maxLength={180}
+          placeholder="openai-compatible 或 插件ID/适配器ID"
+        />
+      </label>
+      <p className="field-help">
+        默认适用于 DeepSeek 等兼容接口。使用插件时填写其提供的适配器名称和模型
+        ID；运行模型的客户端或服务端必须已启用该插件。
+      </p>
       <div className="settings-fields">
         <label>
           上下文窗口

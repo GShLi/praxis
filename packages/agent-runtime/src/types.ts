@@ -39,6 +39,7 @@ export interface Active {
   deadline: number;
   executor?: ToolExecutor;
   pluginContext?: Message[];
+  providerDescriptor?: Record<string, string>;
   finishing?: boolean;
 }
 

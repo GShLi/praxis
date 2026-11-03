@@ -9,6 +9,7 @@ import { inspectPackage } from './inspect.ts';
 import { PluginInstaller } from './installer.ts';
 import type { InstalledPlugin } from './manifest.ts';
 import type { ActivePlugin } from './types.ts';
+import { checkCompatibility } from './compatibility.ts';
 
 /** Trusted code contract, not a JavaScript sandbox. Registry publication is transactional. */
 export class PluginHost {
@@ -19,6 +20,7 @@ export class PluginHost {
     private reservedTools: Set<string>,
     private mode: 'chat' | 'agent',
     private activateTimeoutMs = 10000,
+    private runtime: 'local-host' | 'server' = 'local-host',
   ) {}
   snapshot(): readonly ActivePlugin[] {
     return [...this.active];
@@ -32,13 +34,7 @@ export class PluginHost {
       'PLUGIN_PACKAGE_CHANGED',
       '插件完整性校验失败。',
     );
-    assert(
-      record.manifest.platforms.includes(process.platform as 'darwin' | 'linux' | 'win32') &&
-        record.manifest.runtimes.includes('local-host') &&
-        record.manifest.modes.includes(this.mode),
-      'PLUGIN_INCOMPATIBLE',
-      '插件不支持当前系统、运行位置或模式。',
-    );
+    checkCompatibility(record, this.mode, this.runtime);
     const module = (await import(
       pathToFileURL(path.join(installer.path(record), record.manifest.entry)).href
     )) as { default?: PraxisPlugin };
@@ -50,6 +46,7 @@ export class PluginHost {
     return this.activate(record, module.default);
   }
   async activate(record: InstalledPlugin, plugin: PraxisPlugin) {
+    checkCompatibility(record, this.mode, this.runtime);
     const scope = activationScope(
       record,
       this.mode,
@@ -68,24 +65,13 @@ export class PluginHost {
         'PLUGIN_NAME_CONFLICT',
         '插件已激活或 Host 正在关闭。',
       );
-      for (const name of tools.keys())
-        assert(
-          !this.active.some((p) => p.tools.has(name)),
-          'PLUGIN_NAME_CONFLICT',
-          '工具名已被并发激活的插件占用。',
-        );
-      for (const name of providers.keys())
-        assert(
-          !this.active.some((p) => p.providers.has(name)),
-          'PLUGIN_NAME_CONFLICT',
-          'Provider 名重复。',
-        );
-      for (const name of commands.keys())
-        assert(
-          !this.active.some((p) => p.commands.has(name)),
-          'PLUGIN_NAME_CONFLICT',
-          '命令名重复。',
-        );
+      for (const registry of ['tools', 'providers', 'commands'] as const)
+        for (const name of scope[registry].keys())
+          assert(
+            !this.active.some((p) => p[registry].has(name)),
+            'PLUGIN_NAME_CONFLICT',
+            '注册名称已被并发激活的插件占用。',
+          );
       const active = {
         manifest: structuredClone(record.manifest),
         digest: record.digest,

@@ -1,4 +1,4 @@
-import { pluginContext, finishPluginTurn } from '@praxis/plugin-host';
+import { pluginContext, finishPluginTurn, resolvePluginModel } from '@praxis/plugin-host';
 import {
   assert,
   PraxisError,
@@ -30,7 +30,7 @@ export class TurnExecutor {
     const plugins = this.options.plugins?.(session.kind) ?? [];
     let workspace: string | undefined;
     let claimed = false;
-    const steps = new TurnSteps(this.store, this.options, this.emit);
+    let steps: TurnSteps | undefined;
     let terminal: TurnStatus = 'completed';
     let workspaceLease:
       | Awaited<ReturnType<NonNullable<RuntimeOptions['acquireWorkspace']>>>
@@ -42,6 +42,9 @@ export class TurnExecutor {
     try {
       const config = await this.options.beginUse(session.ownerUserId, signal);
       signal.throwIfAborted();
+      const provider = resolvePluginModel(plugins, config, this.options.model);
+      turn.providerDescriptor = provider.descriptor;
+      steps = new TurnSteps(this.store, { ...this.options, model: provider.model }, this.emit);
       if (session.kind === 'agent') {
         workspace = await realpath(session.workspace!);
         assert(!this.workspaceOwners.has(workspace), 'WORKSPACE_BUSY', '此工作区已有活动执行。');
@@ -91,7 +94,7 @@ export class TurnExecutor {
       await steps.run(session, turn, config);
     } catch (error) {
       terminal = signal.aborted ? 'cancelled' : 'failed';
-      if (steps.partial)
+      if (steps?.partial)
         this.store.append(
           id,
           'assistant/partial',

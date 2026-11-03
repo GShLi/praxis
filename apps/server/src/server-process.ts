@@ -5,10 +5,12 @@ import type { PostgresDatabase } from '@praxis/storage-server';
 import { createApp } from './app.ts';
 import { createChatService } from './chat-service.ts';
 import { serverConfig } from './config.ts';
+import { serverModels } from './model-plugins.ts';
 
 /** One lifetime owns the database lease, HTTP listener and Chat runtime. */
 export async function runServer(database: PostgresDatabase, auth: AuthService, webRoot: string) {
   const config = serverConfig();
+  const providers = await serverModels();
   const controller = new AbortController();
   const stop = () => controller.abort();
   const shutdown = new Promise<void>((resolve) =>
@@ -19,7 +21,7 @@ export async function runServer(database: PostgresDatabase, auth: AuthService, w
   const connect = () => database.pool.connect();
   let lease: Awaited<ReturnType<typeof connect>> | undefined;
   let server: ReturnType<typeof serve> | undefined;
-  const chat = createChatService(database, auth);
+  const chat = createChatService(database, auth, providers.model);
   let locked = false;
   try {
     lease = await database.pool.connect();
@@ -56,6 +58,7 @@ export async function runServer(database: PostgresDatabase, auth: AuthService, w
     try {
       await chat.close();
     } finally {
+      await providers.close();
       if (lease) {
         lease.off('error', stop);
         try {

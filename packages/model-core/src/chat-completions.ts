@@ -1,4 +1,5 @@
 import { fixedEndpointHttp } from '@praxis/transport/http';
+import { assert } from '@praxis/contracts';
 import { readCompletion } from './completion-stream.ts';
 import { providerEndpoint } from './provider.ts';
 import { requestCompletion } from './request.ts';
@@ -9,6 +10,11 @@ import type { Completion, ModelClient, ModelRequest } from './types.ts';
 export class DeepSeekClient implements ModelClient {
   constructor(private fetcher?: typeof fetch) {}
   async complete(request: ModelRequest): Promise<Completion> {
+    assert(
+      !request.config.adapter || request.config.adapter === 'openai-compatible',
+      'PROVIDER_ADAPTER_UNAVAILABLE',
+      '当前运行位置未加载所选插件模型适配器。',
+    );
     const endpoint = providerEndpoint(request.config.baseUrl, 'chat/completions');
     const http = this.fetcher
       ? undefined

@@ -3,6 +3,7 @@ import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/pro
 import type { ApprovalRequest } from '@praxis/permissions';
 
 export interface Provider {
+  adapter?: string;
   id: string;
   revision: number;
   name: string;

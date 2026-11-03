@@ -118,11 +118,14 @@ test('failed activation leaves no partial registry, disposes resources, and forb
   assert.equal(cleaned, true);
   assert.equal(host.snapshot().length, 0);
   await assert.rejects(
-    new PluginHost(new Set(), 'chat').activate(record, {
-      activate(ctx) {
-        ctx.registerTool(tool);
+    new PluginHost(new Set(), 'chat').activate(
+      { ...record, manifest: { ...record.manifest, modes: ['chat'] } },
+      {
+        activate(ctx) {
+          ctx.registerTool(tool);
+        },
       },
-    }),
+    ),
     /Chat 模式/,
   );
   const timed = new PluginHost(new Set(), 'agent', 5);

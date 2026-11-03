@@ -17,6 +17,8 @@ export function ProviderEditor({
   const {
     name,
     setName,
+    adapter,
+    setAdapter,
     baseUrl,
     setBaseUrl,
     model,
@@ -101,7 +103,7 @@ export function ProviderEditor({
       </label>
       <p className="field-help">
         {provider && !canUseSavedKey
-          ? 'Base URL 已改变，请重新填写此地址对应的 API Key。'
+          ? 'Base URL 或适配器已改变，请重新填写对应的 API Key。'
           : '密钥用于获取模型列表和生成回答，保存后不再显示原值。'}
       </p>
       <div className="model-picker">
@@ -110,7 +112,7 @@ export function ProviderEditor({
           <button
             type="button"
             className="text-button"
-            disabled={busy || fetching}
+            disabled={busy || fetching || adapter !== 'openai-compatible'}
             onClick={() => setManual(!manual)}
           >
             {manual ? '从列表选择' : '手动输入模型 ID'}
@@ -154,7 +156,13 @@ export function ProviderEditor({
           <button
             type="button"
             className="secondary-button"
-            disabled={busy || fetching || !endpoint || (!key.trim() && !canUseSavedKey)}
+            disabled={
+              busy ||
+              fetching ||
+              adapter !== 'openai-compatible' ||
+              !endpoint ||
+              (!key.trim() && !canUseSavedKey)
+            }
             onClick={() => {
               void fetchModels();
             }}
@@ -180,6 +188,12 @@ export function ProviderEditor({
         </div>
       </div>
       <ModelCapacity
+        adapter={adapter}
+        setAdapter={(value) => {
+          setAdapter(value);
+          resetCatalog();
+          setManual(value !== 'openai-compatible');
+        }}
         windowSize={windowSize}
         setWindowSize={setWindowSize}
         output={output}

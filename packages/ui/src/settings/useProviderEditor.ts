@@ -8,6 +8,7 @@ export function useProviderEditor(
   saved: () => Promise<void>,
 ) {
   const [name, setName] = useState(provider?.name ?? 'DeepSeek'),
+    [adapter, setAdapter] = useState(provider?.adapter ?? 'openai-compatible'),
     [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? 'https://api.deepseek.com'),
     [model, setModel] = useState(provider?.model ?? ''),
     [key, setKey] = useState('');
@@ -19,7 +20,9 @@ export function useProviderEditor(
   const [models, setModels] = useState<AvailableModel[]>([]),
     [catalogState, setCatalogState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle'),
     [catalogError, setCatalogError] = useState(''),
-    [manual, setManual] = useState(false);
+    [manual, setManual] = useState(
+      Boolean(provider?.adapter && provider.adapter !== 'openai-compatible'),
+    );
   const queryVersion = useRef(0);
   useEffect(
     () => () => {
@@ -39,7 +42,10 @@ export function useProviderEditor(
   };
   const endpoint = normalizedUrl(baseUrl);
   const canUseSavedKey = Boolean(
-    provider?.keyConfigured && endpoint && endpoint === normalizedUrl(provider.baseUrl),
+    provider?.keyConfigured &&
+      endpoint &&
+      endpoint === normalizedUrl(provider.baseUrl) &&
+      adapter === (provider.adapter ?? 'openai-compatible'),
   );
   const fetching = catalogState === 'loading';
   const resetCatalog = () => {
@@ -50,7 +56,7 @@ export function useProviderEditor(
     setModel('');
   };
   const fetchModels = async () => {
-    if (!endpoint || (!key.trim() && !canUseSavedKey)) return;
+    if (!endpoint || adapter !== 'openai-compatible' || (!key.trim() && !canUseSavedKey)) return;
     const version = ++queryVersion.current;
     setCatalogState('loading');
     setCatalogError('');
@@ -88,6 +94,7 @@ export function useProviderEditor(
       .saveProvider({
         config: {
           name,
+          adapter,
           model,
           baseUrl: endpoint,
           contextWindow: windowSize,
@@ -107,6 +114,8 @@ export function useProviderEditor(
   return {
     name,
     setName,
+    adapter,
+    setAdapter,
     baseUrl,
     setBaseUrl,
     model,

@@ -1,10 +1,14 @@
 import { AuthService, scopes } from '@praxis/auth';
 import { ChatRuntime } from '@praxis/chat-runtime';
 import { assert } from '@praxis/contracts';
-import { DeepSeekClient } from '@praxis/model-core';
+import { DeepSeekClient, type ModelClient } from '@praxis/model-core';
 import type { PostgresDatabase } from '@praxis/storage-server';
-export function createChatService(database: PostgresDatabase, auth: AuthService) {
-  return new ChatRuntime(database, new DeepSeekClient(), async (owner, providerId, signal) => {
+export function createChatService(
+  database: PostgresDatabase,
+  auth: AuthService,
+  model: ModelClient = new DeepSeekClient(),
+) {
+  return new ChatRuntime(database, model, async (owner, providerId, signal) => {
     signal.throwIfAborted();
     const row = (
       await database.query<{ status: string }>('SELECT status FROM users WHERE id=$1', [owner])

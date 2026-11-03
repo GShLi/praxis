@@ -54,6 +54,7 @@ export interface Session {
 }
 
 export interface ModelConfig {
+  adapter?: string;
   id: string;
   revision: number;
   baseUrl: string;

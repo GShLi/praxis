@@ -53,6 +53,7 @@ export class TurnSteps {
         providerId: config.id,
         configRevision: config.revision,
         model: config.model,
+        ...turn.providerDescriptor,
         contextVersion: this.store.context(id).version,
       });
       this.store.append(id, 'step/started', { turnId: turn.id, stepId, ordinal: turn.steps });

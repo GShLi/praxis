@@ -12,6 +12,7 @@
     "@praxis/chat-runtime": "workspace:*",
     "@praxis/contracts": "workspace:*",
     "@praxis/model-core": "workspace:*",
+    "@praxis/plugin-host": "workspace:*",
     "@praxis/storage-server": "workspace:*",
     "hono": "4.13.14",
     "zod": "4.3.6"

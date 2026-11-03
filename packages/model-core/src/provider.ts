@@ -1,6 +1,14 @@
 import { assert, idSchema } from '@praxis/contracts';
 import { z } from 'zod';
 
+export const modelAdapterSchema = z
+  .string()
+  .max(180)
+  .regex(
+    /^(?:openai-compatible|[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+\/[a-z][a-z0-9_]{0,63})$/,
+    '适配器应为 openai-compatible 或 插件ID/适配器ID。',
+  );
+
 export function normalizeProviderBaseUrl(value: string): string {
   let url: URL;
   try {
@@ -43,6 +51,7 @@ export const modelIdSchema = z
 export const modelDiscoverySchema = z
   .strictObject({
     baseUrl: providerBaseUrlSchema,
+    adapter: modelAdapterSchema.optional(),
     apiKey: providerKeySchema.optional(),
     id: idSchema.optional(),
     expectedRevision: z.number().int().positive().optional(),

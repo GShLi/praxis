@@ -47,3 +47,28 @@ test('real PostgreSQL provider revisions, ownership, encrypted keys and API scop
     await f.close();
   }
 });
+
+test('changing a model adapter requires a new credential and preserves the explicit adapter through begin-use', async () => {
+  const f = await databaseFixture();
+  try {
+    const saved = await f.auth.saveProvider(f.identity, provider, 'fixture-vendor-key');
+    const custom = { ...provider, adapter: 'fixture.provider/custom' };
+    await assert.rejects(f.auth.saveProvider(f.identity, custom, undefined, saved.id, 1), {
+      code: 'KEY_REQUIRED',
+    });
+    await f.auth.saveProvider(f.identity, custom, 'new-plugin-key', saved.id, 1);
+    const config = await f.auth.beginUse(f.identity, saved.id, true);
+    assert.equal(config.adapter, 'fixture.provider/custom');
+    assert.equal(config.apiKey, 'new-plugin-key');
+    await assert.rejects(
+      f.auth.providerDiscoveryCredentials(f.identity, {
+        id: saved.id,
+        expectedRevision: 2,
+        baseUrl: provider.baseUrl,
+      }),
+      { code: 'MODEL_CATALOG_UNSUPPORTED' },
+    );
+  } finally {
+    await f.close();
+  }
+});

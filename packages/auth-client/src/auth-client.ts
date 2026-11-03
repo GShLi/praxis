@@ -151,6 +151,11 @@ export class AuthClient {
   async discoverModels(raw: ModelDiscoveryInput, signal: AbortSignal, fetcher?: typeof fetch) {
     assert(this.apiKey, 'UNAUTHENTICATED', '请先登录 Praxis。');
     const input = modelDiscoverySchema.parse(raw);
+    assert(
+      !input.adapter || input.adapter === 'openai-compatible',
+      'MODEL_CATALOG_UNSUPPORTED',
+      '插件模型请按插件说明手动填写模型 ID。',
+    );
     let credentials = { baseUrl: input.baseUrl, apiKey: input.apiKey ?? '' };
     if (!input.apiKey) {
       if (Date.now() + 10_000 >= this.expiresAt) await this.exchange(signal);

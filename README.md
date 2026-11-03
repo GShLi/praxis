@@ -51,6 +51,12 @@ CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置�
 
 界面开发预览：运行 `pnpm ui:preview` 后打开 `.cache/ui-preview/index.html`，默认展示 Web ChatBot；在地址末尾添加 `?client=desktop` 查看桌面 Agent 样例。预览使用明确标注的测试数据，不连接模型、认证服务或工作区。
 
+## 插件模型适配器
+
+统一模型配置的“高级设置 → 模型适配器”默认是 `openai-compatible`，兼容已有配置。可信插件用 `registerProvider('custom', client)` 注册后，填写 `插件ID/custom`。当前插件接口仅定义生成，不约定模型发现协议，因此插件模型按作者说明手动填写 ID。更改适配器与更改地址一样，需要重新填写 Key；未安装或未启用该适配器时明确失败，不会把凭据交给默认适配器。当前 turn 的生成和压缩固定同一个插件版本。
+
+Web 只使用部署者在服务端安装的纯 Provider 插件。可通过 `PRAXIS_SERVER_PLUGIN_DIRECTORY` 指向已有的 `PluginInstaller` 注册目录（绝对路径，清单须声明 `server` 与 `chat`）；启用记录和包摘要均在启动时校验，启动失败不退回默认适配器。网页用户不能上传或安装服务端插件。桌面/CLI 则使用本地已信任并启用的插件；服务器和客户端必须分别安装需要在其上运行的适配器。
+
 ## PostgreSQL 集成测试
 
 `pnpm test:postgres` 使用真实数据库和 HTTP，只调用测试模型，不使用模型厂商 Key。每个用例创建独立的 `praxis_test_<随机 ID>` 数据库并在结束后删除；请使用专用测试实例及具备创建数据库权限的测试账号。

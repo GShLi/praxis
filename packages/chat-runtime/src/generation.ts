@@ -44,6 +44,7 @@ export async function generateChat(
       providerId,
       configRevision: config.revision,
       model: config.model,
+      adapter: config.adapter ?? 'openai-compatible',
     });
     const response = await services.model.complete({
       messages,

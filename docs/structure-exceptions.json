@@ -15,9 +15,9 @@
     "validation": "auth-http 测试、Server 构建"
   },
   "packages/agent-runtime/src/turn-executor.ts#run:1": {
-    "maxLines": 110,
-    "reason": "单个 turn 的资源获取、输入领取、运行、失败记录和 finally 回收需要在同一生命周期闭包；实际步骤在 TurnSteps。 本轮新增的插件上下文和结束钩子委托 plugin-host，前者固定于 turn，后者只在终态提交后运行。",
-    "validation": "runtime 的取消、恢复、独占执行测试；plugin-hooks 的跨 step 固定快照与提交后回调验证"
+    "maxLines": 113,
+    "reason": "已有 turn 生命周期新增一次性模型适配器选择，step/压缩共用固定版本；未增加独立业务算法。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/chat-runtime/src/context.ts#buildChatContext:1": {
     "maxLines": 119,
@@ -25,9 +25,9 @@
     "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
   },
   "packages/chat-runtime/src/generation.ts#generateChat:1": {
-    "maxLines": 96,
-    "reason": "一次流式生成的开始、增量、最终事务、取消和错误结算；content 与终态共享同一操作生命周期。",
-    "validation": "真实 PostgreSQL 集成验证：输入去重、重生成、checkpoint、重复压缩、关闭取消与接纳/关闭竞态；TypeScript 和 Server 构建。"
+    "maxLines": 97,
+    "reason": "原生成生命周期仅增加请求快照中的适配器标识。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/chat-runtime/src/submission.ts#acceptSubmission:1": {
     "maxLines": 74,
@@ -60,9 +60,9 @@
     "validation": "plugins-mcp 目录代际和污染 Schema 测试"
   },
   "packages/model-core/src/catalog.ts#discoverModels:1": {
-    "maxLines": 105,
-    "reason": "一次供应商模型发现操作，受控请求、内容大小限制、规范化及安全错误共享一次取消范围。",
-    "validation": "model-catalog 端点、JSON、模型去重、限制与凭据边界测试"
+    "maxLines": 110,
+    "reason": "现有有界目录请求增加适配器类型硬拒绝，防止发送错误协议的凭据。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/permissions/src/approval-gate.ts#forTurn:1": {
     "maxLines": 106,
@@ -245,9 +245,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/settings/ProviderEditor.tsx#ProviderEditor:1": {
-    "maxLines": 205,
-    "reason": "纯表单 JSX；目录请求与保存状态已提取到 useProviderEditor；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
+    "maxLines": 219,
+    "reason": "连续表单 JSX，增加适配器选择及目录能力提示，所有请求和状态继续委托 Hook。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/ui/src/settings/useMcpSettings.ts#useMcpSettings:1": {
     "reason": "同一设置页异步状态所有者，包含客户端切换/卸载代次、加载、检查凭据和动作结果；各网络请求经 PraxisClient，未在 hook 内实现 MCP 协议。",
@@ -255,9 +255,9 @@
     "maxLines": 78
   },
   "packages/ui/src/settings/useProviderEditor.ts#useProviderEditor:1": {
-    "maxLines": 132,
-    "reason": "单个模型配置表单的 draft 与异步版本戳；目录请求、表单保存均为短命名操作，视图完全分离。",
-    "validation": "model-catalog 测试、UI 模型列表交互样例和构建"
+    "maxLines": 141,
+    "reason": "同一个模型表单草稿生命周期，适配器/地址共同决定 Key 复用与目录有效性；保留请求版本防止过期回写。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/workspace/src/lease.ts#acquireLease:1": {
     "maxLines": 63,
@@ -320,9 +320,9 @@
     "validation": "实际 AgentRuntime 与 SQLite 内存存储运行；断言上下文不进入原始消息且两次模型请求相同。"
   },
   "tests/plugins-mcp.test.ts": {
-    "maxLines": 360,
+    "maxLines": 363,
     "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
-    "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
+    "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建；Chat 工具拒绝 fixture 明确声明 Chat 兼容，以验证工具边界而非提前命中模式拒绝。"
   },
   "tests/runtime.test.ts": {
     "maxLines": 327,
@@ -338,5 +338,15 @@
     "maxLines": 62,
     "reason": "真实 HTTP fixture 的协议路由：初始化、工具与资源端点共用请求和响应；资源内容与工具内容的构造已分别提取。",
     "validation": "mcp-runtime、mcp-business-failures 和 mcp-resources 验证官方 SDK 的新旧协议、请求次数、取消及不重放。"
+  },
+  "apps/server/src/server-process.ts#runServer:1": {
+    "maxLines": 62,
+    "reason": "服务生命周期新增已固定的部署插件 Provider 注册表，统一按 Chat→Provider→DB 释放；不引入请求业务。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
+  },
+  "packages/ui/src/settings/ModelCapacity.tsx#ModelCapacity:1": {
+    "maxLines": 65,
+    "reason": "高级设置的连续 JSX，增加用户选择插件适配器；不包含 I/O 或异步状态。",
+    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   }
 }
