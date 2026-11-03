@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "linux": {
+    "enabled": false,
+    "ssh": { "alias": "", "host": "", "port": 22, "user": "" },
+    "systemVersion": "",
+    "architecture": "auto",
+    "workdir": "",
+    "allowInstallDependencies": false,
+    "allowPrivilegedSetup": false
+  },
+  "windows": {
+    "enabled": false,
+    "ssh": { "alias": "", "host": "", "port": 22, "user": "" },
+    "systemVersion": "",
+    "architecture": "auto",
+    "workdir": "",
+    "allowInstallDependencies": false,
+    "allowPrivilegedSetup": false
+  }
+}
