@@ -3,7 +3,7 @@ import { schemas } from './schemas.ts';
 export const descriptions: Record<keyof typeof schemas, string> = {
   fs_list: '列出工作区目录。隐藏和敏感路径受 Host 策略限制。',
   fs_find: '按相对 glob 查找文件，递归使用 **。',
-  fs_search: '有界文本搜索；当前支持字面量语法。',
+  fs_search: '有界单行文本搜索；支持字面量和 Unicode 正则，逐行返回首次命中。',
   fs_read: '读取带版本的 UTF-8 文本行。修改前必须先读取完整修改范围。',
   fs_write: '排他创建新文件，或使用先前完整读取的版本替换文件。',
   fs_apply_patch: '对同一文件版本进行精确、不重叠的文本替换。',

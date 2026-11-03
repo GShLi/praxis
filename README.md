@@ -108,3 +108,7 @@ pnpm cli mcp disable SERVER_ID
 可信插件可以注册 `registerCommand(name, callback, parameters)`；第三个参数为 JSON Schema，省略时只接受空对象。命令仅在用户明确选择时执行，不暴露为模型工具。桌面端输入框旁的“插件命令”可选择命令、查看参数结构并提交；CLI 交互使用 `/commands` 和 `/command 插件ID/命令名 {"参数":"值"}`，非交互使用 `pnpm cli run --workspace /path/to/project --command 插件ID/命令名 --arguments '{"参数":"值"}'`。
 
 命令需要有效 Praxis 身份，不需要模型厂商配置；每次提交使用请求 ID 去重，并保存命令身份、委托工具记录和结果产物。Agent 命令通过 `services.invokeCore` 使用原有权限、预算和审批通道；Chat 命令不能取得 Agent 工具。单次命令限时 120 秒，取消或退出后撤销本次委托能力。插件仍是用户信任的本地代码，不构成隔离边界；服务端 Web 暂不开放用户命令插件安装。
+
+## 文件搜索语法
+
+`fs_search` 支持 `literal`（默认）和 `regex`。正则使用 Node 的 Unicode 单行表达式，不接受 `/pattern/flags` 包装；大小写由 `caseSensitive` 控制，每行返回首次命中，列号从 1 开始按 Unicode 码点计数。支持字符类、分组、量词、断言等当前 Node 引擎语法；实际换行不能用于表达式。每个文件的匹配限时 1 秒，超时报 `SEARCH_TIMEOUT`；32 MiB 扫描文本或遍历预算用尽会标记 `incomplete`，命中数量超限标记 `truncated`。搜索遵守原有工作区、敏感路径、忽略文件和符号链接限制。

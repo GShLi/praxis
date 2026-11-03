@@ -6,6 +6,7 @@ import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import { FileContent } from './content.ts';
 import { sensitive, WorkspacePathPolicy } from './policy.ts';
+import { searchContent, type SearchInput } from './text-search.ts';
 export class FileSearch {
   private snapshots = new Map<string, { key: string; entries: unknown[]; offset: number }>();
   constructor(
@@ -149,75 +150,7 @@ export class FileSearch {
       truncated: paths.length > input.limit,
     };
   }
-  async search(
-    input: {
-      query: string;
-      path: string;
-      syntax: 'literal' | 'regex';
-      include: string[];
-      caseSensitive: boolean;
-      includeHidden: boolean;
-      respectIgnore: boolean;
-      contextLines: number;
-      limit: number;
-    },
-    signal: AbortSignal,
-  ) {
-    assert(
-      input.syntax === 'literal',
-      'SEARCH_SYNTAX_UNAVAILABLE',
-      '当前内置搜索支持字面量；正则后端尚未通过平台验证。',
-    );
-    const scan = await this.scan(input, signal);
-    const matches: unknown[] = [];
-    let incomplete = scan.incomplete;
-    let truncated = false;
-    const query = input.caseSensitive ? input.query : input.query.toLocaleLowerCase();
-    let bytes = 0;
-    const deadline = Date.now() + 30_000;
-    for (const relative of scan.files) {
-      signal.throwIfAborted();
-      if (Date.now() > deadline || bytes > 32 * 1024 * 1024) {
-        incomplete = true;
-        break;
-      }
-      if (
-        input.include.length &&
-        !input.include.some((glob) => minimatch(relative, glob, { dot: input.includeHidden }))
-      )
-        continue;
-      let file;
-      try {
-        file = await this.content.load(path.join(scan.root, relative));
-      } catch {
-        incomplete = true;
-        continue;
-      }
-      bytes += Buffer.byteLength(file.text);
-      const lines = file.text.split(/\r\n|\n|\r/);
-      for (const [index, line] of lines.entries()) {
-        const offset = (input.caseSensitive ? line : line.toLocaleLowerCase()).indexOf(query);
-        if (offset < 0) continue;
-        if (matches.length >= input.limit) {
-          truncated = true;
-          break;
-        }
-        matches.push({
-          path: relative,
-          line: index + 1,
-          column: [...line.slice(0, offset)].length + 1,
-          text: line.slice(0, 1000),
-          lineTruncated: line.length > 1000,
-          contextBefore: lines
-            .slice(Math.max(0, index - input.contextLines), index)
-            .map((s) => s.slice(0, 1000)),
-          contextAfter: lines
-            .slice(index + 1, index + 1 + input.contextLines)
-            .map((s) => s.slice(0, 1000)),
-        });
-      }
-      if (truncated) break;
-    }
-    return { matches, truncated, incomplete };
+  search(input: SearchInput, signal: AbortSignal) {
+    return searchContent(input, signal, this.content, () => this.scan(input, signal));
   }
 }
