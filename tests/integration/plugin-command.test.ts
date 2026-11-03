@@ -11,6 +11,7 @@ import test from 'node:test';
 import { chatFixture } from './chat-fixture.ts';
 import { checkDiagnosticExport } from './diagnostic-assertions.ts';
 import { checkEffectiveConfig } from './config-assertions.ts';
+import { checkRelocatedCli } from './cli-distribution-assertions.ts';
 const execute = promisify(execFile);
 
 async function commandPackage(root: string) {
@@ -52,6 +53,30 @@ async function configuredWorkspace(root: string) {
     }),
   );
   return workspace;
+}
+
+async function checkSourceCli(root: string, env: Record<string, string>) {
+  const workspace = await configuredWorkspace(root);
+  const result = await execute(
+    process.execPath,
+    [
+      '--import',
+      'tsx',
+      'apps/cli/src/main.ts',
+      'run',
+      '--workspace',
+      workspace,
+      '--command',
+      'fixture.cli/hello',
+    ],
+    { env: { ...process.env, ...env }, timeout: 20000, maxBuffer: 1024 * 1024 },
+  );
+  assert.equal(
+    await readFile(path.join(workspace, 'hello.html'), 'utf8'),
+    '<h1>Hello World！！！</h1>',
+  );
+  assert.match(result.stdout, /completed/);
+  assert.ok(!result.stdout.includes(env.PRAXIS_API_KEY!));
 }
 
 test('CLI authenticates over HTTP, reloads an installed command and creates a real file without model configuration', async () => {
@@ -100,30 +125,11 @@ test('CLI authenticates over HTTP, reloads an installed command and creates a re
     });
     await host.close();
     host = undefined;
-    const workspace = await configuredWorkspace(root);
-    const result = await execute(
-      process.execPath,
-      [
-        '--import',
-        'tsx',
-        'apps/cli/src/main.ts',
-        'run',
-        '--workspace',
-        workspace,
-        '--command',
-        'fixture.cli/hello',
-      ],
-      { env: { ...process.env, ...env }, timeout: 20000, maxBuffer: 1024 * 1024 },
-    );
-    assert.equal(
-      await readFile(path.join(workspace, 'hello.html'), 'utf8'),
-      '<h1>Hello World！！！</h1>',
-    );
-    assert.match(result.stdout, /completed/);
-    assert.ok(!result.stdout.includes(key.key));
+    await checkSourceCli(root, env);
     const report = await checkDiagnosticExport(root, env);
     assert.ok(report.records.some((record) => record.kind === 'tool'));
     await checkEffectiveConfig(env);
+    await checkRelocatedCli(root, env);
   } finally {
     await host?.close();
     server.close();

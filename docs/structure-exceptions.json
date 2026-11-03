@@ -334,11 +334,6 @@
     "reason": "真实插件与临时工作区的测试生命周期，覆盖去重、工具执行、取消后撤权、只读限制与清理。",
     "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
-  "tests/integration/plugin-command.test.ts#test(CLI authenticates over HTTP, reloads an installed command and creates a real file without model configuration):1": {
-    "maxLines": 78,
-    "reason": "真实隔离 PostgreSQL、HTTP、Host 安装启用与子进程 CLI 的单一端到端场景；所有资源在 finally 释放。 在同一真实 CLI/Host 身份与生命周期内验证诊断导出，断言已提取到 diagnostic-assertions。",
-    "validation": "真实 PostgreSQL/HTTP/CLI 集成：活动 Host 只读导出、退出后工具元数据、私有文件权限及 Key/路径/正文排除；全量 check 与应用构建。"
-  },
   "tests/instruction-concurrency.test.ts#test(concurrent plugin reads retain both directory instruction scopes):1": {
     "maxLines": 93,
     "reason": "并行插件读两个真实目录的单一生命周期测试，同时检查持久快照及下一次模型输入，finally 释放全部资源。",

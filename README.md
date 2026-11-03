@@ -71,6 +71,8 @@ Web 只使用部署者在服务端安装的纯 Provider 插件。可通过 `PRAX
 
 示例：`PRAXIS_TEST_PG_BIN=/path/to/postgresql/bin pnpm test:postgres`。普通 `pnpm check` 保持无需数据库服务，包含结构检查、类型检查和核心回归。
 
+集成测试还会用正式 Node 构建配置生成临时 CLI/Host/备份 Worker，复制当前平台的原生 helper，再从源码目录之外运行认证、插件创建 HTML、会话重开和备份检查。先运行 `pnpm native:build`。该测试只链接生产第三方依赖，不链接 workspace 包或加载 tsx；它验证运行布局，不代替安装包、依赖交付和签名验收。
+
 ### MCP 远程工具
 
 桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证、Bearer 或 OAuth 的 Streamable HTTP 工具与文本资源；每次业务调用或资源读取展示实际参数与目标地址并等待单次审批。添加时勾选资源能力（或配置 `capabilities.resources: true`）后才开放资源目录与读取。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
