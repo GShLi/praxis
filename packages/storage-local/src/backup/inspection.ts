@@ -21,7 +21,7 @@ const schemaQuery =
 export function inspectDatabase(db: DatabaseSync, owner: string) {
   db.exec('PRAGMA trusted_schema=OFF; PRAGMA cache_size=-16384;');
   assert(
-    db.prepare('PRAGMA user_version').get()?.user_version === 2,
+    [2, 3].includes(Number(db.prepare('PRAGMA user_version').get()?.user_version)),
     'BACKUP_VERSION',
     '备份数据库版本不受支持。',
   );

@@ -23,7 +23,7 @@ export function openDatabase(path: string) {
   try {
     const version = (db.prepare('PRAGMA user_version').get() as Row).user_version;
     assert(
-      version === 0 || version === 1 || version === 2,
+      version === 0 || version === 1 || version === 2 || version === 3,
       'STORAGE_VERSION_UNSUPPORTED',
       '数据库版本比程序新，请升级程序。',
     );
@@ -39,7 +39,7 @@ export function openDatabase(path: string) {
       CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY, session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, kind TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS requests(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE, request_id TEXT NOT NULL, digest TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(session_id,request_id));
       CREATE TABLE IF NOT EXISTS maintenance_operations(id TEXT PRIMARY KEY, owner TEXT NOT NULL, state TEXT NOT NULL, document TEXT NOT NULL);
-      PRAGMA user_version=2;
+      PRAGMA user_version=3;
       COMMIT;
     `);
     return db;

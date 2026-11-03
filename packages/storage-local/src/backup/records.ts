@@ -1,6 +1,8 @@
 import { assert } from '@praxis/contracts';
 import type { DatabaseSync } from 'node:sqlite';
 import { recordSchemas } from './record-schema.ts';
+import { contextViewSchema } from '../context-schema.ts';
+import { validateContextReferences } from '../context-references.ts';
 
 export function inspectRecords(db: DatabaseSync) {
   for (const [table, schema] of Object.entries(recordSchemas)) {
@@ -18,12 +20,14 @@ export function inspectRecords(db: DatabaseSync) {
     );
     // One bounded row at a time; do not retain an iterator whose SQLite statement can be GC'd.
     const statement = db.prepare(
-      `SELECT rowid,document FROM ${table} WHERE rowid>? ORDER BY rowid LIMIT 1`,
+      `SELECT rowid,document${table === 'contexts' ? ',session_id' : ''} FROM ${table} WHERE rowid>? ORDER BY rowid LIMIT 1`,
     );
     let cursor = 0;
     for (let row = statement.get(cursor); row; row = statement.get(cursor)) {
       const parsed = schema.safeParse(JSON.parse(String(row.document)));
       assert(parsed.success, 'BACKUP_CORRUPT', '备份包含不受支持的会话记录。');
+      if (table === 'contexts')
+        validateContextReferences(db, String(row.session_id), contextViewSchema.parse(parsed.data));
       cursor = Number(row.rowid);
     }
   }
@@ -55,7 +59,7 @@ const consistencyRules = [
   ],
   [
     'contexts',
-    "json_extract(document,'$.version') IS NOT version OR NOT EXISTS (SELECT 1 FROM messages WHERE session_id=contexts.session_id AND id=json_extract(contexts.document,'$.throughMessageId'))",
+    "json_extract(document,'$.version') IS NOT version OR (json_extract(document,'$.throughMessageId') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM messages WHERE session_id=contexts.session_id AND id=json_extract(contexts.document,'$.throughMessageId')))",
   ],
   [
     'checkpoints',

@@ -1,6 +1,7 @@
 import type { Event, Message, Session } from '@praxis/contracts';
 import type { DatabaseSync } from 'node:sqlite';
 import type { InputRow } from './types.ts';
+import type { ContextView } from './context-schema.ts';
 /** Repositories share this transaction owner; they never open another database or publish before commit. */
 export interface StoreAccess {
   readonly db: DatabaseSync;
@@ -21,9 +22,5 @@ export interface StoreAccess {
   inputs(id: string, state: string): InputRow[];
   suspend(id: string, cancel?: boolean): void;
   checkpoint(id: string): void;
-  context(id: string): {
-    version: number;
-    summary: Message | null;
-    throughMessageId: string | null;
-  };
+  context(id: string): ContextView;
 }

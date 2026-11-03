@@ -38,9 +38,14 @@ export async function stageBackup(
       'BACKUP_DIGEST',
       '备份文件大小或摘要不匹配。',
     );
-    const counts = await databaseWorker(
+    const { counts, storageVersion } = await databaseWorker(
       { mode: 'inspect', source: file, owner: identity.ownerUserId },
       signal,
+    );
+    assert(
+      storageVersion === manifest.storageVersion,
+      'BACKUP_VERSION',
+      '备份数据库版本与清单不一致。',
     );
     assert(
       JSON.stringify(counts) === JSON.stringify(manifest.counts),

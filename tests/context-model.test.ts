@@ -130,6 +130,7 @@ test('retention is a soft budget and cannot swallow an oversized old group that 
   assert.deepEqual(tail, [answer, latest]);
   assert.ok(estimate(tail) < 500);
 });
+
 function stream(lines: string[]) {
   return new Response(
     new ReadableStream<Uint8Array>({

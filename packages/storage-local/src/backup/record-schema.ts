@@ -1,15 +1,8 @@
 import { eventSchema, permissionSchema, userCommandSchema } from '@praxis/contracts';
 import { z } from 'zod';
+import { messageSchema as message, contextViewSchema as context } from '../context-schema.ts';
 
 const id = z.string().min(1);
-const message = z.object({
-  id,
-  role: z.enum(['system', 'user', 'assistant', 'tool']),
-  content: z.string(),
-  toolCalls: z.array(z.object({ id, name: id, arguments: z.string() })).optional(),
-  toolCallId: id.optional(),
-  reasoning: z.string().optional(),
-});
 const session = z
   .object({
     id,
@@ -38,12 +31,6 @@ const session = z
     }),
   })
   .refine((value) => value.kind !== 'agent' || Boolean(value.workspace));
-const context = z.object({
-  version: z.number().int().nonnegative(),
-  summary: message.nullable(),
-  throughMessageId: id.nullable(),
-  sources: z.array(id).optional(),
-});
 const input = z.object({
   id,
   sessionId: id,
@@ -65,7 +52,10 @@ export const recordSchemas: Record<string, z.ZodType> = {
       ) || message.safeParse(event.payload.message).success,
   ),
   inputs: input,
-  contexts: context.refine((value) => value.version > 0 && value.summary && value.throughMessageId),
+  contexts: context.refine(
+    (value) =>
+      value.version > 0 && ((value.summary && value.throughMessageId) || value.toolOutputs?.length),
+  ),
   checkpoints: z.object({
     schemaVersion: z.literal(1),
     throughSeq: z.number().int().nonnegative(),

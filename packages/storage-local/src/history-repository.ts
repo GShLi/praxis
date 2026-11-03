@@ -64,34 +64,6 @@ export class HistoryRepository {
       return [{ id: event.eventId, role: 'tool' as const, content: JSON.stringify(result) }];
     });
   }
-  context(id: string): {
-    version: number;
-    summary: Message | null;
-    throughMessageId: string | null;
-  } {
-    const row = this.store.db
-      .prepare('SELECT document FROM contexts WHERE session_id=? ORDER BY version DESC LIMIT 1')
-      .get(id) as Row | undefined;
-    return row
-      ? JSON.parse(String(row.document))
-      : { version: 0, summary: null, throughMessageId: null };
-  }
-  commitContext(
-    id: string,
-    expectedVersion: number,
-    summary: Message,
-    throughMessageId: string,
-    sources: string[],
-  ) {
-    this.store.transaction(() => {
-      assert(this.context(id).version === expectedVersion, 'CONTEXT_CONFLICT', '上下文已变化。');
-      const value = { version: expectedVersion + 1, summary, throughMessageId, sources };
-      this.store.db
-        .prepare('INSERT INTO contexts VALUES(?,?,?)')
-        .run(id, value.version, JSON.stringify(value));
-      this.store.append(id, 'context/compaction_committed', value);
-    });
-  }
   artifact(id: string, kind: string, content: string): string {
     const row = this.store.db
       .prepare(

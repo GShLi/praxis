@@ -35,7 +35,7 @@ export const backupCountsSchema = z.strictObject({
 export const backupManifestSchema = z.strictObject({
   format: z.literal('praxis-local-backup'),
   version: z.literal(1),
-  storageVersion: z.literal(2),
+  storageVersion: z.union([z.literal(2), z.literal(3)]),
   identity: backupIdentitySchema,
   createdAt: z.iso.datetime(),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),

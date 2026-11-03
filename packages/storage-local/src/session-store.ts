@@ -7,6 +7,7 @@ import { HistoryRepository } from './history-repository.ts';
 import { uuid } from './identity.ts';
 import { InputRepository } from './input-repository.ts';
 import { MaintenanceRepository } from './maintenance-repository.ts';
+import { ContextRepository } from './context-repository.ts';
 import { RecoveryRepository } from './recovery-repository.ts';
 import type { Row } from './types.ts';
 
@@ -16,6 +17,7 @@ export class SessionStore extends EventEmitter {
   private historyRepository: HistoryRepository;
   private recoveryRepository: RecoveryRepository;
   private maintenanceRepository: MaintenanceRepository;
+  private contextRepository: ContextRepository;
 
   readonly db: DatabaseSync;
   private notifications: Event[] | undefined;
@@ -26,6 +28,7 @@ export class SessionStore extends EventEmitter {
     this.historyRepository = new HistoryRepository(this);
     this.recoveryRepository = new RecoveryRepository(this);
     this.maintenanceRepository = new MaintenanceRepository(this);
+    this.contextRepository = new ContextRepository(this);
   }
   transaction<T>(body: () => T): T {
     if (this.notifications) return body();
@@ -162,11 +165,14 @@ export class SessionStore extends EventEmitter {
   interactionReceipt(...args: Parameters<HistoryRepository['interactionReceipt']>) {
     return this.historyRepository.interactionReceipt(...args);
   }
-  context(...args: Parameters<HistoryRepository['context']>) {
-    return this.historyRepository.context(...args);
+  context(...args: Parameters<ContextRepository['read']>) {
+    return this.contextRepository.read(...args);
   }
-  commitContext(...args: Parameters<HistoryRepository['commitContext']>) {
-    return this.historyRepository.commitContext(...args);
+  commitContext(...args: Parameters<ContextRepository['commit']>) {
+    return this.contextRepository.commit(...args);
+  }
+  publishContext(...args: Parameters<ContextRepository['publish']>) {
+    return this.contextRepository.publish(...args);
   }
   artifact(...args: Parameters<HistoryRepository['artifact']>) {
     return this.historyRepository.artifact(...args);

@@ -36,7 +36,7 @@ export async function createLocalBackup(
   try {
     await chmod(temporary, 0o700);
     const output = path.join(temporary, 'sessions.sqlite');
-    const counts = await databaseWorker(
+    const { counts, storageVersion } = await databaseWorker(
       {
         mode: 'snapshot',
         source: path.resolve(database),
@@ -49,7 +49,7 @@ export async function createLocalBackup(
     const manifest = backupManifestSchema.parse({
       format: 'praxis-local-backup',
       version: 1,
-      storageVersion: 2,
+      storageVersion,
       identity,
       createdAt: new Date().toISOString(),
       ...digest,

@@ -19,7 +19,8 @@ function databaseTask() {
   const source = new DatabaseSync(input.source, { readOnly: true, allowExtension: false });
   try {
     const counts = inspectDatabase(source, input.owner);
-    if (input.mode === 'inspect') return counts;
+    const storageVersion = Number(source.prepare('PRAGMA user_version').get()?.user_version);
+    if (input.mode === 'inspect') return { counts, storageVersion };
     assert(input.destination, 'BACKUP_PATH', '缺少数据库目标路径。');
     if (input.mode === 'snapshot') {
       const bytes =
@@ -48,12 +49,15 @@ function databaseTask() {
       }
       const copy = new DatabaseSync(input.destination, { readOnly: true, allowExtension: false });
       try {
-        return inspectDatabase(copy, input.owner);
+        return {
+          counts: inspectDatabase(copy, input.owner),
+          storageVersion: Number(copy.prepare('PRAGMA user_version').get()?.user_version),
+        };
       } finally {
         copy.close();
       }
     } else restoreRows(input.source, input.destination, input.owner);
-    return counts;
+    return { counts, storageVersion };
   } finally {
     source.close();
   }
@@ -83,7 +87,7 @@ function restoreRows(source: string, destination: string, owner: string) {
         'BACKUP_CORRUPT',
         '恢复数据的关联校验失败。',
       );
-      db.exec('COMMIT');
+      db.exec('PRAGMA main.user_version=3; COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
       throw error;
@@ -94,7 +98,7 @@ function restoreRows(source: string, destination: string, owner: string) {
 }
 
 try {
-  parentPort?.postMessage({ ok: true, counts: databaseTask() });
+  parentPort?.postMessage({ ok: true, ...databaseTask() });
 } catch (error) {
   parentPort?.postMessage({ ok: false, error: safeError(error) });
 }
