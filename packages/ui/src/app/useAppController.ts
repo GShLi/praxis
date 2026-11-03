@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react';
+import { providerModelChoices } from '@praxis/model-core/provider-models';
 import type { UserCommand } from '@praxis/contracts';
 import { useEffect, useRef, useState } from 'react';
 import type { PraxisClient, Snapshot, ViewSession } from '../client-types.ts';
@@ -103,7 +104,8 @@ export function useAppController(injected?: PraxisClient) {
     setFollow(true);
     if (window.innerWidth <= 760) setSidebar(false);
     const preferred = localStorage.getItem('praxis-default-provider');
-    if (providers.some((p) => p.id === preferred && p.enabled)) setProviderId(preferred!);
+    const model = providerModelChoices(providers).find((p) => p.id === preferred);
+    if (model?.enabled) setProviderId(model.id);
     setDraft('');
     setPartial('');
     setError('');

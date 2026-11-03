@@ -130,9 +130,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/app/useAppController.ts#useAppController:1": {
-    "maxLines": 218,
-    "reason": "应用状态协调，MCP 表单调用已提取的通用 Session 提交门闩；目录、预览及确认状态不在此 Hook。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 219,
+    "reason": "应用状态协调，MCP 表单调用已提取的通用 Session 提交门闩；新会话默认模型通过共享模型选择器解析，目录、预览及确认状态不在此 Hook。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；provider-models 测试与桌面新会话默认模型检查；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useConversationSubscription:1": {
     "maxLines": 85,
