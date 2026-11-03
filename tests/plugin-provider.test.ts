@@ -182,6 +182,27 @@ const request = (signal = AbortSignal.timeout(1000)) => ({
   onDelta: (_text: string) => {},
 });
 
+test('plugin final response rejects credentials containing JSON escape characters', async () => {
+  const secret = 'fixture-"quoted"-key\\suffix';
+  const f = await pluginClient({
+    async complete(input) {
+      return {
+        message: { id: uuid(), role: 'assistant', content: input.config.apiKey },
+        usage: { input: 1, output: 1 },
+        finishReason: 'stop',
+      };
+    },
+  });
+  try {
+    await assert.rejects(
+      f.model.complete({ ...request(), config: { ...config, apiKey: secret } }),
+      { code: 'MODEL_SECRET_EXPOSURE' },
+    );
+  } finally {
+    await f.host.dispose();
+  }
+});
+
 test('plugin provider streams never publish a configured key split across deltas', async () => {
   const f = await pluginClient({
     async complete(input) {

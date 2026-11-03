@@ -15,8 +15,8 @@
     "validation": "auth-http 测试、Server 构建"
   },
   "packages/agent-runtime/src/turn-executor.ts#run:1": {
-    "maxLines": 100,
-    "reason": "turn 的 claim、执行、错误和 finally/checkpoint 保持同一生命周期；工具装配提取到 turn-tools，插件命令提取到 user-command。",
+    "maxLines": 107,
+    "reason": "turn 生命周期在初始化和正常关闭两条路径上都识别清理未知，写 interrupted 与 checkpoint；资源具体初始化仍在 turn-tools。",
     "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "packages/chat-runtime/src/context.ts#buildChatContext:1": {
@@ -418,5 +418,15 @@
     "maxLines": 63,
     "reason": "连续问题表单 JSX；保留真实 option ID，显示标签与发送值分开，未加入传输逻辑。",
     "validation": "类型检查、全部应用构建、MCP 表单及 CLI 交互测试。"
+  },
+  "packages/agent-runtime/src/turn-tools.ts#createTurnTools:1": {
+    "maxLines": 66,
+    "reason": "一次 turn 工具装配的资源转移与部分失败回滚必须成对；两个 close 独立结算，避免同步抛错阻断另一资源清理。",
+    "validation": "runtime-initialization、plugin-provider 回归及全量检查/构建。"
+  },
+  "tests/runtime-initialization.test.ts#test callback:1": {
+    "maxLines": 79,
+    "reason": "同一完整 Runtime 夹具验证初始化失败、异步清理失败、同步清理失败三种路径；检查一次释放、无模型调用和终态。",
+    "validation": "runtime-initialization、plugin-provider 回归及全量检查/构建。"
   }
 }

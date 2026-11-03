@@ -99,7 +99,8 @@ class PluginModel implements ModelClient {
           '模型输出超过限制。',
         );
         assert(
-          !request.config.apiKey || !encoded.includes(request.config.apiKey),
+          !request.config.apiKey ||
+            !encoded.includes(JSON.stringify(request.config.apiKey).slice(1, -1)),
           'MODEL_SECRET_EXPOSURE',
           '模型输出包含受保护凭据，已拒绝显示。',
         );

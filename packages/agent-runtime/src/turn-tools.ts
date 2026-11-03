@@ -1,9 +1,9 @@
 import { ProjectInstructions } from './instructions.ts';
-import { assert, type Session, type ModelConfig } from '@praxis/contracts';
+import { assert, PraxisError, type Session, type ModelConfig } from '@praxis/contracts';
 import type { ActivePlugin } from '@praxis/plugin-host';
 import type { ApprovalGate } from '@praxis/permissions';
 import type { SessionStore } from '@praxis/storage-local';
-import { ToolExecutor } from '@praxis/tools';
+import { ToolExecutor, type ToolExtension } from '@praxis/tools';
 import { WorkspaceFiles } from '@praxis/tools/files';
 import type { QuestionGate } from './questions.ts';
 import type { Active, RuntimeOptions } from './types.ts';
@@ -37,19 +37,10 @@ export async function createTurnTools(
     turn.instructions = instructions;
     files.observeSearchDirectories((directory) => instructions.discoverDirectory(directory));
   }
-  return new ToolExecutor(
-    session.id,
-    store,
-    files,
-    questions.ask(session.id, turn),
-    options.processes?.(session, store),
-    plugins,
-    approvals.forTurn(session.id, turn.id),
-    () => {
-      signal.throwIfAborted();
-      assert(++turn.tools <= (options.maxTools ?? 200), 'BUDGET_EXHAUSTED', '工具预算已用完。');
-    },
-    config
+  const processes = options.processes?.(session, store);
+  let extension: ToolExtension | undefined;
+  try {
+    extension = config
       ? await options.toolExtension?.(
           session,
           config,
@@ -57,7 +48,30 @@ export async function createTurnTools(
           signal,
           options.interactive ? questions.ask(session.id, turn) : undefined,
         )
-      : undefined,
-    turn.instructions?.beforeTool.bind(turn.instructions),
-  );
+      : undefined;
+    signal.throwIfAborted();
+    return new ToolExecutor(
+      session.id,
+      store,
+      files,
+      questions.ask(session.id, turn),
+      processes,
+      plugins,
+      approvals.forTurn(session.id, turn.id),
+      () => {
+        signal.throwIfAborted();
+        assert(++turn.tools <= (options.maxTools ?? 200), 'BUDGET_EXHAUSTED', '工具预算已用完。');
+      },
+      extension,
+      turn.instructions?.beforeTool.bind(turn.instructions),
+    );
+  } catch (error) {
+    const cleanup = await Promise.allSettled([
+      Promise.resolve().then(() => extension?.close()),
+      Promise.resolve().then(() => processes?.close()),
+    ]);
+    if (cleanup.some((result) => result.status === 'rejected'))
+      throw new PraxisError('EXECUTION_CLEANUP_UNKNOWN', '初始化失败，且执行资源未能确认释放。');
+    throw error;
+  }
 }

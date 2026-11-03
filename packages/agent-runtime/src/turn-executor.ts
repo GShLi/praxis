@@ -80,7 +80,14 @@ export class TurnExecutor {
         await steps.run(session, turn, config);
       }
     } catch (error) {
-      terminal = signal.aborted ? 'cancelled' : 'failed';
+      terminal =
+        error instanceof PraxisError && error.code === 'EXECUTION_CLEANUP_UNKNOWN'
+          ? 'interrupted'
+          : signal.aborted
+            ? 'cancelled'
+            : 'failed';
+      if (terminal === 'interrupted')
+        this.store.append(id, 'execution/cleanup_unknown', { turnId: turn.id });
       if (steps?.partial)
         this.store.append(
           id,

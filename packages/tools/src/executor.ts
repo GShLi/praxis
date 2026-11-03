@@ -230,7 +230,10 @@ export class ToolExecutor {
   }
   private async drain() {
     this.lifetime.abort();
-    const closed = await Promise.allSettled([this.extension?.close(), this.processes?.close()]);
+    const closed = await Promise.allSettled([
+      Promise.resolve().then(() => this.extension?.close()),
+      Promise.resolve().then(() => this.processes?.close()),
+    ]);
     await Promise.allSettled([...this.pending]);
     for (const result of closed) if (result.status === 'rejected') throw result.reason;
   }
