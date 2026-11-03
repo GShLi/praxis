@@ -25,12 +25,12 @@ export const answersSchema = z
     }),
   )
   .min(1)
-  .max(3);
+  .max(12);
 
 export const pendingQuestionSchema = z.object({
   questionId: z.string(),
   turnId: z.string(),
-  questions: z.array(questionSchema).min(1).max(3),
+  questions: z.array(questionSchema).min(1).max(12),
 });
 export type PendingQuestion = z.infer<typeof pendingQuestionSchema>;
 export type QuestionAnswer = z.infer<typeof answersSchema>[number];

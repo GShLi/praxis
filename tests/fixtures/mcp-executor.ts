@@ -1,11 +1,11 @@
 import { PraxisError } from '@praxis/contracts';
 import { ApprovalGate } from '@praxis/permissions';
 import { uuid } from '@praxis/storage-local';
-import { ToolExecutor } from '@praxis/tools';
+import { ToolExecutor, type Ask } from '@praxis/tools';
 import { WorkspaceFiles } from '@praxis/tools/files';
 import { mcpFixture } from './mcp-server.ts';
 
-export async function mcpExecutor(legacy = false, resources = false) {
+export async function mcpExecutor(legacy = false, resources = false, ask?: Ask) {
   const env = await mcpFixture(legacy, resources);
   const cancel = new AbortController();
   const approval = new ApprovalGate(env.store, true, () => 'turn-fixture');
@@ -28,6 +28,7 @@ export async function mcpExecutor(legacy = false, resources = false) {
     approval.forTurn(env.session.id, 'turn-fixture'),
     cancel.signal,
     ['fixture-model-secret'],
+    ask,
   );
   const files = await WorkspaceFiles.open(env.root, (kind, text) =>
     env.store.artifact(env.session.id, kind, text),

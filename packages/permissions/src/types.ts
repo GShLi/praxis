@@ -18,6 +18,8 @@ export type Approve = (details: ApprovalDetails, signal: AbortSignal) => Promise
 
 export interface Pending {
   request: ApprovalRequest;
+  current: () => boolean;
+  detached: boolean;
   resolve(): void;
   reject(error: PraxisError): void;
 }

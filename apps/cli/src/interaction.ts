@@ -26,6 +26,11 @@ export class CliInteraction {
       this.question = { ...pendingQuestionSchema.parse(event.payload), answers: [] };
       this.printQuestion();
     }
+    if (
+      ['question/answered', 'question/closed'].includes(event.type) &&
+      event.payload.questionId === this.question?.questionId
+    )
+      this.question = undefined;
     if (event.type === 'approval/requested') {
       this.approval = approvalRequestSchema.parse(event.payload);
       const approval = this.approval;
@@ -72,12 +77,18 @@ export class CliInteraction {
     };
     const answers = [...pending.answers, answer];
     if (answers.length === pending.questions.length) {
-      await this.host.rpc.request('question/respond', {
-        sessionId: this.sessionId,
-        questionId: pending.questionId,
-        turnId: pending.turnId,
-        answers,
-      });
+      try {
+        await this.host.rpc.request('question/respond', {
+          sessionId: this.sessionId,
+          questionId: pending.questionId,
+          turnId: pending.turnId,
+          answers,
+        });
+      } catch (error) {
+        pending.answers = [];
+        this.printQuestion();
+        throw error;
+      }
       if (this.question === pending) this.question = undefined;
       this.prompt();
     } else {

@@ -55,6 +55,7 @@ export async function createTurnTools(
           config,
           approvals.forTurn(session.id, turn.id),
           signal,
+          options.interactive ? questions.ask(session.id, turn) : undefined,
         )
       : undefined,
     turn.instructions?.beforeTool.bind(turn.instructions),

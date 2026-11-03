@@ -101,7 +101,7 @@ pnpm cli mcp disable SERVER_ID
 }
 ```
 
-使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、Bearer/OAuth、提示词及 MRTR 表单续交尚未接入。详见 [实现记录](docs/implementation.md)。
+使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、Bearer/OAuth 尚未接入。提示词与表单交互见下文；当前验收缺口见 [V1 台账](docs/v1-completion.md)。
 
 ## 用户主动执行插件命令
 
@@ -130,3 +130,11 @@ pnpm cli run --resume SESSION_ID --provider PROVIDER_ID --apply-prompt PREVIEW_I
 ```
 
 获取预览不会启动模型；应用精确的本地快照，不重新请求远端模板。文本之外的内容明确报不支持，避免悄悄丢弃模板的一部分。
+
+### MCP 人工表单
+
+交互式 CLI 和桌面 Agent 支持新版 MRTR 与旧版 form elicitation，覆盖工具调用、文本资源读取和提示词预览。服务器要求补充信息时展示来源、字段及约束；回答格式验证通过后才保存和续交，新增参数还需单次执行确认。非交互 CLI 不声明表单能力。
+
+每轮最多 12 个字段、每个操作最多 8 次续交；支持文本、数值、布尔、字符串数组及枚举，Schema 中未实现的约束会明确拒绝。跳过必填项表示拒绝表单；取消、退出或停用服务器会关闭等待。Key、密码和支付秘密不得通过表单填写，已知凭据会在保存/发送前拦截。服务器私有 requestState 仅在当前操作内原样续交，不写入 Session 或恢复 checkpoint。
+
+CLI 获取预览期间仍可回答问题、`/approve`、`/deny` 或 `/cancel`。桌面预览等待输入时会让出对话里的回答/审批卡片。重复提交相同回答或审批决定只返回已保存的回执，不产生第二份执行授权。

@@ -157,6 +157,7 @@ export function sessionsRoutes(
       store.get(input.sessionId, owner);
       runtime.cancel(owner, input.sessionId);
       await runtime.wait(input.sessionId);
+      await identity.mcpRuntime?.cancelUserOperations(input.sessionId);
       identity.subscriptions.delete(input.sessionId);
       store.delete(input.sessionId);
       return { ok: true };

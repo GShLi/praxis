@@ -7,7 +7,12 @@ import { mcpHttpFixture } from './mcp-http.ts';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-export async function mcpFixture(legacy = false, resources = false, prompts = false) {
+export async function mcpFixture(
+  legacy = false,
+  resources = false,
+  prompts = false,
+  interaction?: ConstructorParameters<typeof McpRuntime>[4],
+) {
   const root = await mkdtemp(path.join(tmpdir(), 'praxis-mcp-business-'));
   const store = new SessionStore(':memory:');
   const http = await mcpHttpFixture(legacy, resources, prompts);
@@ -32,7 +37,7 @@ export async function mcpFixture(legacy = false, resources = false, prompts = fa
     mcp.invalidate(id);
   });
   const maintenance = new McpMaintenance(configs, store, 'alice', 'cli');
-  const mcp = new McpRuntime(configs, store, 'cli');
+  const mcp = new McpRuntime(configs, store, 'cli', undefined, interaction);
   const session = store.create('alice', 'agent', root);
   await configs.upsert(config, 0, null);
   return {

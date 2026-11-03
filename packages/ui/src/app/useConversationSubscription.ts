@@ -40,8 +40,10 @@ export function useConversationSubscription(options: Subscription) {
     const refresh = async () => {
       const order = ++request.current;
       const value = await client.read(selected);
-      if (!stopped && selectedRef.current === selected && order === request.current)
+      if (!stopped && selectedRef.current === selected && order === request.current) {
         setSnapshot(value);
+        setQuestion(value.question ?? null);
+      }
     };
     setPartial('');
     setSnapshot(null);
@@ -65,8 +67,12 @@ export function useConversationSubscription(options: Subscription) {
             }
             cursor = event.seq;
             if (event.type === 'question/asked') setQuestion(event.payload as Question);
-            if (event.type === 'question/answered' || event.type === 'turn/finished')
-              setQuestion(null);
+            if (['question/answered', 'question/closed'].includes(event.type))
+              setQuestion((current) =>
+                current?.questionId === event.payload.questionId ? null : current,
+              );
+            if (event.type === 'turn/finished')
+              setQuestion((current) => (current?.turnId === event.payload.turnId ? null : current));
             if (event.type.endsWith('/error'))
               setError(String(event.payload.safeMessage ?? '执行失败。'));
             if (['assistant/message', 'generation/finished', 'turn/finished'].includes(event.type))

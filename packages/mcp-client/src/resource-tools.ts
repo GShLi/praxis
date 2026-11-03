@@ -129,15 +129,18 @@ export class McpResourceTools {
     result: ToolResult,
   ) {
     try {
-      const raw = await connection.client.readResource(
-        { uri },
-        {
-          signal,
-          cacheMode: 'bypass',
-          timeout: 60_000,
-          maxTotalTimeout: 60_000,
-          resetTimeoutOnProgress: false,
-        },
+      const raw = await connection.interact((continuation) =>
+        connection.client.readResource(
+          { uri, ...continuation },
+          {
+            signal,
+            cacheMode: 'bypass',
+            allowInputRequired: true,
+            timeout: 60_000,
+            maxTotalTimeout: 60_000,
+            resetTimeoutOnProgress: false,
+          },
+        ),
       );
       signal.throwIfAborted();
       const normalized = resourceContent(raw);

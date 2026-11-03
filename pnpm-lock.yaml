@@ -57,6 +57,9 @@ importers:
       '@praxis/chat-runtime':
         specifier: workspace:*
         version: link:packages/chat-runtime
+      '@praxis/cli':
+        specifier: workspace:*
+        version: link:apps/cli
       '@praxis/client-host':
         specifier: workspace:*
         version: link:packages/client-host
@@ -255,6 +258,9 @@ importers:
 
   packages/agent-runtime:
     dependencies:
+      '@praxis/config':
+        specifier: workspace:*
+        version: link:../config
       '@praxis/context':
         specifier: workspace:*
         version: link:../context

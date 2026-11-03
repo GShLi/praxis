@@ -1,3 +1,4 @@
+import { McpInteraction, type McpInteractionOptions, type Continuation } from './interaction.ts';
 import type { FetchLike, Transport } from '@modelcontextprotocol/client';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { assert } from '@praxis/contracts';
@@ -10,6 +11,7 @@ import { validator } from './validator.ts';
 /** One logical operation owns its SDK, transport and all ephemeral protocol state. */
 export class McpConnection {
   readonly client: Client;
+  private interaction: McpInteraction;
   private closed = false;
   private signal: AbortSignal;
   private lifetime = new AbortController();
@@ -18,6 +20,7 @@ export class McpConnection {
     readonly config: McpConfig,
     readonly binding: CatalogBinding,
     signal: AbortSignal,
+    interaction?: McpInteractionOptions,
   ) {
     validateConfig(config);
     assert(
@@ -26,6 +29,15 @@ export class McpConnection {
       'MCP 连接与配置版本不匹配。',
     );
     this.signal = AbortSignal.any([signal, this.lifetime.signal]);
+    this.interaction = new McpInteraction(
+      interaction ?? {
+        server: config.displayName,
+        sensitiveValues: [],
+        record: () => {},
+        beforeContinue: async () => {},
+      },
+      this.signal,
+    );
     this.client = new Client(
       { name: 'Praxis', version: '0.1.0' },
       {
@@ -39,7 +51,7 @@ export class McpConnection {
                 : { pin: config.protocol },
           probe: { timeoutMs: 10_000, maxRetries: 0 },
         },
-        capabilities: {},
+        capabilities: this.interaction.interactive ? { elicitation: { form: {} } } : {},
         enforceStrictCapabilities: true,
         inputRequired: { autoFulfill: false, maxRounds: 8 },
         listMaxPages: 20,
@@ -50,6 +62,10 @@ export class McpConnection {
     );
     // Raw remote error messages can contain secrets; only stable local errors leave this adapter.
     this.client.onerror = () => {};
+    if (this.interaction.interactive)
+      this.client.setRequestHandler('elicitation/create', (params, context) =>
+        this.interaction.legacy(params.params, String(context.mcpReq.id)),
+      );
   }
   async connect(options: { transport?: Transport; fetch?: FetchLike; bearer?: string } = {}) {
     this.signal.throwIfAborted();
@@ -112,6 +128,9 @@ export class McpConnection {
       await this.close();
       throw failure;
     }
+  }
+  interact(send: (continuation: Continuation) => Promise<unknown>) {
+    return this.interaction.run(send);
   }
   async catalog() {
     const protocol = this.client.getNegotiatedProtocolVersion();

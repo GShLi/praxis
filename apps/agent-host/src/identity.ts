@@ -106,11 +106,15 @@ export class HostIdentity {
         },
         protectedPaths: [baseData, commonData],
         plugins: (kind) => this.pluginHosts?.[kind].snapshot() ?? [],
-        toolExtension: (session, config, approve, signal) =>
-          this.mcpRuntime!.create(session, config.contextWindow, approve, signal, [
-            config.apiKey,
-            input.praxisApiKey,
-          ]),
+        toolExtension: (session, config, approve, signal, ask) =>
+          this.mcpRuntime!.create(
+            session,
+            config.contextWindow,
+            approve,
+            signal,
+            [config.apiKey, input.praxisApiKey],
+            ask,
+          ),
         acquireWorkspace: (root, signal) =>
           acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),
       });
@@ -143,7 +147,16 @@ export class HostIdentity {
       this.mcpRuntime?.invalidate(id);
     });
     this.mcpMaintenance = new McpMaintenance(this.mcpConfig, store, owner, this.clientKind());
-    this.mcpRuntime = new McpRuntime(this.mcpConfig, store, this.clientKind());
+    this.mcpRuntime = new McpRuntime(
+      this.mcpConfig,
+      store,
+      this.clientKind(),
+      undefined,
+      (session) => {
+        assert(this.runtime, 'INPUT_UNAVAILABLE', 'Runtime 尚未初始化。');
+        return this.runtime.interaction(owner, session.id);
+      },
+    );
   }
   private async loadPlugins() {
     const installer = this.pluginInstaller,

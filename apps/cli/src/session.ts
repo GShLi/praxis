@@ -21,7 +21,12 @@ export class CliSession {
     private sessionId: string,
     private values: CliOptions,
   ) {
-    this.mcpPrompts = new CliMcpPrompts(host, sessionId);
+    this.mcpPrompts = new CliMcpPrompts(
+      host,
+      sessionId,
+      (error) => this.report(error),
+      () => this.terminal?.prompt(),
+    );
     this.interaction = new CliInteraction(
       host,
       sessionId,
@@ -168,7 +173,6 @@ export class CliSession {
     this.active = false;
     this.finished = true;
     this.interrupted = false;
-    this.interaction.reset();
     if (!this.values.json) console.log(`\n任务状态：${String(event.payload.status)}`);
     if (event.payload.status !== 'completed') process.exitCode = 1;
     this.releaseWaiters();
@@ -201,6 +205,7 @@ export class CliSession {
   close() {
     if (this.closed) return;
     this.closed = true;
+    this.mcpPrompts.close();
     process.off('SIGINT', this.onInterrupt);
     process.off('SIGTERM', this.stop);
     this.host.rpc.off('notification', this.onNotification);

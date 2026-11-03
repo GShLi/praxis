@@ -1,13 +1,13 @@
 {
   "apps/agent-host/src/identity.ts#bind:1": {
-    "maxLines": 72,
-    "reason": "身份绑定按顺序装配资源；命令新增独立 profile 校验，clear 保持统一释放。",
-    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+    "maxLines": 75,
+    "reason": "身份绑定依次装配 Runtime 与 MCP；新增 Ask 接线，不扩展身份生命周期职责。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "apps/agent-host/src/sessions-rpc.ts#sessionsRoutes:1": {
-    "maxLines": 163,
-    "reason": "会话 RPC 路由表；单个 handler 有界，统一保留身份检查、Session ID 和 runtime 调用的对应关系。",
-    "validation": "runtime、permissions 测试、Host 构建"
+    "maxLines": 164,
+    "reason": "RPC 路由表保持输入与处理器对应；删除会话前等待 MCP 控制操作退出。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "apps/server/src/chat-routes.ts#registerChat:1": {
     "maxLines": 62,
@@ -63,16 +63,6 @@
     "maxLines": 110,
     "reason": "现有有界目录请求增加适配器类型硬拒绝，防止发送错误协议的凭据。",
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
-  },
-  "packages/permissions/src/approval-gate.ts#forTurn:1": {
-    "maxLines": 106,
-    "reason": "一次授权等待的超时/取消/响应相互竞争；pending 请求、资源哈希、permission revision 和一次性 grant 必须由同一闭包拥有。",
-    "validation": "permissions 的真实写入前审批、过期、取消、权限变化测试"
-  },
-  "packages/permissions/src/approval-gate.ts#callback:2": {
-    "maxLines": 104,
-    "reason": "一次授权等待的超时/取消/响应相互竞争；pending 请求、资源哈希、permission revision 和一次性 grant 必须由同一闭包拥有。",
-    "validation": "permissions 的真实写入前审批、过期、取消、权限变化测试"
   },
   "packages/plugin-host/src/activation-scope.ts#activationScope:1": {
     "maxLines": 118,
@@ -135,9 +125,9 @@
     "validation": "mcp-client/model-catalog 的 DNS、重定向、私网拒绝、超时/取消测试"
   },
   "packages/ui/src/App.tsx#App:1": {
-    "maxLines": 227,
-    "reason": "连续应用装配 JSX，传入一个会话准备回调；没有引入 MCP 请求实现。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 228,
+    "reason": "根 JSX 仅新增 question 传递；已有状态与行为分别由 Hook、客户端和组件拥有。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/ui/src/Navigation.tsx#AppRail:1": {
     "maxLines": 131,
@@ -160,14 +150,14 @@
     "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useConversationSubscription:1": {
-    "maxLines": 78,
-    "reason": "一次所选会话订阅拥有游标、快照版本、取消标识和 disposer；统一防止晚到快照覆盖新会话。",
-    "validation": "TS、UI 浏览器样例和构建"
+    "maxLines": 85,
+    "reason": "单个会话订阅的快照、游标、事件和关闭共享顺序保护；新增按 question ID 清理及快照恢复。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useEffect callback:1": {
-    "maxLines": 70,
-    "reason": "一次所选会话订阅拥有游标、快照版本、取消标识和 disposer；统一防止晚到快照覆盖新会话。",
-    "validation": "TS、UI 浏览器样例和构建"
+    "maxLines": 77,
+    "reason": "订阅生命周期内持有游标与 disposer；关闭、快照竞态和人工请求同步保持一起。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/ui/src/app/useIdentity.ts#useIdentity:1": {
     "maxLines": 69,
@@ -185,9 +175,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/Composer.tsx#Composer:1": {
-    "maxLines": 193,
-    "reason": "连续输入区 JSX，MCP 提示词仅在 Agent 模式挂载独立组件。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 196,
+    "reason": "连续输入区 JSX；仅将人工交互状态传给提示词面板，异步状态仍在 Hook。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/ui/src/conversation/Conversation.tsx#Conversation:1": {
     "maxLines": 90,
@@ -270,9 +260,9 @@
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
   "tests/fixtures/mcp-executor.ts#mcpExecutor:1": {
-    "reason": "单个 MCP 执行 fixture 的资源装配和统一释放；HTTP 服务、配置和调用工具分别在独立 fixture 中。",
-    "validation": "真实 HTTP、ApprovalGate 与 ToolExecutor 的版本变化、拒绝、取消、结果、断流和协议兼容场景。",
-    "maxLines": 74
+    "maxLines": 75,
+    "reason": "测试 fixture 装配工具、真实 SessionStore、权限门和可选 Ask；资源统一 close。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "tests/fixtures/ui-preview.tsx#read:1": {
     "maxLines": 76,
@@ -305,9 +295,9 @@
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
   "tests/permissions.test.ts": {
-    "maxLines": 306,
-    "reason": "同一能力的行为回归用例与资源清理放在一起；长 callback 保持 arrange/act/assert 连续，测试 fixture 数据不属于生产业务实现。",
-    "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
+    "maxLines": 310,
+    "reason": "五个有独立状态清理的权限门行为案例；新增重复回执与不同决定冲突，单次消费保证不变。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "tests/permissions.test.ts#test(runtime waits for a real approval before writing and a hard-denied path never opens approval):1": {
     "maxLines": 82,
@@ -335,9 +325,9 @@
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
   "tests/fixtures/mcp-http.ts#handle:1": {
-    "maxLines": 68,
-    "reason": "测试用协议分派器支持工具、资源及提示词；具体 payload 生成分别位于 fixtures 文件。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 95,
+    "reason": "本地协议 fixture 同时验证 JSON 与旧版 POST SSE 请求/回答；路由分发与响应绑定保持完整。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "apps/server/src/server-process.ts#runServer:1": {
     "maxLines": 62,
@@ -380,9 +370,9 @@
     "validation": "instructions、instruction-concurrency、file-search、核心测试及构建。"
   },
   "packages/ui/src/conversation/McpPrompts.tsx#McpPrompts:1": {
-    "maxLines": 129,
-    "reason": "连续用户选择/预览表单 JSX；远端控制请求、取消和过期回调在专用 Hook。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 139,
+    "reason": "连续提示词面板 JSX；等待人工回答时让出对话中的表单/审批卡片，不复制交互状态。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "packages/ui/src/conversation/useMcpPrompts.ts#useMcpPrompts:1": {
     "maxLines": 146,
@@ -393,5 +383,40 @@
     "maxLines": 126,
     "reason": "真实数据库、HTTP、Host、CLI 两次重启及 Provider 插件的单一端到端场景；初始化 helper 已独立，统一 finally 清理。",
     "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+  },
+  "packages/agent-runtime/src/questions.ts#forScope:1": {
+    "maxLines": 61,
+    "reason": "一次人工等待的提交、监听、失败回滚、取消和 Promise 结算保持同一生命周期；答案校验已提取。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+  },
+  "packages/mcp-client/src/prompts.ts#preview:1": {
+    "maxLines": 61,
+    "reason": "模板获取、人工续交和预览快照在一次 scope 操作中提交；协议交互实现在 interaction。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+  },
+  "packages/mcp-client/src/turn-scope.ts#perform:1": {
+    "maxLines": 75,
+    "reason": "同一 MCP 操作拥有连接、审批、续交配置、事件和 finally 关闭，不能拆成独立生命周期。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+  },
+  "packages/permissions/src/approval-gate.ts#wait:1": {
+    "maxLines": 63,
+    "reason": "单个审批等待的定时器、取消监听、提交及一次结算；已从票据构造和消费流程提取。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+  },
+  "tests/mcp-prompt-interaction.test.ts#test callback:1": {
+    "maxLines": 74,
+    "reason": "完整预览的成功/取消案例共享真实 HTTP 服务、Runtime 问题和审批，不以 mock 绕过交互。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+  },
+  "tests/mcp-questions.test.ts#test(interactive MCP fields use runtime questions and validate before durable answer or continuation):1": {
+    "maxLines": 110,
+    "reason": "同一真实 Agent 流程验证四种字段、错误回答不落盘和新参数再审批；保留夹具、观察和清理对应。",
+    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+  },
+  "packages/ui/src/conversation/QuestionCard.tsx#QuestionCard:1": {
+    "maxLines": 63,
+    "reason": "连续问题表单 JSX；保留真实 option ID，显示标签与发送值分开，未加入传输逻辑。",
+    "validation": "类型检查、全部应用构建、MCP 表单及 CLI 交互测试。"
   }
 }

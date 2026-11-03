@@ -1,3 +1,4 @@
+import type { Ask } from '@praxis/tools';
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { assert, type Session } from '@praxis/contracts';
 import type { McpConfigService } from '@praxis/mcp-core';
@@ -6,6 +7,12 @@ import type { SessionStore } from '@praxis/storage-local';
 import { McpTurnScope } from './turn-scope.ts';
 import { McpTurnTools } from './turn-tools.ts';
 
+export interface UserInteraction {
+  signal: AbortSignal;
+  ask?: Ask;
+  approve: Approve;
+  close(): void;
+}
 export class McpRuntime {
   private turns = new Set<McpTurnScope>();
   private closed = false;
@@ -15,6 +22,7 @@ export class McpRuntime {
     private store: SessionStore,
     private client: string,
     private fetch?: FetchLike,
+    private interaction?: (session: Session) => UserInteraction,
   ) {}
   async create(
     session: Session,
@@ -22,6 +30,7 @@ export class McpRuntime {
     approve: Approve,
     signal: AbortSignal,
     sensitiveValues: readonly string[] = [],
+    ask?: Ask,
   ) {
     assert(!this.closed && session.kind === 'agent', 'MCP_UNAVAILABLE', '此执行范围不能使用 MCP。');
     const configs = (await this.configs.file.read()).value.filter(
@@ -36,6 +45,7 @@ export class McpRuntime {
       signal,
       approve,
       sensitiveValues,
+      ...(ask ? { ask } : {}),
       record: (type, data) => this.store.append(session.id, type, data),
       artifact: (kind, content) => this.store.artifact(session.id, kind, content),
       ...(this.fetch ? { fetch: this.fetch } : {}),
@@ -58,11 +68,17 @@ export class McpRuntime {
     );
     assert(!this.closed, 'MCP_UNAVAILABLE', 'MCP 已关闭。');
     assert(this.turns.size < 8, 'MCP_BUSY', 'MCP 操作数量已达到上限。');
+    const interaction = this.interaction?.(session);
     const scope = new McpTurnScope(configs, {
       configs: this.configs,
       owner: session.ownerUserId,
       client: this.client,
-      signal: AbortSignal.timeout(300000),
+      signal: AbortSignal.any([
+        AbortSignal.timeout(300000),
+        ...(interaction ? [interaction.signal] : []),
+      ]),
+      ...(interaction?.ask ? { ask: interaction.ask } : {}),
+      ...(interaction ? { continueApproval: interaction.approve } : {}),
       // This API is reachable only from an explicit user preview request, never a model tool.
       approve: async () => () => {},
       sensitiveValues,
@@ -76,12 +92,16 @@ export class McpRuntime {
       return await action(scope);
     } finally {
       await scope.close();
+      interaction?.close();
       this.turns.delete(scope);
       this.controls.delete(scope);
     }
   }
-  cancelUserOperations(sessionId: string) {
-    for (const [scope, id] of this.controls) if (id === sessionId) scope.cancel();
+  async cancelUserOperations(sessionId: string) {
+    const pending = [...this.controls]
+      .filter(([, id]) => id === sessionId)
+      .map(([scope]) => scope.close());
+    await Promise.allSettled(pending);
   }
   invalidate(serverId: string) {
     for (const turn of this.turns) turn.invalidate(serverId);

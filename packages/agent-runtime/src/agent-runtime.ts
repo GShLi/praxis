@@ -6,6 +6,7 @@ import { ApprovalGate } from '@praxis/permissions';
 import { SessionStore, uuid } from '@praxis/storage-local';
 import { EventEmitter } from 'node:events';
 import { QuestionGate } from './questions.ts';
+import { InteractiveControls } from './interactive-controls.ts';
 import { TurnExecutor } from './turn-executor.ts';
 import type { Active, RuntimeOptions } from './types.ts';
 
@@ -14,6 +15,7 @@ export class AgentRuntime extends EventEmitter {
   readonly approvals: ApprovalGate;
   private questions: QuestionGate;
   private turns: TurnExecutor;
+  private controls: InteractiveControls;
   private active = new Map<string, Active>();
 
   private closing = false;
@@ -28,6 +30,12 @@ export class AgentRuntime extends EventEmitter {
     this.approvals = new ApprovalGate(store, options.interactive ?? false, (id) =>
       this.getTurn(id),
     );
+    this.controls = new InteractiveControls(
+      store,
+      this.questions,
+      this.approvals,
+      options.interactive ?? false,
+    );
     this.turns = new TurnExecutor(
       store,
       options,
@@ -40,6 +48,10 @@ export class AgentRuntime extends EventEmitter {
   }
   get busy() {
     return this.active.size > 0;
+  }
+  interaction(owner: string, sessionId: string) {
+    assert(!this.closing, 'HOST_CLOSING', 'Host 正在退出。');
+    return this.controls.create(owner, sessionId);
   }
   pendingQuestion(...args: Parameters<QuestionGate['pendingQuestion']>) {
     return this.questions.pendingQuestion(...args);
@@ -142,6 +154,7 @@ export class AgentRuntime extends EventEmitter {
     this.store.get(id, owner);
     const turn = this.active.get(id);
     assert(!expectedTurnId || expectedTurnId === turn?.id, 'TURN_CONFLICT', '要取消的执行已结束。');
+    this.controls.cancel(id);
     this.store.transaction(() => {
       this.store.suspend(id, cancelPending);
       this.store.append(id, 'turn/cancel_requested', { turnId: turn?.id ?? null }, 'user');
@@ -160,6 +173,7 @@ export class AgentRuntime extends EventEmitter {
 
   async close() {
     this.closing = true;
+    this.controls.cancel();
     for (const [id, turn] of this.active) {
       this.store.suspend(id);
       turn.controller.abort();

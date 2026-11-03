@@ -10,6 +10,7 @@ export function QuestionCard({
   submit: (answers: unknown) => Promise<void>;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({}),
+    [choices, setChoices] = useState<Record<string, string | undefined>>({}),
     [busy, setBusy] = useState(false);
   return (
     <form
@@ -20,7 +21,9 @@ export function QuestionCard({
         void submit(
           question.questions.map((q) => ({
             id: q.id,
-            text: answers[q.id] ?? '',
+            ...(choices[q.id] !== undefined
+              ? { selectedOptionId: choices[q.id] }
+              : { text: answers[q.id] ?? '' }),
             skipped: !answers[q.id]?.trim(),
           })),
         ).finally(() => setBusy(false));
@@ -36,7 +39,10 @@ export function QuestionCard({
                 <button
                   type="button"
                   key={o.id}
-                  onClick={() => setAnswers({ ...answers, [q.id]: o.label })}
+                  onClick={() => {
+                    setAnswers({ ...answers, [q.id]: o.label });
+                    setChoices({ ...choices, [q.id]: o.id });
+                  }}
                 >
                   {o.label}
                 </button>
@@ -45,7 +51,10 @@ export function QuestionCard({
           )}
           <input
             value={answers[q.id] ?? ''}
-            onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+            onChange={(e) => {
+              setAnswers({ ...answers, [q.id]: e.target.value });
+              setChoices({ ...choices, [q.id]: undefined });
+            }}
             placeholder="填写回答；留空表示跳过"
           />
         </label>

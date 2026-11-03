@@ -8,6 +8,7 @@ export function McpPrompts({
   mode,
   turnId,
   disabled,
+  interacting,
 }: {
   client: PraxisClient;
   selected: string | null;
@@ -16,6 +17,7 @@ export function McpPrompts({
   mode: 'queue' | 'steer';
   turnId: string | null;
   disabled: boolean;
+  interacting: boolean;
 }) {
   const state = useMcpPrompts(client, selected, prepareSession, providerId, mode, turnId);
   return (
@@ -23,7 +25,15 @@ export function McpPrompts({
       <button type="button" className="text-button" disabled={disabled} onClick={state.show}>
         MCP 提示词
       </button>
-      {state.open && (
+      {state.open && interacting && (
+        <div role="status">
+          <p>MCP 正在等待回答或确认，请使用上方的交互卡片。</p>
+          <button type="button" onClick={state.cancel}>
+            取消预览
+          </button>
+        </div>
+      )}
+      {state.open && !interacting && (
         <div className="mcp-prompt-panel" role="dialog" aria-label="选择 MCP 提示词">
           <div className="mcp-prompt-heading">
             <strong>MCP 提示词</strong>

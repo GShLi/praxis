@@ -71,6 +71,7 @@
     "@praxis/config": "workspace:*",
     "@praxis/schema": "workspace:*",
     "@praxis/transport": "workspace:*",
-    "@praxis/client-host": "workspace:*"
+    "@praxis/client-host": "workspace:*",
+    "@praxis/cli": "workspace:*"
   }
 }

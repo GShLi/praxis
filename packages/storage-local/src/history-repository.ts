@@ -5,6 +5,19 @@ import type { StoreAccess } from './store-access.ts';
 import type { Row } from './types.ts';
 export class HistoryRepository {
   constructor(private store: Pick<StoreAccess, 'transaction' | 'append' | 'db'>) {}
+  interactionReceipt(
+    id: string,
+    type: 'question/answered' | 'approval/resolved',
+    interactionId: string,
+  ): Record<string, unknown> | undefined {
+    const field = type === 'question/answered' ? '$.payload.questionId' : '$.payload.approvalId';
+    const row = this.store.db
+      .prepare(
+        "SELECT document FROM events WHERE session_id=? AND json_extract(document,'$.type')=? AND json_extract(document,?)=? ORDER BY seq DESC LIMIT 1",
+      )
+      .get(id, type, field, interactionId) as Row | undefined;
+    return row ? (JSON.parse(String(row.document)) as Event).payload : undefined;
+  }
   message(id: string, message: Message) {
     return this.store.transaction(() => {
       const event = this.store.append(

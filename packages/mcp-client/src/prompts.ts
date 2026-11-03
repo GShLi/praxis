@@ -94,14 +94,17 @@ export class McpPrompts {
               name: input.name,
               argumentsHash: fingerprint(input.arguments),
             });
-            const response = await connection.client.getPrompt(
-              { name: input.name, arguments: input.arguments },
-              {
-                signal,
-                timeout: 60000,
-                maxTotalTimeout: 60000,
-                resetTimeoutOnProgress: false,
-              },
+            const response = await connection.interact((continuation) =>
+              connection.client.getPrompt(
+                { name: input.name, arguments: input.arguments, ...continuation },
+                {
+                  signal,
+                  allowInputRequired: true,
+                  timeout: 60000,
+                  maxTotalTimeout: 60000,
+                  resetTimeoutOnProgress: false,
+                },
+              ),
             );
             signal.throwIfAborted();
             const value = promptPreview(response, { ...input, binding: catalog.binding });

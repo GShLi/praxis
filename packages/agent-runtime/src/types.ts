@@ -20,6 +20,7 @@ export interface RuntimeOptions {
     config: ModelConfig,
     approve: Approve,
     signal: AbortSignal,
+    ask?: Ask,
   ) => Promise<ToolExtension>;
   maxSteps?: number;
   maxTools?: number;
@@ -51,6 +52,9 @@ export interface PendingQuestion {
   sessionId: string;
   turnId: string;
   questions: Parameters<Ask>[0];
+  current: () => boolean;
+  detached: boolean;
+  validate?: (answer: unknown) => void;
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
 }

@@ -18,6 +18,7 @@ export interface ProcessService {
 export type Ask = (
   questions: z.infer<typeof schemas.user_ask>['questions'],
   signal: AbortSignal,
+  validate?: (answer: unknown) => void,
 ) => Promise<unknown>;
 
 /** Owned by one turn; registrations change only before the next model request. */

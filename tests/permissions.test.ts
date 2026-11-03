@@ -66,7 +66,11 @@ test('approvals bind identity, exact displayed content and turn, and can be cons
     env.gate.respond('alice', response);
     const grant = await pending;
     assert.equal(env.gate.snapshot(env.session.id), null);
-    assert.throws(() => env.gate.respond('alice', response), { code: 'APPROVAL_EXPIRED' });
+    // A lost acknowledgement may be retried; the receipt never creates a second grant.
+    assert.deepEqual(env.gate.respond('alice', response), { accepted: true });
+    assert.throws(() => env.gate.respond('alice', { ...response, decision: 'deny' }), {
+      code: 'APPROVAL_CONFLICT',
+    });
     grant();
     assert.throws(grant, { code: 'APPROVAL_EXPIRED' });
     assert.equal(

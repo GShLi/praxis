@@ -201,6 +201,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
             </button>
           )}
           <Composer
+            question={question}
             client={client}
             providers={providers}
             providerId={providerId}

@@ -1,8 +1,10 @@
+import { LegacyForms } from './mcp-legacy-form.ts';
 import { promptFixture, promptReply } from './mcp-prompts.ts';
 import { createServer } from 'node:http';
 import { resourceReply, resourcesFixture, type ResourceFixture } from './mcp-resources.ts';
 interface RemoteFixture {
   legacy: boolean;
+  legacyForms: LegacyForms;
   prompts: ReturnType<typeof promptFixture> | undefined;
   resources: ResourceFixture | undefined;
   description: string;
@@ -10,17 +12,22 @@ interface RemoteFixture {
   invalidOutput: boolean;
   disconnect: boolean;
   inputRequired: boolean;
+  repeatInput: boolean;
+  stateOnly: boolean;
+  form: Record<string, unknown>;
   beforeList?: (() => Promise<void>) | undefined;
   beforeCall?: (() => Promise<void>) | undefined;
 }
 export async function mcpHttpFixture(legacy = false, resources = false, prompts = false) {
   const requests: Array<{
+    id: string;
     method: string;
     headers: Record<string, unknown>;
     params: Record<string, unknown>;
   }> = [];
   const remote = {
     legacy,
+    legacyForms: new LegacyForms(),
     prompts: prompts ? promptFixture() : undefined,
     resources: resources ? resourcesFixture() : undefined,
     description: 'Echo fixture',
@@ -28,6 +35,13 @@ export async function mcpHttpFixture(legacy = false, resources = false, prompts 
     invalidOutput: false,
     disconnect: false,
     inputRequired: false,
+    repeatInput: false,
+    stateOnly: false,
+    form: {
+      type: 'object',
+      properties: { city: { type: 'string', description: '目的城市' } },
+      required: ['city'],
+    } as Record<string, unknown>,
     beforeList: undefined as (() => Promise<void>) | undefined,
     beforeCall: undefined as (() => Promise<void>) | undefined,
   };
@@ -54,6 +68,7 @@ export async function mcpHttpFixture(legacy = false, resources = false, prompts 
 
 async function handle(
   requests: Array<{
+    id: string;
     method: string;
     headers: Record<string, unknown>;
     params: Record<string, unknown>;
@@ -70,8 +85,25 @@ async function handle(
   }
   let body = '';
   for await (const part of request) body += String(part);
-  const rpc = JSON.parse(body) as { id: string; method: string; params: Record<string, unknown> };
-  requests.push({ method: rpc.method, params: rpc.params, headers: request.headers });
+  const rpc = JSON.parse(body) as {
+    id: string;
+    method: string;
+    params: Record<string, unknown>;
+    result?: unknown;
+    error?: unknown;
+  };
+  if (!rpc.method) {
+    remote.legacyForms.reply(String(rpc.id), rpc.result ?? rpc.error);
+    response.writeHead(202);
+    response.end();
+    return;
+  }
+  requests.push({
+    id: String(rpc.id),
+    method: rpc.method,
+    params: rpc.params,
+    headers: request.headers,
+  });
   if (rpc.method === 'notifications/initialized') {
     response.writeHead(202);
     response.end();
@@ -95,7 +127,10 @@ async function handle(
       capabilities,
     };
   else if (remote.prompts && rpc.method.startsWith('prompts/'))
-    result = await promptReply(remote.prompts, rpc.method, rpc.params);
+    result =
+      rpc.method === 'prompts/get' && remote.inputRequired && !rpc.params.inputResponses
+        ? echoResult(remote, rpc.params)
+        : await promptReply(remote.prompts, rpc.method, rpc.params);
   else if (remote.resources && rpc.method.startsWith('resources/'))
     result = await resourceReply(remote.resources, rpc.method, rpc.params);
   else if (rpc.method === 'tools/list') {
@@ -107,18 +142,24 @@ async function handle(
       request.socket.destroy();
       return;
     }
-    result = echoResult(remote);
+    if (remote.legacy && remote.inputRequired) {
+      const answer = await remote.legacyForms.ask(response, remote.form);
+      result = echoResult(remote, { ...rpc.params, inputResponses: { details: answer } });
+    } else result = echoResult(remote, rpc.params);
   } else throw new Error(`Unexpected request ${rpc.method}`);
-  response.writeHead(200, { 'content-type': 'application/json' });
-  response.end(
-    JSON.stringify({
-      jsonrpc: '2.0',
-      id: rpc.id,
-      result: remote.legacy
-        ? result
-        : { resultType: 'complete', ttlMs: 0, cacheScope: 'private', ...result },
-    }),
-  );
+  const message = JSON.stringify({
+    jsonrpc: '2.0',
+    id: rpc.id,
+    result: remote.legacy
+      ? result
+      : { resultType: 'complete', ttlMs: 0, cacheScope: 'private', ...result },
+  });
+  if (response.destroyed) return;
+  if (response.headersSent) response.end('event: message\ndata: ' + message + '\n\n');
+  else {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(message);
+  }
 }
 
 function echoDefinition(remote: RemoteFixture) {
@@ -137,7 +178,7 @@ function echoDefinition(remote: RemoteFixture) {
   };
 }
 
-function echoResult(remote: RemoteFixture) {
+function echoResult(remote: RemoteFixture, params: Record<string, unknown>) {
   let result: object = {
     content: [{ type: 'text', text: 'echo result' }],
     isError: remote.isError,
@@ -147,11 +188,21 @@ function echoResult(remote: RemoteFixture) {
         ? { value: false }
         : false,
   };
-  if (remote.inputRequired)
+  if (
+    remote.inputRequired &&
+    ((remote.stateOnly ? !params.requestState : !params.inputResponses) || remote.repeatInput)
+  )
     result = {
       resultType: 'input_required',
       requestState: 'private-resume-state',
-      inputRequests: [],
+      inputRequests: remote.stateOnly
+        ? {}
+        : {
+            details: {
+              method: 'elicitation/create',
+              params: { mode: 'form', message: '补充任务信息', requestedSchema: remote.form },
+            },
+          },
     };
   return result;
 }

@@ -1,7 +1,7 @@
 import type { startHost } from '@praxis/client-host';
 import { assert, type McpPromptList } from '@praxis/contracts';
 import { randomUUID } from 'node:crypto';
-type Host = Awaited<ReturnType<typeof startHost>>;
+type Host = { rpc: Pick<Awaited<ReturnType<typeof startHost>>['rpc'], 'request'> };
 export async function previewPrompt(
   host: Host,
   sessionId: string,
@@ -19,9 +19,16 @@ export async function previewPrompt(
   });
 }
 export class CliMcpPrompts {
+  private previewing = false;
+  private closed = false;
+  close() {
+    this.closed = true;
+  }
   constructor(
     private host: Host,
     private sessionId: string,
+    private report: (error: unknown) => void,
+    private prompt: () => void,
   ) {}
   async input(line: string): Promise<'read' | 'submitted' | false> {
     if (line.startsWith('/mcp-prompts ')) {
@@ -36,27 +43,16 @@ export class CliMcpPrompts {
       return 'read';
     }
     if (line.startsWith('/mcp-preview ')) {
-      const match = /^\/mcp-preview (\S+) ([\s\S]+)$/.exec(line);
-      assert(
-        match,
-        'INVALID_COMMAND',
-        '格式：/mcp-preview SERVER_ID {"name":"模板名称","arguments":{}}',
-      );
-      const value: unknown = JSON.parse(match[2]!);
-      assert(
-        value && typeof value === 'object' && 'name' in value && typeof value.name === 'string',
-        'INVALID_ARGUMENT',
-        '需要模板 name 和 arguments。',
-      );
-      const result = await previewPrompt(
-        this.host,
-        this.sessionId,
-        match[1]!,
-        value.name,
-        'arguments' in value ? value.arguments : {},
-      );
-      console.log(JSON.stringify(result, null, 2));
-      console.log('检查完整 text 后使用 /mcp-apply PREVIEW_ID CONTENT_HASH [queue|steer] 确认。');
+      assert(!this.previewing, 'MCP_BUSY', '正在获取预览；请先回答问题或 /cancel。');
+      this.previewing = true;
+      void this.preview(line)
+        .catch((error) => {
+          if (!this.closed) this.report(error);
+        })
+        .finally(() => {
+          this.previewing = false;
+          if (!this.closed) this.prompt();
+        });
       return 'read';
     }
     if (line.startsWith('/mcp-apply ')) {
@@ -80,6 +76,30 @@ export class CliMcpPrompts {
       return 'submitted';
     }
     return false;
+  }
+  private async preview(line: string) {
+    const match = /^\/mcp-preview (\S+) ([\s\S]+)$/.exec(line);
+    assert(
+      match,
+      'INVALID_COMMAND',
+      '格式：/mcp-preview SERVER_ID {"name":"模板名称","arguments":{}}',
+    );
+    const value: unknown = JSON.parse(match[2]!);
+    assert(
+      value && typeof value === 'object' && 'name' in value && typeof value.name === 'string',
+      'INVALID_ARGUMENT',
+      '需要模板 name 和 arguments。',
+    );
+    const result = await previewPrompt(
+      this.host,
+      this.sessionId,
+      match[1]!,
+      value.name,
+      'arguments' in value ? value.arguments : {},
+    );
+    if (this.closed) return;
+    console.log(JSON.stringify(result, null, 2));
+    console.log('检查完整 text 后使用 /mcp-apply PREVIEW_ID CONTENT_HASH [queue|steer] 确认。');
   }
 }
 

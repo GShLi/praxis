@@ -1,3 +1,5 @@
+import type { Ask } from '@praxis/tools';
+import { containsSecret } from './form.ts';
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { fingerprint } from '@praxis/config';
 import { assert, PraxisError, safeError } from '@praxis/contracts';
@@ -13,10 +15,12 @@ export interface TurnScopeOptions {
   client: string;
   signal: AbortSignal;
   approve: Approve;
+  continueApproval?: Approve;
   sensitiveValues: readonly string[];
   record(type: string, data: Record<string, unknown>): void;
   artifact(kind: string, content: string): string;
   fetch?: FetchLike;
+  ask?: Ask;
 }
 export interface RemoteOperation {
   connection: McpConnection;
@@ -96,6 +100,27 @@ export class McpTurnScope {
         authEpoch: 0,
       },
       signal,
+      {
+        server: config.displayName,
+        sensitiveValues: this.options.sensitiveValues,
+        ...(!policy.metadataOnly && this.options.ask ? { ask: this.options.ask } : {}),
+        record: (type, data) => this.record(type, { ...details, ...data }),
+        beforeContinue: async (responses) => {
+          await this.current(config, signal);
+          if (Object.values(responses).some((r) => r.action === 'accept')) {
+            const grant = await this.approval(
+              config,
+              callId,
+              toolId,
+              { original: parameters, inputResponses: responses },
+              signal,
+              this.options.continueApproval,
+            );
+            await this.current(config, signal);
+            grant();
+          }
+        },
+      },
     );
     this.record('mcp/operation-started', details);
     try {
@@ -161,10 +186,10 @@ export class McpTurnScope {
     toolId: string,
     parameters: unknown,
     signal: AbortSignal,
+    approve = this.options.approve,
   ) {
-    const serialized = JSON.stringify(parameters);
     assert(
-      !this.options.sensitiveValues.some((value) => value && serialized.includes(value)),
+      !containsSecret(parameters, this.options.sensitiveValues),
       'MCP_SECRET_DENIED',
       '工具参数包含已知凭据，不能发送至 MCP 服务器。',
     );
@@ -173,7 +198,7 @@ export class McpTurnScope {
       'MCP_TRANSPORT_UNAVAILABLE',
       '不支持此传输。',
     );
-    return this.options.approve(
+    return approve(
       {
         callId,
         toolId,

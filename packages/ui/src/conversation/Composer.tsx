@@ -12,6 +12,7 @@ export function Composer({
   kind,
   selected,
   snapshot,
+  question,
   draft,
   setDraft,
   sending,
@@ -36,6 +37,7 @@ export function Composer({
   | 'kind'
   | 'selected'
   | 'snapshot'
+  | 'question'
   | 'draft'
   | 'setDraft'
   | 'sending'
@@ -178,6 +180,7 @@ export function Composer({
           providerId={providerId}
           mode={inputMode}
           turnId={snapshot?.turnId ?? null}
+          interacting={Boolean(question || snapshot?.approval)}
           disabled={sending || loadingSession}
         />
       )}

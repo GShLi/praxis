@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@praxis/config": "workspace:*",
     "@praxis/context": "workspace:*",
     "@praxis/contracts": "workspace:*",
     "@praxis/model-core": "workspace:*",

@@ -7,5 +7,8 @@
     "@praxis/client-host": "workspace:*",
     "@praxis/contracts": "workspace:*",
     "@praxis/permissions": "workspace:*"
+  },
+  "exports": {
+    "./mcp-prompts": "./src/mcp-prompts.ts"
   }
 }

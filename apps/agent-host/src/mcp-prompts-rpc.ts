@@ -34,7 +34,7 @@ export function mcpPromptsRoutes(identity: HostIdentity): RpcRoutes {
       const { store, owner } = identity.require();
       const input = z.strictObject({ sessionId: idSchema }).parse(params);
       store.get(input.sessionId, owner);
-      identity.mcpRuntime?.cancelUserOperations(input.sessionId);
+      await identity.mcpRuntime?.cancelUserOperations(input.sessionId);
       return { accepted: true };
     },
   };
