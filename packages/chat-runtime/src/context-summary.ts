@@ -1,20 +1,35 @@
-import { SummaryJob } from '@praxis/context';
+import { SummaryJob, estimate } from '@praxis/context';
 import type { Message, ModelConfig } from '@praxis/contracts';
 import { randomUUID } from 'node:crypto';
 import type { ChatContextServices } from './context-types.ts';
 import type { Running } from './types.ts';
 
-export function chatSummaryJob(services: ChatContextServices, run: Running, config: ModelConfig) {
-  return new SummaryJob(services.model, config, run.controller.signal, async (messages) => {
-    await services.append(run.chatId, 'request/snapshot', {
-      purpose: 'compaction',
-      generationId: run.id,
-      messages,
-      tools: [],
-      providerId: config.id,
-      configRevision: config.revision,
-    });
-  });
+export function chatSummaryJob(
+  services: ChatContextServices,
+  run: Running,
+  config: ModelConfig,
+  count = estimate,
+) {
+  return new SummaryJob(
+    services.model,
+    config,
+    run.controller.signal,
+    async (messages, requestId) => {
+      await services.append(run.chatId, 'request/snapshot', {
+        purpose: 'compaction',
+        requestId,
+        estimatedInputTokens: count([messages, []]),
+        estimateSource: 'estimated',
+        generationId: run.id,
+        messages,
+        tools: [],
+        providerId: config.id,
+        configRevision: config.revision,
+      });
+    },
+    undefined,
+    count,
+  );
 }
 export async function summarizeChat(
   job: SummaryJob,

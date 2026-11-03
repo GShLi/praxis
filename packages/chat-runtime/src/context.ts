@@ -13,6 +13,7 @@ export async function buildChatContext(
   currentInput: string,
   personal: Message[] = [],
   force = false,
+  count = estimate,
 ) {
   let { messages, version, summaryId } = await readChatContext(services, run, currentInput);
   const fixed: Message[] = [
@@ -25,11 +26,11 @@ export async function buildChatContext(
     ...personal,
   ];
   const limits = budget(config);
-  assert(estimate(fixed) < limits.trigger, 'CONTEXT_FIXED_TOO_LARGE', '固定指令超过输入预算。');
-  const job = chatSummaryJob(services, run, config);
+  assert(count([fixed, []]) < limits.trigger, 'CONTEXT_FIXED_TOO_LARGE', '固定指令超过输入预算。');
+  const job = chatSummaryJob(services, run, config, count);
   for (let contraction = 0; contraction < 2; contraction++) {
-    if ((!force || contraction > 0) && estimate([fixed, messages]) < limits.trigger) break;
-    const { groups, tail } = compactionSource(messages, force ? 0 : limits.retain);
+    if ((!force || contraction > 0) && count([[...fixed, ...messages], []]) < limits.trigger) break;
+    const { groups, tail } = compactionSource(messages, force ? 0 : limits.retain, count);
     const source = groups.flat();
     assert(
       source.some((message) => message.id !== summaryId),
@@ -38,7 +39,7 @@ export async function buildChatContext(
     );
     const summary = await summarizeChat(job, services, run, groups, version);
     assert(
-      estimate([summary, ...tail]) < estimate(messages),
+      count([summary, ...tail]) < count(messages),
       'COMPACTION_NO_PROGRESS',
       '候选摘要未缩小输入，保留原视图。',
     );
@@ -46,6 +47,10 @@ export async function buildChatContext(
     summaryId = summary.id;
     messages = [summary, ...tail];
   }
-  assert(estimate([fixed, messages]) < limits.trigger, 'CONTEXT_TOO_LARGE', '压缩后仍超过预算。');
+  assert(
+    count([[...fixed, ...messages], []]) < limits.trigger,
+    'CONTEXT_TOO_LARGE',
+    '压缩后仍超过预算。',
+  );
   return { messages: [...fixed, ...messages], version };
 }

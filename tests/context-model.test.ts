@@ -1,4 +1,4 @@
-import { ContextBuilder, protocolGroups } from '@praxis/context';
+import { ContextBuilder, protocolGroups, compactionSource, estimate } from '@praxis/context';
 import type { Message, ModelConfig } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
 import { DeepSeekClient } from '@praxis/model-core';
@@ -119,6 +119,16 @@ test('protocol grouping rejects incorrect tool identities even when counts match
       { id: 'r', role: 'tool', toolCallId: 'other', content: 'ok' },
     ]),
   );
+});
+
+test('retention is a soft budget and cannot swallow an oversized old group that should be compacted', () => {
+  const old: Message = { id: 'old', role: 'user', content: 'old '.repeat(2000) };
+  const answer: Message = { id: 'answer', role: 'assistant', content: 'ok' };
+  const latest: Message = { id: 'latest', role: 'user', content: 'continue' };
+  const { groups, tail } = compactionSource([old, answer, latest], 500);
+  assert.deepEqual(groups.flat(), [old]);
+  assert.deepEqual(tail, [answer, latest]);
+  assert.ok(estimate(tail) < 500);
 });
 function stream(lines: string[]) {
   return new Response(

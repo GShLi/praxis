@@ -136,3 +136,23 @@ test('unfit protocol groups and excessive chunk count reject before model I/O', 
   await assert.rejects(job.summarize(many), /过多/);
   assert.equal(calls, 0);
 });
+
+test('summary input reserves its actual output cap even when normal generation has a smaller cap', async () => {
+  let calls = 0;
+  const job = new SummaryJob(
+    {
+      async complete() {
+        calls++;
+        return completion();
+      },
+    },
+    { ...config, contextWindow: 16000, maxOutputTokens: 128 },
+    new AbortController().signal,
+    () => {},
+  );
+  await assert.rejects(
+    job.summarize([[{ id: 'large', role: 'user', content: 'x'.repeat(27000) }]]),
+    { code: 'CONTEXT_GROUP_TOO_LARGE' },
+  );
+  assert.equal(calls, 0);
+});

@@ -11,6 +11,7 @@ export class ContextBuilder {
   constructor(
     private store: SessionStore,
     private model: ModelClient,
+    private count = estimate,
   ) {}
   async build(
     id: string,
@@ -23,30 +24,16 @@ export class ContextBuilder {
   ): Promise<Message[]> {
     const limits = budget(config);
     assert(
-      estimate([fixed, tools]) < limits.trigger,
+      this.count([fixed, tools]) < limits.trigger,
       'CONTEXT_FIXED_TOO_LARGE',
       '固定提示词和工具定义超过输入预算。',
     );
-    const summaryJob = new SummaryJob(
-      this.model,
-      config,
-      signal,
-      (messages) => {
-        this.store.append(id, 'request/snapshot', {
-          purpose: 'compaction',
-          messages,
-          tools: [],
-          providerId: config.id,
-          configRevision: config.revision,
-        });
-      },
-      attempt,
-    );
+    const summaryJob = this.summaryJob(id, config, signal, attempt);
     for (let shrink = 0; shrink < 2; shrink++) {
       const { view, history } = this.read(id);
-      if ((!force || shrink > 0) && estimate([fixed, history, tools]) < limits.trigger)
+      if ((!force || shrink > 0) && this.count([[...fixed, ...history], tools]) < limits.trigger)
         return [...fixed, ...history];
-      const { groups, tail } = compactionSource(history, force ? 0 : limits.retain);
+      const { groups, tail } = compactionSource(history, force ? 0 : limits.retain, this.count);
       const prefix = groups.flat();
       this.store.append(id, 'context/compaction_started', {
         version: view.version,
@@ -64,7 +51,7 @@ export class ContextBuilder {
       };
       protocolGroups([summaryMessage, ...tail]);
       assert(
-        estimate([summaryMessage, ...tail]) < estimate(history),
+        this.count([summaryMessage, ...tail]) < this.count(history),
         'COMPACTION_NO_PROGRESS',
         '候选摘要未缩小输入，保留原视图。',
       );
@@ -75,8 +62,29 @@ export class ContextBuilder {
     }
     const { history } = this.read(id);
     const result = [...fixed, ...history];
-    assert(estimate([result, tools]) < limits.trigger, 'CONTEXT_TOO_LARGE', '压缩后仍超过预算。');
+    assert(this.count([result, tools]) < limits.trigger, 'CONTEXT_TOO_LARGE', '压缩后仍超过预算。');
     return result;
+  }
+  private summaryJob(id: string, config: ModelConfig, signal: AbortSignal, attempt: () => void) {
+    return new SummaryJob(
+      this.model,
+      config,
+      signal,
+      (messages, requestId) => {
+        this.store.append(id, 'request/snapshot', {
+          requestId,
+          purpose: 'compaction',
+          messages,
+          tools: [],
+          estimatedInputTokens: this.count([messages, []]),
+          estimateSource: 'estimated',
+          providerId: config.id,
+          configRevision: config.revision,
+        });
+      },
+      attempt,
+      this.count,
+    );
   }
   private read(id: string) {
     const view = this.store.context(id);

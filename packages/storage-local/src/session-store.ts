@@ -130,12 +130,12 @@ export class SessionStore extends EventEmitter {
         .all(id, after, Math.min(limit, 500)) as Row[]
     ).map((r) => JSON.parse(String(r.document)) as Event);
   }
-  latestEvent(id: string, type: string): Event | undefined {
+  latestEvent(id: string, type: string, scope?: string): Event | undefined {
     const row = this.db
       .prepare(
-        "SELECT document FROM events WHERE session_id=? AND json_extract(document,'$.type')=? ORDER BY seq DESC LIMIT 1",
+        "SELECT document FROM events WHERE session_id=? AND json_extract(document,'$.type')=? AND (? IS NULL OR json_extract(document,'$.payload.scope')=?) ORDER BY seq DESC LIMIT 1",
       )
-      .get(id, type) as Row | undefined;
+      .get(id, type, scope ?? null, scope ?? null) as Row | undefined;
     return row ? (JSON.parse(String(row.document)) as Event) : undefined;
   }
   accept(...args: Parameters<InputRepository['accept']>) {

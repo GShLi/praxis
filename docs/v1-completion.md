@@ -138,3 +138,5 @@
 
 - 用量与校准切片：model-core 拥有规范用量和有界数字原字段，缺失用 null 表示 unknown，估算必须标 estimated；缓存命中不从输入量扣除，累计流快照不重复相加。依据 [DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/) 的 input/cache/reasoning 字段语义，仅保留已知数值字段，不保存任意远端元数据。context 拥有按供应商 ID、配置 revision、模型和 adapter 分区的单调校准器，用真实输入与原始估计之比加 10% 余量提高系数，最低为 1；本地 SQLite 与 Web PostgreSQL 分别保存 Session 范围的 model/usage 事件，重启后按分区读取最新状态。所有固定输入、历史、工具及摘要请求共用计数器；摘要期间更新后再次检查后续请求，不发送已知超预算请求。每次发送保存估计，每次完整成功响应保存实际用量；失败、取消、未知或估算用量不更新系数，不充当平台计费账本。
 - 用量基础已实现：内置 SSE 适配器保留完整累计 input/output/cache/reasoning 数字快照；未知用量为 null，插件共享用量 Schema。诊断忽略未知计数但保留事件。207 项核心测试（含真实 macOS Keychain）、结构/类型检查和应用构建通过；校准器接线继续下一批。
+- 校准已接入本地 Agent/Chat 和 Web：每个 turn/generation 拥有独立计数器，按模型分区从 Session 读取最后的持久化系数；固定输入、工具、历史、分块、合并和摘要校验共用动态计数。model/usage 与 request/snapshot 通过 requestId 对应，完整成功响应先保存用量再更新内存系数；取消发生在提交之后不会撤销已落盘事实。新增事件不修改旧历史和现有数据库结构。摘要请求按自己的实际输出上限预留窗口。修复软保留预算吞入巨大旧消息、导致无可压缩前缀的问题，最新输入与完整工具组仍保护。
+- 本批验证：212 项核心测试全部通过（含真实 macOS Keychain）、30 项 PostgreSQL/HTTP/CLI 集成、结构/类型检查和全部应用构建通过。覆盖缺失/累计/缓存/推理用量、估算不校准、持久化失败、取消、本地重开、Web runtime 重建、模型版本隔离、工具组保留与摘要输出预留。旧工具正文裁剪、原生命令沙箱、stdio 和跨平台发行仍待完成。

@@ -1,4 +1,9 @@
-import { ContextBuilder, completeWithContextRecovery } from '@praxis/context';
+import {
+  CalibratedModel,
+  calibrationScope,
+  ContextBuilder,
+  completeWithContextRecovery,
+} from '@praxis/context';
 import type { Message, ModelConfig, Session, ToolDefinition } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import { SessionStore, uuid } from '@praxis/storage-local';
@@ -25,7 +30,15 @@ export class TurnSteps {
   async run(session: Session, turn: Active, config: ModelConfig) {
     const id = session.id,
       signal = turn.controller.signal;
-    const context = new ContextBuilder(this.store, this.options.model);
+    const model = new CalibratedModel(
+      this.options.model,
+      config,
+      this.store.latestEvent(id, 'model/usage', calibrationScope(config))?.payload,
+      (payload) => {
+        this.store.append(id, 'model/usage', { ...payload, turnId: turn.id }, 'model');
+      },
+    );
+    const context = new ContextBuilder(this.store, model, model.estimate);
     for (;;) {
       signal.throwIfAborted();
       assert(
@@ -38,7 +51,7 @@ export class TurnSteps {
       const tools = turn.executor?.definitions ?? [];
       const stepId = uuid();
       this.store.append(id, 'step/started', { turnId: turn.id, stepId, ordinal: turn.steps });
-      const response = await this.complete(session, turn, config, context, stepId, tools);
+      const response = await this.complete(session, turn, config, context, stepId, tools, model);
       signal.throwIfAborted();
       const message = { ...response.message, id: uuid() };
       validateResponse(message, session.kind);
@@ -58,8 +71,9 @@ export class TurnSteps {
     context: ContextBuilder,
     stepId: string,
     tools: ToolDefinition[],
+    model: CalibratedModel,
   ) {
-    return completeWithContextRecovery(this.options.model, async (force) => {
+    return completeWithContextRecovery(model, async (force) => {
       const fixed = await fixedPrompt(session, turn, this.store, this.options);
       if (force)
         this.store.append(session.id, 'context/overflow-recovery', { turnId: turn.id, stepId });
@@ -75,10 +89,11 @@ export class TurnSteps {
       this.consumeAttempt(turn);
       this.attemptId = uuid();
       this.partial = '';
-      this.snapshot(session, turn, config, stepId, messages, tools);
+      this.snapshot(session, turn, config, stepId, messages, tools, model);
       return {
         contextVersion: this.store.context(session.id).version,
         request: {
+          requestId: this.attemptId,
           messages,
           tools,
           config,
@@ -105,11 +120,14 @@ export class TurnSteps {
     stepId: string,
     messages: Message[],
     tools: ToolDefinition[],
+    model: CalibratedModel,
   ) {
     this.store.append(session.id, 'request/snapshot', {
       turnId: turn.id,
       stepId,
       attemptId: this.attemptId,
+      requestId: this.attemptId,
+      inputEstimate: model.snapshot([messages, tools]),
       messages,
       tools,
       providerId: config.id,

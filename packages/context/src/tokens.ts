@@ -1,7 +1,7 @@
 import type { ModelConfig } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 
-// Conservative UTF-8 byte estimate. Usage calibration can improve this without undercounting Chinese.
+// UTF-8 heuristic, not a tokenizer guarantee. CalibratedModel only increases this baseline.
 export const estimate = (value: unknown) =>
   Math.ceil(Buffer.byteLength(JSON.stringify(value)) / 2) + 16;
 

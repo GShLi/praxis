@@ -46,6 +46,14 @@ export class ChatRepository {
     assert(row, 'SESSION_NOT_FOUND', '对话不存在。');
     return row;
   }
+  async latestEvent(id: string, type: string, scope: string) {
+    return (
+      await this.database.query<{ document: Event }>(
+        "SELECT document FROM chat_events WHERE session_id=$1 AND document->>'type'=$2 AND document->'payload'->>'scope'=$3 ORDER BY seq DESC LIMIT 1",
+        [id, type, scope],
+      )
+    ).rows[0]?.document;
+  }
   async create(owner: string) {
     const id = randomUUID();
     await this.database.transaction(async (sql) => {

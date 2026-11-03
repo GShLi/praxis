@@ -8,6 +8,8 @@ export interface Completion {
 }
 
 export interface ModelRequest {
+  /** Correlates a logical request with its snapshot and usage; transport retries share this ID. */
+  requestId?: string;
   messages: Message[];
   tools: ToolDefinition[];
   config: ModelConfig;

@@ -6,3 +6,4 @@ export { userInstructionMaterial } from './user-instructions.ts';
 export { SummaryJob } from './summary-job.ts';
 export { compactionSource } from './compaction-source.ts';
 export { completeWithContextRecovery } from './retry-overflow.ts';
+export { CalibratedModel, calibrationScope } from './calibrated-model.ts';
