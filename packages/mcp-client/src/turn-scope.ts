@@ -9,8 +9,10 @@ import type { Approve } from '@praxis/permissions';
 import { randomUUID } from 'node:crypto';
 import { McpConnection } from './connection.ts';
 import { mcpError } from './errors.ts';
+import { WorkspaceMcpPolicy } from './workspace-policy.ts';
 
 export interface TurnScopeOptions {
+  workspace?: WorkspaceMcpPolicy;
   configs: McpConfigService;
   owner: string;
   client: string;
@@ -36,6 +38,7 @@ interface OperationPolicy {
 }
 /** Connections and tickets belong to a turn, never a global/shared SDK session. */
 export class McpTurnScope {
+  readonly workspace: WorkspaceMcpPolicy;
   private lifetime = new AbortController();
   private servers = new Map<string, AbortController>();
   private authentication = new Map<string, number>();
@@ -43,7 +46,9 @@ export class McpTurnScope {
   constructor(
     readonly configs: readonly McpConfig[],
     readonly options: TurnScopeOptions,
-  ) {}
+  ) {
+    this.workspace = options.workspace ?? new WorkspaceMcpPolicy();
+  }
   record(type: string, data: Record<string, unknown>) {
     this.options.record(type, data);
   }
@@ -179,7 +184,9 @@ export class McpTurnScope {
   private async prepare(serverId: string, capability: OperationPolicy['capability']) {
     const config = this.configs.find((c) => c.id === serverId);
     assert(
-      config?.enabled && config.capabilities[capability],
+      config?.enabled &&
+        config.capabilities[capability] &&
+        (capability !== 'tools' || this.workspace.toolsEnabled(serverId)),
       'MCP_NOT_ENABLED',
       '此服务器未启用所需能力。',
     );

@@ -112,7 +112,7 @@ export class HostIdentity {
         },
         protectedPaths: [baseData, commonData],
         plugins: (kind) => this.pluginHosts?.[kind].snapshot() ?? [],
-        toolExtension: (session, config, approve, signal, ask) =>
+        toolExtension: (session, config, approve, signal, ask, workspace) =>
           this.mcpRuntime!.create(
             session,
             config.contextWindow,
@@ -120,6 +120,7 @@ export class HostIdentity {
             signal,
             [config.apiKey, input.praxisApiKey],
             ask,
+            workspace,
           ),
         acquireWorkspace: (root, signal) =>
           acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),

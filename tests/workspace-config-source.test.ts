@@ -60,3 +60,15 @@ test('workspace parsing reports known schema paths without echoing invalid conte
     assert.ok(!error.message.includes('secret-'));
   }
 });
+
+test('workspace MCP configuration has only bounded unique server IDs and raw tool names', () => {
+  const serverId = crypto.randomUUID();
+  const parse = (mcp: unknown) => parseWorkspaceConfig(JSON.stringify({ schemaVersion: 1, mcp }));
+  assert.deepEqual(parse({ servers: [] }).value.mcp?.servers, []);
+  assert.throws(() => parse({ servers: [{ serverId, endpoint: 'https://untrusted.invalid' }] }));
+  assert.throws(() => parse({ servers: [{ serverId, apiKey: 'secret' }] }));
+  assert.throws(() => parse({ servers: [{ serverId }, { serverId }] }));
+  assert.throws(() => parse({ servers: [{ serverId, tools: ['echo', 'echo'] }] }));
+  assert.throws(() => parse({ servers: [{ serverId, tools: ['tool\nname'] }] }));
+  assert.throws(() => parse({ servers: [{ serverId: 'not-an-id' }] }));
+});

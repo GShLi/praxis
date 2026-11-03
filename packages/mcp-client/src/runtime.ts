@@ -1,12 +1,13 @@
 import type { ResolveCredentials } from './credentials/service.ts';
 import type { Ask } from '@praxis/tools';
 import type { FetchLike } from '@modelcontextprotocol/client';
-import { assert, type Session } from '@praxis/contracts';
+import { assert, type Session, type WorkspaceMcpConfig } from '@praxis/contracts';
 import type { McpConfigService } from '@praxis/mcp-core';
 import type { Approve } from '@praxis/permissions';
 import type { SessionStore } from '@praxis/storage-local';
 import { McpTurnScope } from './turn-scope.ts';
 import { McpTurnTools } from './turn-tools.ts';
+import { WorkspaceMcpPolicy } from './workspace-policy.ts';
 
 export interface UserInteraction {
   signal: AbortSignal;
@@ -33,14 +34,17 @@ export class McpRuntime {
     signal: AbortSignal,
     sensitiveValues: readonly string[] = [],
     ask?: Ask,
+    workspace?: WorkspaceMcpConfig,
   ) {
     assert(!this.closed && session.kind === 'agent', 'MCP_UNAVAILABLE', '此执行范围不能使用 MCP。');
-    const configs = (await this.configs.file.read()).value.filter(
-      (c) => c.enabled && (c.capabilities.tools || c.capabilities.resources),
-    );
+    const policy = new WorkspaceMcpPolicy(workspace);
+    const configs = policy
+      .select((await this.configs.file.read()).value)
+      .filter((c) => c.enabled && (c.capabilities.tools || c.capabilities.resources));
     signal.throwIfAborted();
     assert(!this.closed, 'MCP_UNAVAILABLE', 'MCP 已关闭。');
     const scope = new McpTurnScope(configs, {
+      workspace: policy,
       configs: this.configs,
       ...(this.credentials ? { credentials: this.credentials } : {}),
       owner: session.ownerUserId,

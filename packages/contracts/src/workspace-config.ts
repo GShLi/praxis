@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { permissionSchema } from './protocol.ts';
+import { workspaceMcpSchema } from './workspace-mcp.ts';
 
 const singleLine = (max: number) =>
   z
@@ -9,6 +10,7 @@ const singleLine = (max: number) =>
     .regex(/^[^\x00-\x1f\x7f]+$/);
 export const workspaceConfigSchema = z.strictObject({
   schemaVersion: z.literal(1),
+  mcp: workspaceMcpSchema.optional(),
   ignore: z.array(singleLine(512)).max(128).default([]),
   context: z
     .strictObject({

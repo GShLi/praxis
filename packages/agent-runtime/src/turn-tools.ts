@@ -31,6 +31,7 @@ export async function createTurnTools(
           approvals.forTurn(session.id, turn.id),
           signal,
           options.interactive ? questions.ask(session.id, turn) : undefined,
+          turn.workspaceConfig?.value.mcp,
         )
       : undefined;
     signal.throwIfAborted();

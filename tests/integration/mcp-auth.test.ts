@@ -13,6 +13,7 @@ import { chatFixture } from './chat-fixture.ts';
 import { provider } from './fixture.ts';
 import { installProvider } from './prompt-provider.ts';
 import { mcpHttpFixture } from '../fixtures/mcp-http.ts';
+import { checkWorkspaceBinding } from './workspace-mcp-assertions.ts';
 const execute = promisify(execFile);
 
 async function fileHelpers(directory: string) {
@@ -143,6 +144,7 @@ test('CLI consumes a one-time Bearer input, reports memory fallback, and enables
       options,
     );
     assert.equal(JSON.parse(removed.stdout).value.length, 0);
+    await checkWorkspaceBinding(workspace, f.config.id, env);
   } finally {
     await host?.close();
     server.close();

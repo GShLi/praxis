@@ -19,7 +19,7 @@ export class McpTurnTools implements ToolExtension {
     contextWindow: number,
     private dispose: () => void,
   ) {
-    this.bridge = discoveryDefinition(scope.configs);
+    this.bridge = discoveryDefinition(scope.workspace.toolConfigs(scope.configs));
     this.resources = new McpResourceTools(scope);
     this.bridges = [...(this.bridge ? [this.bridge] : []), ...this.resources.definitions];
     const budget = Math.min(4000, Math.floor(contextWindow * 0.1));
@@ -93,7 +93,11 @@ export class McpTurnTools implements ToolExtension {
           toolCount: catalog.tools.length,
           rejectedTools: catalog.rejected.length,
         });
-        const selected = this.selector.discover(catalog, args.query, args.limit);
+        const selected = this.selector.discover(
+          this.scope.workspace.catalog(catalog),
+          args.query,
+          args.limit,
+        );
         this.catalogs.set(args.serverId, catalog);
         return {
           serverId: args.serverId,
@@ -113,6 +117,11 @@ export class McpTurnTools implements ToolExtension {
     tool.validate(input);
     const catalog = [...this.catalogs.values()].find((c) => c.tools.some((t) => t.id === tool.id));
     assert(catalog, 'TOOL_NOT_AVAILABLE', '未找到此工具的固定目录。');
+    assert(
+      this.scope.workspace.allows(catalog.binding.serverId, tool.rawName),
+      'TOOL_NOT_AVAILABLE',
+      '工具不在工作区允许范围内。',
+    );
     result.data = await this.scope.run(
       catalog.binding.serverId,
       result.callId,

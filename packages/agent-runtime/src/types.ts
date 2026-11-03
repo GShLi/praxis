@@ -1,6 +1,6 @@
 import type { ProjectInstructions } from './instructions.ts';
 import type { parseWorkspaceConfig } from '@praxis/config';
-import type { EffectiveConfig } from '@praxis/contracts';
+import type { EffectiveConfig, WorkspaceMcpConfig } from '@praxis/contracts';
 import type { Message, ModelConfig, Session, UserInstructionSettings } from '@praxis/contracts';
 import type { userInstructionMaterial } from '@praxis/context';
 import type { ModelClient } from '@praxis/model-core';
@@ -25,6 +25,7 @@ export interface RuntimeOptions {
     approve: Approve,
     signal: AbortSignal,
     ask?: Ask,
+    workspace?: WorkspaceMcpConfig,
   ) => Promise<ToolExtension>;
   maxSteps?: number;
   maxTools?: number;

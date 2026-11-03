@@ -36,6 +36,10 @@ export function parseWorkspaceConfig(text: string | null, knownSecrets: readonly
               'language',
               'responseStyle',
               'validationCommands',
+              'mcp',
+              'servers',
+              'serverId',
+              'tools',
             ].includes(String(part)),
         )
         .join('.') || '$';
