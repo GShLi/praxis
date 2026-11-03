@@ -1,4 +1,5 @@
 import { mcpPromptsRoutes } from './mcp-prompts-rpc.ts';
+import { mcpOAuthRoutes } from './mcp-oauth-rpc.ts';
 import { assert, initializeSchema, PraxisError, PROTOCOL } from '@praxis/contracts';
 import { JsonLines, serveRpc } from '@praxis/transport';
 import { randomUUID } from 'node:crypto';
@@ -36,6 +37,7 @@ export class HostProcess {
         sessionsRoutes,
         mcpRoutes,
         mcpPromptsRoutes,
+        mcpOAuthRoutes,
         pluginsRoutes,
         commandsRoutes,
       ].map((factory) => factory(this.identity, () => this.clientKind)),

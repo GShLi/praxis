@@ -17,7 +17,7 @@ export interface McpTestResult {
 }
 /** User-initiated maintenance only. No credentials, model inputs or business calls. */
 export class McpMaintenance {
-  private tested = new Map<string, number>();
+  private tested = new Map<string, { revision: number; authEpoch: number }>();
   private active = new Map<string, { cancel: AbortController; promise: Promise<McpTestResult> }>();
   private closed = false;
   constructor(
@@ -99,7 +99,7 @@ export class McpMaintenance {
       failure?.code,
     );
     if (failure) throw failure;
-    this.tested.set(serverId, config.revision);
+    this.tested.set(serverId, { revision: config.revision, authEpoch: authentication.authEpoch });
     return result!;
   }
   private async checkedConfig(serverId: string, expectedRevision: number, signal: AbortSignal) {
@@ -123,12 +123,27 @@ export class McpMaintenance {
     return config;
   }
   async enable(serverId: string, expectedStoreRevision: number, expectedRevision: number) {
+    const tested = this.tested.get(serverId);
     assert(
-      !this.closed && this.tested.get(serverId) === expectedRevision,
+      !this.closed && tested?.revision === expectedRevision,
       'MCP_TEST_REQUIRED',
       '请先在当前客户端检查此配置，再明确启用。',
     );
+    const signal = AbortSignal.timeout(15000);
+    const config = await this.checkedConfig(serverId, expectedRevision, signal);
+    const authentication =
+      config.transport.type === 'streamable-http' && config.transport.auth.type !== 'none'
+        ? await this.credentials?.(config, signal)
+        : { authEpoch: 0 };
+    assert(
+      authentication?.authEpoch === tested.authEpoch,
+      'MCP_TEST_REQUIRED',
+      '认证已更新，请重新检查连接。',
+    );
     return this.configs.enable(serverId, expectedStoreRevision, expectedRevision);
+  }
+  invalidateAuthentication(serverId: string) {
+    this.tested.delete(serverId);
   }
   cancel(serverId: string) {
     this.tested.delete(serverId);

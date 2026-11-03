@@ -69,7 +69,7 @@ Web 只使用部署者在服务端安装的纯 Provider 插件。可通过 `PRAX
 
 ### MCP 远程工具
 
-桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证或 Bearer 认证的 Streamable HTTP 工具与文本资源；每次业务调用或资源读取展示实际参数与目标地址并等待单次审批。添加时勾选资源能力（或配置 `capabilities.resources: true`）后才开放资源目录与读取。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
+桌面端在“设置 → MCP 连接”保存固定端点，先检查连接，再点击“启用 Agent 工具”。当前支持无认证、Bearer 或 OAuth 的 Streamable HTTP 工具与文本资源；每次业务调用或资源读取展示实际参数与目标地址并等待单次审批。添加时勾选资源能力（或配置 `capabilities.resources: true`）后才开放资源目录与读取。ChatBot 不接入 MCP。停用或编辑会取消活动操作；断流、取消和重启不会自动重放调用。
 
 CLI 与桌面使用独立 profile，可通过以下命令管理 CLI 的服务器：
 
@@ -159,3 +159,21 @@ pnpm cli run --workspace /absolute/path/project --mcp-bearer-server SERVER_ID
 ```
 
 认证版本与配置版本绑定目录；更换凭据取消旧操作。业务调用收到 401 不自动重放，服务器回显已知凭据会在保存和交给模型前拒绝。`pnpm native:build` 构建本机 Keychain/Credential Manager helper；秘密经私有管道传输，不放入 helper 参数。
+
+### MCP OAuth
+
+在桌面“设置 → MCP 连接 → OAuth 浏览器授权”填写 Issuer、公共客户端 ID、已经注册的本机回调地址及权限范围。点击开始后，在系统浏览器完成授权，再检查连接并启用。支持授权码 + PKCE S256；不自动注册客户端。服务器声明支持 Client ID Metadata Document 时，也可使用对应的 HTTPS URL 作为客户端 ID。
+
+CLI 示例（替换为服务器的实际注册信息）：
+
+```sh
+pnpm cli mcp oauth SERVER_ID \
+  --issuer https://auth.example.com \
+  --client-id praxis-public \
+  --redirect-uri http://127.0.0.1:4319/oauth/callback \
+  --scopes "docs:read"
+```
+
+回调仅监听配置的 `127.0.0.1` 或 `::1` IP、固定端口和路径，5 分钟后关闭；端口不可用会报错，不私自更改已注册地址。无自动浏览器的本机终端可加 `--no-browser`，手动打开输出的链接；这不是设备授权流。私网 Issuer 需要显式传入 `--allow-private-issuer`，该许可不会扩大到元数据声明的其他私网域名。
+
+Token 使用与 Bearer 相同的系统凭据存储。没有系统存储时，使用 `run --mcp-oauth-server SERVER_ID` 加上上述参数，可在同一次前台运行中授权并使用内存 Token。关闭客户端会取消授权并关闭回调；内存凭据随进程退出失效。刷新按凭据引用合并并发请求；原子保存轮换结果后更新认证版本，旧目录和执行范围失效。刷新结果未确认时要求重新授权，不重放工具调用。清除本地凭据不会撤销远端授权，远端撤销须在服务商账户中操作。

@@ -110,6 +110,9 @@ export class McpRuntime {
   invalidate(serverId: string) {
     for (const turn of this.turns) turn.invalidate(serverId);
   }
+  invalidateAuthentication(serverId: string, epoch: number) {
+    for (const turn of this.turns) turn.invalidateAuthentication(serverId, epoch);
+  }
   async close() {
     this.closed = true;
     await Promise.allSettled([...this.turns].map((t) => t.close()));

@@ -1,9 +1,10 @@
 import { assert, PraxisError } from '@praxis/contracts';
 import type { McpConfig, McpConfigService } from '@praxis/mcp-core';
-import { randomUUID } from 'node:crypto';
 import { containsSecret } from '../form.ts';
 import type { SecretStore } from './secret-store.ts';
-import { credentialKey, credentialReference } from './references.ts';
+import { credentialReference } from './references.ts';
+import { CredentialRecords } from './records.ts';
+import { McpOAuth } from '../oauth/service.ts';
 
 export interface McpAuthentication {
   authEpoch: number;
@@ -16,34 +17,21 @@ export type ResolveCredentials = (
 
 /** Config publication follows secret storage; edits revoke old execution through ConfigService. */
 export class McpCredentials {
+  readonly oauth: McpOAuth;
+  private records: CredentialRecords;
   private closed = false;
   private lifetime = new AbortController();
   private pending = new Set<Promise<unknown>>();
   constructor(
     private configs: McpConfigService,
     private secrets: SecretStore,
-    private owner: string,
-    private client: string,
+    owner: string,
+    client: string,
     private protectedValues: readonly string[] = [],
-  ) {}
-  private key(config: McpConfig, id: string) {
-    return credentialKey(config, this.owner, this.client, id);
-  }
-  private async checked(serverId: string, expectedStoreRevision: number, expectedRevision: number) {
-    assert(!this.closed, 'SECRET_STORE_CLOSED', '凭据存储已关闭。');
-    const state = await this.configs.file.read(),
-      config = state.value.find((c) => c.id === serverId);
-    assert(
-      config && state.revision === expectedStoreRevision && config.revision === expectedRevision,
-      'CONFIG_CONFLICT',
-      '服务器配置已变化，请刷新后重试。',
-    );
-    assert(
-      config.transport.type === 'streamable-http',
-      'MCP_AUTH_UNSUPPORTED',
-      '请选择固定的 HTTP 服务器。',
-    );
-    return config;
+    authenticationChanged: (serverId: string, epoch: number) => void = () => {},
+  ) {
+    this.records = new CredentialRecords(configs, secrets, owner, client, this.lifetime.signal);
+    this.oauth = new McpOAuth(this.records, protectedValues, authenticationChanged);
   }
   setBearer(
     serverId: string,
@@ -62,41 +50,19 @@ export class McpCredentials {
         'MCP_SECRET_DENIED',
         '不能将 Praxis 或模型凭据用作 MCP Token。',
       );
-      const config = await this.checked(serverId, expectedStoreRevision, expectedRevision);
-      const id = randomUUID(),
-        key = this.key(config, id);
-      const storage = await this.secrets.put(key, token, this.lifetime.signal);
-      let published = false;
-      try {
-        assert(!this.closed, 'SECRET_STORE_CLOSED', '凭据存储已关闭。');
-        const result = await this.configs.upsert(
-          {
-            ...config,
-            transport: {
-              ...config.transport,
-              auth: { type: 'bearer', credentialRef: `${storage}:${config.revision + 1}:${id}` },
-            },
-          },
-          expectedStoreRevision,
-          expectedRevision,
-        );
-        published = true;
-        await this.remove(config);
-        return result;
-      } finally {
-        if (!published) await this.secrets.delete(key, storage);
-      }
+      const config = await this.records.checked(serverId, expectedStoreRevision, expectedRevision);
+      return this.records.publish(config, expectedStoreRevision, token);
     });
   }
   clear(serverId: string, expectedStoreRevision: number, expectedRevision: number) {
     return this.track(async () => {
-      const config = await this.checked(serverId, expectedStoreRevision, expectedRevision);
+      const config = await this.records.checked(serverId, expectedStoreRevision, expectedRevision);
       const result = await this.configs.upsert(
         { ...config, transport: { ...config.transport, auth: { type: 'none' } } },
         expectedStoreRevision,
         expectedRevision,
       );
-      await this.remove(config);
+      await this.records.remove(config);
       return result;
     });
   }
@@ -108,9 +74,9 @@ export class McpCredentials {
       '不支持此凭据类型。',
     );
     if (config.transport.auth.type === 'none') return { authEpoch: 0 };
-    assert(config.transport.auth.type === 'bearer', 'MCP_AUTH_REQUIRED', '请先完成 OAuth 授权。');
+    if (config.transport.auth.type === 'oauth') return this.oauth.resolve(config, signal);
     const ref = credentialReference(config);
-    const bearer = await this.secrets.get(this.key(config, ref.id), ref.storage, signal);
+    const bearer = await this.secrets.get(this.records.key(config, ref.id), ref.storage, signal);
     assert(bearer, 'MCP_AUTH_REQUIRED', '当前客户端没有可用的 MCP 凭据，请在设置中重新填写。');
     return { bearer, authEpoch: ref.epoch };
   }
@@ -126,19 +92,13 @@ export class McpCredentials {
       return {
         type,
         storage:
-          ref.storage === 'memory' && !this.secrets.hasMemory(this.key(config, ref.id))
+          ref.storage === 'memory' && !this.secrets.hasMemory(this.records.key(config, ref.id))
             ? 'missing'
             : ref.storage,
       };
     } catch {
       return { type, storage: 'missing' };
     }
-  }
-  private async remove(config: McpConfig) {
-    if (config.transport.type !== 'streamable-http' || config.transport.auth.type === 'none')
-      return;
-    const ref = credentialReference(config);
-    await this.secrets.delete(this.key(config, ref.id), ref.storage);
   }
   private track<T>(action: () => Promise<T>) {
     const task = Promise.resolve()
@@ -150,6 +110,7 @@ export class McpCredentials {
   async close() {
     this.closed = true;
     this.lifetime.abort(new PraxisError('SECRET_STORE_CLOSED', '凭据服务已关闭。'));
+    await this.oauth.close();
     await Promise.allSettled([...this.pending]);
     await this.secrets.close();
   }

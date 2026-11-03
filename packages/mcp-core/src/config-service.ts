@@ -66,9 +66,9 @@ export class McpConfigService {
         '检查后配置已变化，请重新检查。',
       );
       assert(
-        config.transport.type === 'streamable-http' && config.transport.auth.type !== 'oauth',
+        config.transport.type === 'streamable-http',
         'MCP_TRANSPORT_UNAVAILABLE',
-        '当前仅能启用无认证或 Bearer HTTP 工具。',
+        '当前仅能启用已检查的 HTTP 工具。',
       );
       return configs.map((c) =>
         c.id === serverId ? { ...c, enabled: true, revision: c.revision + 1 } : c,

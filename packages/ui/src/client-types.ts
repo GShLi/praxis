@@ -1,4 +1,7 @@
 import type {
+  McpOAuthStart,
+  McpOAuthStarted,
+  McpOAuthStatus,
   McpPromptGet,
   McpPromptApply,
   McpPromptPreview,
@@ -65,6 +68,9 @@ export type HostMethod =
   | 'plugin/run-command'
   | 'mcp/credential-set'
   | 'mcp/credential-clear'
+  | 'mcp/oauth-start'
+  | 'mcp/oauth-status'
+  | 'mcp/oauth-cancel'
   | 'mcp/server-list'
   | 'mcp/server-upsert'
   | 'mcp/server-disable'
@@ -233,6 +239,9 @@ export interface PraxisClient {
   installPlugin?(source: string, digest: string, revision: number): Promise<void>;
   enablePlugin?(id: string, enabled: boolean, revision: number): Promise<void>;
   mcpServers?(): Promise<McpState>;
+  startMcpOAuth?(input: McpOAuthStart): Promise<McpOAuthStarted>;
+  mcpOAuthStatus?(id: string): Promise<McpOAuthStatus>;
+  cancelMcpOAuth?(id: string): Promise<McpOAuthStatus>;
   setMcpBearer?(id: string, storeRevision: number, revision: number, token: string): Promise<void>;
   clearMcpCredential?(id: string, storeRevision: number, revision: number): Promise<void>;
   mcpPrompts?(sessionId: string, serverId: string): Promise<McpPromptList>;

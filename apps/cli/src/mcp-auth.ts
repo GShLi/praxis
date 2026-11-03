@@ -1,6 +1,31 @@
+import { enableMcpConnection } from './mcp-enable.ts';
+import { authorizeMcpOAuth } from './mcp-oauth.ts';
+import type { CliOptions } from './options.ts';
 import type { startHost } from '@praxis/client-host';
 import { assert } from '@praxis/contracts';
 type Host = Awaited<ReturnType<typeof startHost>>;
+export async function mcpCredentialCommand(
+  host: Host,
+  action: string,
+  target: string | undefined,
+  values: CliOptions,
+  bearer?: string,
+) {
+  if (!['auth', 'clear-auth', 'oauth'].includes(action)) return false;
+  assert(target, 'INVALID_ARGUMENT', '需要服务器 ID。');
+  if (action === 'oauth') await authorizeMcpOAuth(host, target, values);
+  else
+    console.log(
+      JSON.stringify(
+        action === 'auth'
+          ? await configureMcpBearer(host, target, bearer)
+          : await clearMcpCredential(host, target),
+        null,
+        2,
+      ),
+    );
+  return true;
+}
 
 export async function configureMcpBearer(
   host: Host,
@@ -19,22 +44,13 @@ export async function configureMcpBearer(
   }>('mcp/server-list');
   const config = state.value.find((c) => c.id === serverId);
   assert(config, 'MCP_NOT_FOUND', '请先导入此服务器配置。');
-  const saved = await host.rpc.request<typeof state>('mcp/credential-set', {
+  await host.rpc.request<typeof state>('mcp/credential-set', {
     serverId,
     expectedStoreRevision: state.revision,
     expectedRevision: config.revision,
     token,
   });
-  const current = saved.value.find((c) => c.id === serverId);
-  assert(current, 'MCP_NOT_FOUND', '服务器配置不可用。');
-  if (enable) {
-    await host.rpc.request('mcp/test', { serverId, expectedRevision: current.revision });
-    await host.rpc.request('mcp/server-enable', {
-      serverId,
-      expectedStoreRevision: saved.revision,
-      expectedRevision: current.revision,
-    });
-  }
+  if (enable) await enableMcpConnection(host, serverId);
   return host.rpc.request('mcp/server-list');
 }
 

@@ -38,6 +38,8 @@ export {
   mcpPromptApplySchema,
   mcpPromptPreviewSchema,
 } from './mcp-prompts.ts';
+export { mcpOAuthStartSchema } from './mcp-oauth.ts';
+export type { McpOAuthStart, McpOAuthStarted, McpOAuthStatus } from './mcp-oauth.ts';
 export type {
   McpPromptEntry,
   McpPromptList,

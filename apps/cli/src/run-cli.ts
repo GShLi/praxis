@@ -1,8 +1,10 @@
 import { configureMcpBearer } from './mcp-auth.ts';
+import { authorizeMcpOAuth } from './mcp-oauth.ts';
 import { CLI_HELP } from './help.ts';
 import { startHost } from '@praxis/client-host';
 import { assert } from '@praxis/contracts';
-import { parseOptions } from './options.ts';
+import { parseOptions, validateMcpOptions } from './options.ts';
+import { bindCliIdentity } from './login-cli.ts';
 import { pluginCommand } from './plugin-command.ts';
 import { mcpCommand } from './mcp-command.ts';
 import { prepareSession } from './session-setup.ts';
@@ -27,11 +29,7 @@ export async function runCli() {
   );
   const mcpBearer = process.env.PRAXIS_MCP_BEARER;
   delete process.env.PRAXIS_MCP_BEARER;
-  assert(
-    !values['mcp-bearer-server'] || command === 'run',
-    'INVALID_COMMAND',
-    '--mcp-bearer-server 仅用于 run。',
-  );
+  validateMcpOptions(values, command);
   const host = await startHost('cli');
   let session: CliSession | undefined;
   try {
@@ -39,21 +37,7 @@ export async function runCli() {
       console.log(JSON.stringify(await host.rpc.request('host/diagnostics'), null, 2));
       return;
     }
-    const serverUrl = values.server ?? process.env.PRAXIS_SERVER_URL ?? 'http://127.0.0.1:4310';
-    const praxisApiKey = process.env.PRAXIS_API_KEY;
-    assert(
-      praxisApiKey,
-      'PRAXIS_KEY_REQUIRED',
-      '请先设置 PRAXIS_API_KEY；不要将密钥写在命令行参数中。',
-    );
-    await host.rpc.request('auth/bind', {
-      serverUrl,
-      praxisApiKey,
-      ...(values.provider ? { providerId: values.provider } : {}),
-      interactive: Boolean(
-        process.stdin.isTTY && !values.prompt && !values.command && !values['apply-prompt'],
-      ),
-    });
+    await bindCliIdentity(host, values);
     if (command === 'plugins') {
       await pluginCommand(host, values, positionals);
       return;
@@ -74,6 +58,8 @@ export async function runCli() {
     }
     if (values['mcp-bearer-server'])
       await configureMcpBearer(host, values['mcp-bearer-server'], mcpBearer, true);
+    if (values['mcp-oauth-server'])
+      await authorizeMcpOAuth(host, values['mcp-oauth-server'], values, true);
     const sessionId = await prepareSession(host, values);
     session = new CliSession(host, sessionId, values);
     await session.run();

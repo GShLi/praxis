@@ -38,6 +38,7 @@ interface OperationPolicy {
 export class McpTurnScope {
   private lifetime = new AbortController();
   private servers = new Map<string, AbortController>();
+  private authentication = new Map<string, number>();
   private operations = new Set<Promise<unknown>>();
   constructor(
     readonly configs: readonly McpConfig[],
@@ -56,6 +57,10 @@ export class McpTurnScope {
       new PraxisError('MCP_CONFIG_CHANGED', '服务器配置已修改或停用；请开始新一轮任务。'),
     );
     this.servers.set(id, scope);
+  }
+  invalidateAuthentication(id: string, epoch: number) {
+    const bound = this.authentication.get(id);
+    if (bound !== undefined && bound < epoch) this.invalidate(id);
   }
   private async current(config: McpConfig, signal: AbortSignal) {
     signal.throwIfAborted();
@@ -198,6 +203,7 @@ export class McpTurnScope {
       authentication = await this.options.credentials(config, signal);
       await this.current(config, signal);
     }
+    this.authentication.set(serverId, authentication.authEpoch);
     return { config, signal, authentication };
   }
   private approval(

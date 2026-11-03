@@ -15,6 +15,7 @@ interface RemoteFixture {
   inputRequired: boolean;
   repeatInput: boolean;
   stateOnly: boolean;
+  oauthIssuer: string | undefined;
   form: Record<string, unknown>;
   beforeList?: (() => Promise<void>) | undefined;
   beforeCall?: (() => Promise<void>) | undefined;
@@ -39,6 +40,7 @@ export async function mcpHttpFixture(legacy = false, resources = false, prompts 
     inputRequired: false,
     repeatInput: false,
     stateOnly: false,
+    oauthIssuer: undefined as string | undefined,
     form: {
       type: 'object',
       properties: { city: { type: 'string', description: '目的城市' } },
@@ -80,6 +82,16 @@ async function handle(
   request: import('node:http').IncomingMessage,
   response: import('node:http').ServerResponse,
 ) {
+  if (remote.oauthIssuer && request.url?.startsWith('/.well-known/oauth-protected-resource')) {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(
+      JSON.stringify({
+        resource: `http://${request.headers.host}/mcp`,
+        authorization_servers: [remote.oauthIssuer],
+      }),
+    );
+    return;
+  }
   if (request.method !== 'POST') {
     response.writeHead(405);
     response.end();

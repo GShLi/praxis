@@ -220,9 +220,9 @@
     "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/McpSettings.tsx#McpSettings:1": {
-    "maxLines": 88,
-    "reason": "连续 MCP 设置页面 JSX，凭据子表单已提取；数据与异步动作由 Hook 管理。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 94,
+    "reason": "现有连接列表 JSX 只增加独立 OAuth 组件的装配，数据操作仍在 Hook。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
   },
   "packages/ui/src/settings/Models.tsx#Models:1": {
     "maxLines": 121,
@@ -240,9 +240,9 @@
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "packages/ui/src/settings/useMcpSettings.ts#useMcpSettings:1": {
-    "maxLines": 96,
-    "reason": "单设置页的版本快照、异步过期保护和操作表；凭据提交失败后仍刷新权威配置，避免提交成功但回执丢失造成旧版本循环。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 97,
+    "reason": "已有设置状态 Hook 增加刷新入口，复用原有异常与身份代数保护。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
   },
   "packages/ui/src/settings/useProviderEditor.ts#useProviderEditor:1": {
     "maxLines": 141,
@@ -325,9 +325,9 @@
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
   "tests/fixtures/mcp-http.ts#handle:1": {
-    "maxLines": 103,
-    "reason": "同一真实 HTTP/SSE 协议 fixture 路由和响应配对；新增业务 401，验证 SDK 不自动重放。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 113,
+    "reason": "固定本机 MCP 协议 fixture 增加 OAuth 资源元数据；连接和请求生命周期仍由 fixture 统一释放。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
   },
   "apps/server/src/server-process.ts#runServer:1": {
     "maxLines": 62,
@@ -463,5 +463,40 @@
     "maxLines": 93,
     "reason": "同一凭据生命周期验证保存、不同身份/端点隔离、轮换、旧引用失效及删除，保留对象和清理对应。",
     "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+  },
+  "packages/ui/src/settings/McpOAuth.tsx#McpOAuth:1": {
+    "maxLines": 123,
+    "reason": "OAuth 注册表单的连续 JSX 和局部字段状态；网络轮询与生命周期在 useMcpOAuth、mcp-oauth-poll，视图不持有 Token。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+  },
+  "packages/ui/src/settings/useMcpOAuth.ts#useMcpOAuth:1": {
+    "maxLines": 76,
+    "reason": "单一视图授权生命周期：当前身份代数、未返回 start 的取消、活动流程与卸载清理共享状态；轮询算法已独立。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+  },
+  "tests/fixtures/oauth-profile.ts#oauthProfile:1": {
+    "maxLines": 77,
+    "reason": "单测试 profile 装配受控授权服务、凭据后端和配置清理；测试状态不跨用例共享。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+  },
+  "tests/fixtures/oauth-server.ts#oauthFixture:1": {
+    "maxLines": 86,
+    "reason": "本机 OAuth 协议 fixture 包含 discovery/token 处理与统一关闭；测试控制仅影响虚构凭据。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+  },
+  "tests/integration/mcp-oauth.test.ts#test(CLI authorizes OAuth through a loopback callback, uses the token in a foreground run and forgets memory credentials on exit):1": {
+    "maxLines": 115,
+    "reason": "一个真实 CLI 前台授权闭环，共享临时数据库、认证服务器、Host 与清理 finally；子进程驱动已独立。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+  },
+  "tests/mcp-oauth.test.ts#test(OAuth binds PKCE/resource, rejects false state, stores only references and single-flights refresh):1": {
+    "maxLines": 77,
+    "reason": "同一授权事务的反伪造、凭据发布与并发刷新行为测试，资源全部在同一 finally 清理。",
+    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+  },
+  "tests/mcp-oauth-runtime.test.ts#test(OAuth refresh revokes an already bound MCP operation and does not require a config edit):1": {
+    "maxLines": 86,
+    "reason": "同一真实 HTTP 操作跨 Token 到期、刷新与旧范围取消；共享连接和计时边界在单一 finally 清理。",
+    "validation": "mcp-oauth-runtime 测试检查旧操作取消、配置版本保持和 Session 不含 Token；全量结构/类型/测试。"
   }
 }

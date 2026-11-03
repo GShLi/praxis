@@ -147,6 +147,7 @@ export class HostIdentity {
     const store = this.store;
     assert(store, 'STORAGE_UNAVAILABLE', '会话存储尚未初始化。');
     this.mcpConfig = new McpConfigService(directory, (id) => {
+      this.mcpCredentials?.oauth.invalidate(id);
       this.mcpMaintenance?.cancel(id);
       this.mcpRuntime?.invalidate(id);
     });
@@ -156,6 +157,10 @@ export class HostIdentity {
       owner,
       `${this.clientKind()}:${hash(new URL(serverUrl).href)}`,
       [praxisKey],
+      (id, epoch) => {
+        this.mcpMaintenance?.invalidateAuthentication(id);
+        this.mcpRuntime?.invalidateAuthentication(id, epoch);
+      },
     );
     const credentials = this.mcpCredentials.resolve.bind(this.mcpCredentials);
     this.mcpMaintenance = new McpMaintenance(

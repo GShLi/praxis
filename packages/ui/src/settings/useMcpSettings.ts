@@ -54,6 +54,7 @@ export function useMcpSettings(client: PraxisClient) {
     }
   };
   return {
+    refresh: () => run(async () => '', true),
     state,
     message,
     busy,

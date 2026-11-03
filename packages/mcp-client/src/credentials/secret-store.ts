@@ -49,6 +49,20 @@ export class SecretStore {
   hasMemory(key: string) {
     return !this.lifetime.signal.aborted && this.memory.has(key);
   }
+  replace(key: string, value: string, storage: SecretStorage, cancellation?: AbortSignal) {
+    return this.run(async (signal) => {
+      assert(
+        value.length > 0 && Buffer.byteLength(value) <= 65536,
+        'SECRET_LIMIT',
+        '凭据超过存储限制。',
+      );
+      if (storage === 'memory') {
+        assert(this.memory.has(key), 'MCP_AUTH_REQUIRED', '临时凭据已失效，请重新授权。');
+        this.memory.set(key, value);
+      } else await this.native.set(key, value, signal);
+      // Rotation must stay in the same store. Falling back would publish a stale OS reference.
+    }, cancellation);
+  }
   delete(key: string, storage: SecretStorage) {
     return this.run(async (signal) => {
       if (storage === 'memory') this.memory.delete(key);

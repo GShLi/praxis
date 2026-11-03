@@ -185,6 +185,15 @@ export class LocalClient implements PraxisClient {
       expectedRevision: revision,
     });
   }
+  startMcpOAuth(input: import('@praxis/contracts').McpOAuthStart) {
+    return this.bridge.call<import('@praxis/contracts').McpOAuthStarted>('mcp/oauth-start', input);
+  }
+  mcpOAuthStatus(id: string) {
+    return this.bridge.call<import('@praxis/contracts').McpOAuthStatus>('mcp/oauth-status', { id });
+  }
+  cancelMcpOAuth(id: string) {
+    return this.bridge.call<import('@praxis/contracts').McpOAuthStatus>('mcp/oauth-cancel', { id });
+  }
   mcpServers() {
     return this.bridge.call<McpState>('mcp/server-list');
   }

@@ -20,8 +20,8 @@
 | V01–V04、V06–V08、V10–V18、V26–V29 | 核心自动测试、真实 PostgreSQL/HTTP 集成、文件闭环 | 真实模型、完整客户端验收及各项边界复核         |
 | V05、V09、V19–V25、T07–T10         | 命令接口和拒绝路径、Host 生命周期                 | 原生命令隔离、执行域清理、输出管理、各 OS 实测 |
 | T01–T06、T11–T15                   | 文件、版本、审批、计划、提问、产物测试            | 路径竞态、完整命令案例及真实模型               |
-| V30–V32、M01–M20                   | HTTP/Bearer 工具/资源/Prompts、表单、审批、恢复测试   | stdio、OAuth、互操作及 OS 测试                |
-| 插件与交付                         | 可信工具/上下文/生命周期、构建与本机启动          | 凭据存储、备份恢复、发行包和跨平台验证         |
+| V30–V32、M01–M20                   | HTTP/Bearer/OAuth、工具/资源/Prompts、表单、审批与恢复测试   | stdio、真实互操作及 OS 测试                |
+| 插件与交付                         | 可信工具/上下文/生命周期、构建与本机启动          | 备份恢复、发行包和跨平台验证         |
 
 ## 实施记录
 
@@ -71,3 +71,10 @@
 - MCP 凭据边界：目录/资源/模板和最终响应在进入存储或模型前检查已知秘密；服务端业务 401 不自动重放。凭据改变使运行范围失效，旧目录 hash 与 authEpoch 不再可用。
 - 用户入口：桌面独立密码字段和存储状态；CLI auth/clear-auth 以及 run --mcp-bearer-server 前台入口，一次性环境 Token 在启动 Host 前移除。后者支持系统存储不可用的机器，凭据退出失效。添加连接表单补齐 Prompts 能力选择。
 - 本批验证：134 项核心测试全部通过（包括真实 macOS Keychain 测试），结构/类型检查、原生 helper 和全部应用构建通过；12 项真实 PostgreSQL 集成通过，新增 CLI/Host 测试完成临时凭据设置、前台 Agent 运行、退出后确认缺失。OAuth、stdio、原生执行沙箱、交付与平台验收仍未完成。
+
+- OAuth 下一切片：使用已锁定官方 SDK 的 discovery/startAuthorization/exchangeAuthorization/refreshAuthorization，不启用传输自动认证重放。mcp-client/oauth 负责受控元数据 HTTP、绑定 issuer/resource/client/scopes 的 PKCE 与短时 loopback callback；凭据模块先保存加密 token bundle 再公布引用。Host 控制 RPC 显式发起、查询和取消，客户端调用系统浏览器；非交互 CLI 无法打开回调时返回明确要求。V1 不做 DCR，支持预注册公共客户端，并在服务器支持时接受用户提供的 HTTPS Client ID Metadata URL。刷新按引用单飞，轮换不扩大 scope，旧认证目录失效。每个操作与网络请求有期限，callback 不暴露 Host 的其他 RPC。
+
+- OAuth：完成官方 SDK 元数据发现与公共客户端 PKCE、固定短时 loopback 回调、state/issuer/resource/client 绑定、Token 存储后发布配置、桌面表单和 CLI 前台授权。元数据端点有显式目的地策略、DNS 固定、请求/响应预算和期限；无 DCR、无业务认证重放。
+- 刷新：按凭据引用合并并发调用，单个等待者取消不影响其他等待者；先持久化 refreshing 意图，再执行一次刷新并原子写回。结果未知或 scope 扩大要求重新授权，重启不会重复旧 refresh。新 epoch 使已绑定旧凭据的操作失效；凭据不进入 Session。
+- 结构复查：OAuth 发现、HTTP 策略、回调、Token 校验、交换、账户刷新和流程生命周期分别放置；CLI 认证/启用步骤与身份装配提取复用，UI 轮询独立于视图。连续表单 JSX 和共享测试资源的例外逐项记录依据。
+- OAuth 验证：141 项核心测试全部通过（含真实 macOS Keychain），结构/类型检查和全部应用构建通过；13 项真实 PostgreSQL 集成通过。新集成从真实 CLI 启动 Host，经 HTTP 认证、授权回调、MCP Token 连接和前台 Agent 完成，退出后确认内存凭据失效。浏览器操作由 fixture 回调驱动，真实服务商授权和桌面视觉仍未实测；三平台沙箱与交付仍未完成。
