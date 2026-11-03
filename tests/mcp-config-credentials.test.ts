@@ -90,3 +90,47 @@ test('deleting a pending OAuth configuration cancels the callback before removin
     await f.close();
   }
 });
+
+test('failed credential clear or rotation retains the old cleanup reference instead of publishing an unreachable secret', async () => {
+  const f = await oauthProfile();
+  try {
+    const initial = await f.credentials.setBearer(f.config.id, 1, 1, 'fixture-old-token');
+    const remove = f.backend.delete;
+    f.backend.delete = async () => {
+      throw new PraxisError('SECRET_STORE_UNAVAILABLE', 'fixture');
+    };
+    await assert.rejects(
+      f.credentials.clear(f.config.id, initial.revision, initial.value[0]!.revision),
+      { code: 'SECRET_STORE_UNAVAILABLE' },
+    );
+    const afterClear = await f.configs.file.read();
+    assert.deepEqual(afterClear.value[0]?.transport, initial.value[0]?.transport);
+    assert.equal(afterClear.value[0]?.enabled, false);
+    await assert.rejects(
+      f.credentials.setBearer(
+        f.config.id,
+        afterClear.revision,
+        afterClear.value[0]!.revision,
+        'fixture-new-token',
+      ),
+      { code: 'SECRET_STORE_UNAVAILABLE' },
+    );
+    const afterRotation = await f.configs.file.read();
+    assert.deepEqual(afterRotation.value[0]?.transport, initial.value[0]?.transport);
+    assert.equal(f.values.size, 1);
+    f.backend.delete = remove;
+    const saved = await f.credentials.setBearer(
+      f.config.id,
+      afterRotation.revision,
+      afterRotation.value[0]!.revision,
+      'fixture-new-token',
+    );
+    assert.equal(
+      (await f.credentials.resolve(saved.value[0]!, AbortSignal.timeout(1000))).bearer,
+      'fixture-new-token',
+    );
+    assert.equal(f.values.size, 1);
+  } finally {
+    await f.close();
+  }
+});

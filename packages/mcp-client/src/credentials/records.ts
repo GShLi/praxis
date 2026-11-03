@@ -12,6 +12,7 @@ export class CredentialRecords {
     private owner: string,
     private client: string,
     readonly signal: AbortSignal,
+    private stopRefreshes: (serverId: string) => Promise<void>,
   ) {}
   key(config: McpConfig, id: string) {
     return credentialKey(config, this.owner, this.client, id);
@@ -45,6 +46,20 @@ export class CredentialRecords {
       '请选择固定的 HTTP 服务器。',
     );
     const signal = AbortSignal.any([cancellation, this.signal]);
+    // Keep the old reference until deletion succeeds. A failed rotation remains retryable.
+    if (config.transport.auth.type !== 'none') {
+      const disabled = await this.configs.disable(config.id, storeRevision);
+      await this.stopRefreshes(config.id);
+      await this.remove(config);
+      config = { ...config, revision: config.revision + 1, enabled: false };
+      storeRevision = disabled.revision;
+    }
+    assert(
+      config.transport.type === 'streamable-http',
+      'MCP_AUTH_UNSUPPORTED',
+      '请选择固定的 HTTP 服务器。',
+    );
+    signal.throwIfAborted();
     const id = randomUUID(),
       key = this.key(config, id);
     const storage = await this.secrets.put(key, value, signal);
@@ -61,7 +76,6 @@ export class CredentialRecords {
         config.revision,
       );
       published = true;
-      await this.remove(config);
       return result;
     } finally {
       if (!published) await this.secrets.delete(key, storage);

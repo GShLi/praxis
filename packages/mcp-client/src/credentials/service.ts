@@ -25,14 +25,21 @@ export class McpCredentials {
   private lifetime = new AbortController();
   private pending = new Set<Promise<unknown>>();
   constructor(
-    private configs: McpConfigService,
+    configs: McpConfigService,
     private secrets: SecretStore,
     owner: string,
     client: string,
     private protectedValues: readonly string[] = [],
     authenticationChanged: (serverId: string, epoch: number) => void = () => {},
   ) {
-    this.records = new CredentialRecords(configs, secrets, owner, client, this.lifetime.signal);
+    this.records = new CredentialRecords(
+      configs,
+      secrets,
+      owner,
+      client,
+      this.lifetime.signal,
+      (id) => this.oauth.stopRefreshes(id),
+    );
     this.oauth = new McpOAuth(this.records, protectedValues, authenticationChanged);
     this.configChanges = new CredentialConfigChanges(this.records, (id) =>
       this.oauth.stopServer(id),
@@ -73,16 +80,9 @@ export class McpCredentials {
     });
   }
   clear(serverId: string, expectedStoreRevision: number, expectedRevision: number) {
-    return this.track(async () => {
-      const config = await this.records.checked(serverId, expectedStoreRevision, expectedRevision);
-      const result = await this.configs.upsert(
-        { ...config, transport: { ...config.transport, auth: { type: 'none' } } },
-        expectedStoreRevision,
-        expectedRevision,
-      );
-      await this.records.remove(config);
-      return result;
-    });
+    return this.track(() =>
+      this.configChanges.clear(serverId, expectedStoreRevision, expectedRevision),
+    );
   }
   async resolve(config: McpConfig, signal: AbortSignal): Promise<McpAuthentication> {
     assert(!this.closed, 'SECRET_STORE_CLOSED', '凭据存储已关闭。');

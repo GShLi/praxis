@@ -66,6 +66,15 @@ export class CredentialConfigChanges {
     const disabled = await this.disableAndClean(old, storeRevision);
     return this.records.configs.remove(serverId, disabled.revision, old.revision + 1);
   }
+  async clear(serverId: string, storeRevision: number, revision: number) {
+    const config = await this.records.checked(serverId, storeRevision, revision);
+    const disabled = await this.disableAndClean(config, storeRevision);
+    return this.records.configs.upsert(
+      { ...config, transport: { ...config.transport, auth: { type: 'none' } } },
+      disabled.revision,
+      config.revision + 1,
+    );
+  }
   private async disableAndClean(config: McpConfig, storeRevision: number) {
     const disabled = await this.records.configs.disable(config.id, storeRevision);
     await this.stopServer(config.id);

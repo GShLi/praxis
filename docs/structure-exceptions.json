@@ -460,9 +460,9 @@
     "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "tests/mcp-credentials.test.ts#test(Bearer references bind profile and exact endpoint, rotate epoch, and keep configuration free of secrets):1": {
-    "maxLines": 93,
-    "reason": "同一凭据生命周期验证保存、不同身份/端点隔离、轮换、旧引用失效及删除，保留对象和清理对应。",
-    "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
+    "maxLines": 94,
+    "reason": "同一凭据生命周期覆盖绑定、轮换、配置无秘密与清除；失效断言允许安全的中间停用版本，不固定内部步骤数。",
+    "validation": "mcp-credentials、mcp-config-credentials 与 OAuth 回归；全量结构/类型检查、测试及构建。"
   },
   "packages/ui/src/settings/McpOAuth.tsx#McpOAuth:1": {
     "maxLines": 124,

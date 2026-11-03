@@ -66,6 +66,9 @@ export class McpOAuth {
     await Promise.allSettled(flows.map((flow) => flow.completed));
     await this.accounts.stopServer(serverId);
   }
+  stopRefreshes(serverId: string) {
+    return this.accounts.stopServer(serverId);
+  }
   resolve(config: McpConfig, signal: AbortSignal) {
     return this.accounts.resolve(config, signal);
   }

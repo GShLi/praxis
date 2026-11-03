@@ -94,7 +94,8 @@ test('Bearer references bind profile and exact endpoint, rotate epoch, and keep 
       'none',
     );
     assert.equal(values.size, 0);
-    assert.equal(invalidated.length, 4);
+    assert.ok(invalidated.length >= 4);
+    assert.ok(invalidated.every((id) => id === config.id));
   } finally {
     await credentials.close();
     await rm(root, { recursive: true, force: true });
