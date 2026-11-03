@@ -25,6 +25,27 @@ PRAXIS_TEST_KEYRING_HELPER=/path/to/gnome-keyring-daemon pnpm test:linux-keyring
 pnpm test:linux-credentials
 ```
 
+## 2026-11-04：SQLite 容量耗尽与恢复
+
+- 临时文件数据库通过 `PRAGMA max_page_count` 触发真实 `SQLITE_FULL`，不填满宿主磁盘。回归先复现二次 ROLLBACK 把 errcode 13 覆盖为“没有活动事务”的 errcode 1。
+- 事务所有者现在只忽略 SQLite 已自行回滚这一明确结果，保留原始容量故障；其他回滚异常仍抛出，并保留原故障。该处理遵循 [SQLite 事务错误语义](https://sqlite.org/lang_transaction.html#response_to_errors_within_a_transaction)，兼容本机 Node 22.15 没有 `isTransaction` 的情况。
+- 验证失败事务的前序写入一起回滚、不发事件、序号不前进；提高容量后可继续提交，重新打开后记录完整且 integrity_check 为 ok。Agent 在工具派发前写库失败时停止，不创建目标文件、不重试模型，恢复不会自动执行该写入。
+- 修复后 macOS（Node 22.15.0）和 Linux（Node 24.22.2）各 222 项核心、30 项 PostgreSQL/HTTP/CLI 集成、结构/类型检查和应用构建全部通过，无跳过。这是 SQLite 容量错误路径验收，不代替文件系统 ENOSPC、断电和长期压力验收。
+
+## 当前验收汇总与剩余项
+
+| 项目 | macOS | Ubuntu 22.04.5 |
+| --- | --- | --- |
+| 核心自动回归 | 222/222 | 222/222 |
+| 真实 PostgreSQL/HTTP/CLI 集成 | 30/30 | 30/30 |
+| 系统隔离机制原型 | Seatbelt 4/4 | Bubblewrap 5/5 |
+| 系统凭据 | 核心套件含真实 Keychain 读写/删除 | 私有 Keyring/服务故障 5/5 |
+| 已配置 DeepSeek | 6 请求完成 Chat、创建与修改 | 6 请求完成相同场景 |
+| Electron 实际界面 | 主要流程通过，范围见上文 | 未提供图形显示服务，未运行 |
+| 结构、类型及应用构建 | 通过 | 通过 |
+
+仍未完成的验收：生产命令沙箱及 MCP stdio（执行后端尚未接通，含 macOS 脱离进程组后的子孙回收）、完整 MCP/OAuth 桌面交互和外部服务互操作、Linux 桌面实际交互、安装包/签名/升级、真实模型长任务压缩、长期压力及真实文件系统写满。只有当前机器的 OS/架构得到上述证据，不扩展为其他版本或架构已支持。
+
 ## 可重复入口
 
 先运行 `pnpm build`。真实模型测试不在默认自动回归里，不会因为运行 `pnpm check` 而计费。

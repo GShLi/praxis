@@ -41,7 +41,21 @@ export class SessionStore extends EventEmitter {
       this.db.exec('COMMIT');
       emitted = this.notifications;
     } catch (error) {
-      this.db.exec('ROLLBACK');
+      try {
+        this.db.exec('ROLLBACK');
+      } catch (rollbackError) {
+        // SQLite FULL/IOERR can already roll back. Node 22.15 exposes no isTransaction;
+        // ignore only this known harmless result, preserving the original failure.
+        if (
+          !(rollbackError instanceof Error) ||
+          !('code' in rollbackError) ||
+          rollbackError.code !== 'ERR_SQLITE_ERROR' ||
+          rollbackError.message !== 'cannot rollback - no transaction is active'
+        )
+          throw new AggregateError([error, rollbackError], '数据库事务回滚失败。', {
+            cause: error,
+          });
+      }
       throw error;
     } finally {
       this.notifications = undefined;
