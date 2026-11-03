@@ -53,8 +53,8 @@ export function projectDiagnosticEvent(event: Event): DiagnosticInput | undefine
     steps: payload.steps,
     attempts: payload.attempts,
     tools: typeof payload.tools === 'number' ? payload.tools : undefined,
-    inputTokens: usage.input,
-    outputTokens: usage.output,
+    inputTokens: usage.input ?? undefined,
+    outputTokens: usage.output ?? undefined,
   });
   return parsed.success ? parsed.data : undefined;
 }

@@ -1,13 +1,9 @@
 import { PraxisError } from '@praxis/contracts';
 import { z } from 'zod';
+import { providerUsageSchema } from './usage.ts';
 const schema = z.object({
   error: z.unknown().optional(),
-  usage: z
-    .object({
-      prompt_tokens: z.number().int().nonnegative().optional(),
-      completion_tokens: z.number().int().nonnegative().optional(),
-    })
-    .nullish(),
+  usage: providerUsageSchema.nullish(),
   choices: z
     .array(
       z.object({

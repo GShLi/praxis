@@ -1,6 +1,6 @@
 import { assert, PraxisError, type ModelConfig } from '@praxis/contracts';
 import type { ModelClient, ModelRequest } from '@praxis/model-core';
-import { ModelOutputGuard } from '@praxis/model-core';
+import { ModelOutputGuard, modelUsageSchema } from '@praxis/model-core';
 import { z } from 'zod';
 import { hookOperation } from './hook-operation.ts';
 import type { ActivePlugin } from './types.ts';
@@ -23,10 +23,7 @@ const responseSchema = z
         .max(64)
         .optional(),
     }),
-    usage: z.strictObject({
-      input: z.number().int().nonnegative(),
-      output: z.number().int().nonnegative(),
-    }),
+    usage: modelUsageSchema,
     finishReason: z.string().min(1).max(128),
   })
   .transform((value) => {

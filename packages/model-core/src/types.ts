@@ -1,8 +1,9 @@
 import type { Message, ModelConfig, ToolDefinition } from '@praxis/contracts';
+import type { ModelUsage } from './usage.ts';
 
 export interface Completion {
   message: Message;
-  usage: { input: number; output: number };
+  usage: ModelUsage;
   finishReason: string;
 }
 

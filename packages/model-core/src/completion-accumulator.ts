@@ -1,13 +1,14 @@
 import { assert, PraxisError, type ToolCall } from '@praxis/contracts';
 import { parseCompletionChunk } from './completion-schema.ts';
 import type { Completion } from './types.ts';
+import { normalizeUsage } from './usage.ts';
 export class CompletionAccumulator {
   private content = '';
   private reasoning = '';
   private finishReason = '';
   ended = false;
   private calls = new Map<number, ToolCall>();
-  private usage = { input: 0, output: 0 };
+  private usage = normalizeUsage();
   constructor(private onDelta: (text: string) => void) {}
   consume(line: string) {
     if (!line.startsWith('data:')) return;
@@ -19,11 +20,7 @@ export class CompletionAccumulator {
     }
     const chunk = parseCompletionChunk(data);
     assert(!chunk.error, 'MODEL_STREAM_ERROR', '模型流报告错误。');
-    if (chunk.usage)
-      this.usage = {
-        input: chunk.usage.prompt_tokens ?? 0,
-        output: chunk.usage.completion_tokens ?? 0,
-      };
+    if (chunk.usage) this.usage = normalizeUsage(chunk.usage);
     const choice = chunk.choices?.find((c) => c.index === 0 || c.index === undefined);
     if (!choice) return;
     if (typeof choice.delta?.content === 'string') {
