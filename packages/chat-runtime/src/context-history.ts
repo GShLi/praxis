@@ -1,4 +1,4 @@
-import type { Message } from '@praxis/contracts';
+import { assert, type Message } from '@praxis/contracts';
 import type { ChatContextServices } from './context-types.ts';
 import type { Running } from './types.ts';
 
@@ -27,34 +27,24 @@ export async function readChatHistory(
   return all;
 }
 
-export async function commitChatContext(
+export async function readChatContext(
   services: ChatContextServices,
   run: Running,
-  source: Message[],
-  summary: Message,
+  currentInput: string,
 ) {
-  await services.database.transaction(async (sql) => {
-    await services.repository.owned(run.owner, run.chatId, sql, true);
-    const row = (
-      await sql.query<{ version: number }>(
-        'SELECT COALESCE(MAX(version),0)+1 AS version FROM chat_contexts WHERE session_id=$1',
-        [run.chatId],
-      )
-    ).rows[0]!;
-    await sql.query(
-      'INSERT INTO chat_contexts(session_id,version,summary,source_ids,through_input) VALUES($1,$2,$3,$4,$5)',
-      [
-        run.chatId,
-        row.version,
-        JSON.stringify(summary),
-        JSON.stringify(source.map((m) => m.id)),
-        source.at(-1)!.id,
-      ],
-    );
-    await services.repository.event(sql, run.chatId, 'context/compaction_committed', {
-      version: row.version,
-      summary,
-      sourceIds: source.map((m) => m.id),
-    });
-  });
+  const all = await readChatHistory(services, run, currentInput);
+  const previous = (
+    await services.database.query<{ version: number; summary: Message; through_input: string }>(
+      'SELECT version,summary,through_input FROM chat_contexts WHERE session_id=$1 AND valid=true ORDER BY version DESC LIMIT 1',
+      [run.chatId],
+    )
+  ).rows[0];
+  if (!previous) return { version: 0, messages: all, summaryId: undefined };
+  const through = all.findIndex((message) => message.id === previous.through_input);
+  assert(through >= 0, 'INVALID_CONTEXT', '上下文来源消息不存在。');
+  return {
+    version: previous.version,
+    messages: [previous.summary, ...all.slice(through + 1)],
+    summaryId: previous.summary.id,
+  };
 }

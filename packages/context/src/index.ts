@@ -3,3 +3,5 @@ export { protocolGroups } from './protocol-groups.ts';
 export { summarySchema } from './summary.ts';
 export { budget, estimate } from './tokens.ts';
 export { userInstructionMaterial } from './user-instructions.ts';
+export { SummaryJob } from './summary-job.ts';
+export { compactionSource } from './compaction-source.ts';

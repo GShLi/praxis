@@ -6,7 +6,6 @@ import type { Running } from './types.ts';
 import { snapshotUserInstructions, type UserInstructionOptions } from './user-instructions.ts';
 export interface GenerationServices extends ChatContextServices, UserInstructionOptions {
   beginUse: (owner: string, providerId: string, signal: AbortSignal) => Promise<ModelConfig>;
-  emit: (name: string, payload: unknown) => void;
 }
 export async function generateChat(
   services: GenerationServices,

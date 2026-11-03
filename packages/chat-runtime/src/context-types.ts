@@ -6,6 +6,7 @@ export interface ChatContextServices {
   database: ServerDatabase;
   model: ModelClient;
   repository: ChatRepository;
+  emit: (name: string, payload: unknown) => void;
   append: (
     id: string,
     type: string,

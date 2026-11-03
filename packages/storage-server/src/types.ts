@@ -8,6 +8,6 @@ export interface SqlConnection {
 }
 
 export interface ServerDatabase extends SqlConnection {
-  transaction<T>(body: (connection: SqlConnection) => Promise<T>): Promise<T>;
+  transaction<T>(body: (connection: SqlConnection) => Promise<T>, signal?: AbortSignal): Promise<T>;
   close(): Promise<void>;
 }

@@ -12,6 +12,7 @@ export async function requestCompletion(
   let response: Response | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     signal.throwIfAborted();
+    if (attempt) request.beforeRetry?.();
     try {
       response = await fetcher(endpoint, {
         method: 'POST',

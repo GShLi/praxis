@@ -40,7 +40,7 @@
     "validation": "client-lifecycle 的真实子进程关闭、握手失败回收测试"
   },
   "packages/context/src/context-builder.ts#build:1": {
-    "maxLines": 131,
+    "maxLines": 90,
     "reason": "完整上下文预算与压缩候选算法；原历史、摘要版本、保留尾部和请求大小共同决定一次原子提交。",
     "validation": "context-model 重复压缩、摘要失败、协议分组测试"
   },

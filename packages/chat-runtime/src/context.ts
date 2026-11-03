@@ -1,8 +1,9 @@
-import { budget, estimate } from '@praxis/context';
+import { budget, estimate, compactionSource } from '@praxis/context';
 import { assert, type Message, type ModelConfig } from '@praxis/contracts';
 import type { ChatContextServices } from './context-types.ts';
-import { readChatHistory, commitChatContext } from './context-history.ts';
-import { summarizeChat } from './context-summary.ts';
+import { readChatContext } from './context-history.ts';
+import { commitChatContext } from './context-commit.ts';
+import { chatSummaryJob, summarizeChat } from './context-summary.ts';
 import type { Running } from './types.ts';
 
 export async function buildChatContext(
@@ -12,7 +13,7 @@ export async function buildChatContext(
   currentInput: string,
   personal: Message[] = [],
 ): Promise<Message[]> {
-  const all = await readChatHistory(services, run, currentInput);
+  let { messages, version, summaryId } = await readChatContext(services, run, currentInput);
   const fixed: Message[] = [
     {
       id: 'chat-system-v1',
@@ -24,30 +25,21 @@ export async function buildChatContext(
   ];
   const limits = budget(config);
   assert(estimate(fixed) < limits.trigger, 'CONTEXT_FIXED_TOO_LARGE', '固定指令超过输入预算。');
-  const previous = (
-    await services.database.query<{ version: number; summary: Message; through_input: string }>(
-      'SELECT version,summary,through_input FROM chat_contexts WHERE session_id=$1 AND valid=true ORDER BY version DESC LIMIT 1',
-      [run.chatId],
-    )
-  ).rows[0];
-  let messages = previous
-    ? [previous.summary, ...all.slice(all.findIndex((m) => m.id === previous.through_input) + 1)]
-    : all;
-  if (estimate([fixed, messages]) >= limits.trigger) {
-    let start = messages.findLastIndex((m) => m.role === 'user');
-    let size = estimate(messages.slice(start));
-    while (start > 0 && size < limits.retain) size += estimate(messages[--start]);
-    assert(start > 0, 'CONTEXT_TOO_LARGE', '最新输入超过上下文预算。');
-    const source = messages.slice(0, start);
+  const job = chatSummaryJob(services, run, config);
+  for (let contraction = 0; contraction < 2; contraction++) {
+    if (estimate([fixed, messages]) < limits.trigger) break;
+    const { groups, tail } = compactionSource(messages, limits.retain);
+    const source = groups.flat();
     assert(
-      estimate(source) < limits.available,
-      'CONTEXT_TOO_LARGE',
-      '历史需要分块压缩，当前请求超过摘要窗口。',
+      source.some((message) => message.id !== summaryId),
+      'COMPACTION_NO_PROGRESS',
+      '没有可压缩的新历史。',
     );
-    const summary = await summarizeChat(services, run, config, source, limits.summary);
-    await commitChatContext(services, run, source, summary);
-    messages = [summary, ...messages.slice(start)];
+    const summary = await summarizeChat(job, services, run, groups, version);
+    version = await commitChatContext(services, run, version, source, summary);
+    summaryId = summary.id;
+    messages = [summary, ...tail];
   }
-  assert(estimate([fixed, messages]) < limits.available, 'CONTEXT_TOO_LARGE', '模型输入超过窗口。');
+  assert(estimate([fixed, messages]) < limits.trigger, 'CONTEXT_TOO_LARGE', '压缩后仍超过预算。');
   return [...fixed, ...messages];
 }

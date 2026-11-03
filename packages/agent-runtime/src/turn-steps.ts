@@ -52,6 +52,7 @@ export class TurnSteps {
         config,
         signal,
         purpose: session.kind === 'chat' ? 'chat_generation' : 'agent_step',
+        beforeRetry: () => this.consumeAttempt(turn),
         onDelta: (text) => {
           this.partial += text;
           this.emit('delta', { sessionId: id, turnId: turn.id, attemptId: this.attemptId, text });

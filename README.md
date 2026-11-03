@@ -55,6 +55,8 @@ CLI 使用平台签发的 Praxis API Key；厂商 Key 在统一 Provider 设置�
 
 统一模型配置的“高级设置 → 模型适配器”默认是 `openai-compatible`，兼容已有配置。可信插件用 `registerProvider('custom', client)` 注册后，填写 `插件ID/custom`。当前插件接口仅定义生成，不约定模型发现协议，因此插件模型按作者说明手动填写 ID。更改适配器与更改地址一样，需要重新填写 Key；未安装或未启用该适配器时明确失败，不会把凭据交给默认适配器。当前 turn 的生成和压缩固定同一个插件版本。
 
+模型适配器的 `ModelRequest.beforeRetry` 是预算边界：首次调用由运行时计费，适配器每次额外发送前必须调用此回调；回调抛错时立即停止。内置适配器已将 HTTP 重试接入任务及摘要预算。可信插件须遵守同一契约；同进程 SDK 无法强制拦截插件自行联网。
+
 Web 只使用部署者在服务端安装的纯 Provider 插件。可通过 `PRAXIS_SERVER_PLUGIN_DIRECTORY` 指向已有的 `PluginInstaller` 注册目录（绝对路径，清单须声明 `server` 与 `chat`）；启用记录和包摘要均在启动时校验，启动失败不退回默认适配器。网页用户不能上传或安装服务端插件。桌面/CLI 则使用本地已信任并启用的插件；服务器和客户端必须分别安装需要在其上运行的适配器。
 
 ## PostgreSQL 集成测试

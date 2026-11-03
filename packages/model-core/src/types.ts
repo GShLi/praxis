@@ -13,6 +13,9 @@ export interface ModelRequest {
   purpose: 'agent_step' | 'chat_generation' | 'compaction';
   signal: AbortSignal;
   onDelta: (text: string) => void;
+  /** The caller charges the first attempt; adapters must call this before every additional send.
+   * A thrown budget/cancellation error ends the request and must never trigger another retry. */
+  beforeRetry?: () => void;
 }
 
 export interface ModelClient {

@@ -15,11 +15,17 @@ export class PostgresDatabase implements ServerDatabase {
   query<R extends QueryResultRow = QueryResultRow>(sql: string, values?: unknown[]) {
     return this.pool.query<R>(sql, values);
   }
-  async transaction<T>(body: (connection: SqlConnection) => Promise<T>): Promise<T> {
+  async transaction<T>(
+    body: (connection: SqlConnection) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    signal?.throwIfAborted();
     const client: PoolClient = await this.pool.connect();
     try {
       await client.query('BEGIN');
+      signal?.throwIfAborted();
       const result = await body(client);
+      signal?.throwIfAborted();
       await client.query('COMMIT');
       return result;
     } catch (error) {
