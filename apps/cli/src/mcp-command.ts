@@ -1,3 +1,5 @@
+import type { CliOptions } from './options.ts';
+import { mcpPromptCommand } from './mcp-prompts.ts';
 import type { startHost } from '@praxis/client-host';
 import { assert } from '@praxis/contracts';
 import { open } from 'node:fs/promises';
@@ -23,9 +25,11 @@ async function importedConfig(file: string) {
 export async function mcpCommand(
   host: Awaited<ReturnType<typeof startHost>>,
   positionals: string[],
+  values: CliOptions,
 ) {
   const action = positionals[1] ?? 'list',
     target = positionals[2];
+  if (await mcpPromptCommand(host, positionals, values.arguments)) return;
   const state = await host.rpc.request<{
     revision: number;
     value: Array<{ id: string; revision: number }>;

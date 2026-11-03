@@ -11,7 +11,7 @@ export function useSessionSubmission(
   reload: () => Promise<void>,
 ) {
   const [sending, setSending] = useState(false);
-  const submit = async (operation: (id: string) => Promise<void>) => {
+  const submit = async <T>(operation: (id: string) => Promise<T>): Promise<T> => {
     if (sending) throw new Error('上一条请求正在提交。');
     if (kind === 'agent' && !selected && !workspace) throw new Error('请先选择任务工作区。');
     setSending(true);
@@ -21,8 +21,9 @@ export function useSessionSubmission(
         id = (await client.create(kind, workspace || undefined)).id;
         onSelect(id);
       }
-      await operation(id);
+      const value = await operation(id);
       await reload();
+      return value;
     } finally {
       setSending(false);
     }

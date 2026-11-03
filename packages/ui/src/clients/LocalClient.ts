@@ -1,3 +1,9 @@
+import type {
+  McpPromptGet,
+  McpPromptApply,
+  McpPromptPreview,
+  McpPromptList,
+} from '@praxis/contracts';
 import type { Event, Message, Session, UserCommand } from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type {
@@ -150,6 +156,19 @@ export class LocalClient implements PraxisClient {
   }
   async enablePlugin(id: string, enabled: boolean, revision: number) {
     await this.bridge.call('plugin/set-enabled', { id, enabled, expectedRevision: revision });
+  }
+  mcpPrompts(sessionId: string, serverId: string) {
+    return this.bridge.call<McpPromptList>('mcp/prompt-list', { sessionId, serverId });
+  }
+  previewMcpPrompt(input: McpPromptGet) {
+    return this.bridge.call<McpPromptPreview>('mcp/prompt-preview', input);
+  }
+  async applyMcpPrompt(input: McpPromptApply, providerId: string) {
+    await this.bridge.call('provider/select', { providerId });
+    await this.bridge.call('mcp/prompt-apply', input);
+  }
+  async cancelMcpPrompt(sessionId: string) {
+    await this.bridge.call('mcp/prompt-cancel', { sessionId });
   }
   mcpServers() {
     return this.bridge.call<McpState>('mcp/server-list');

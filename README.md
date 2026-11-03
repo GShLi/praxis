@@ -116,3 +116,17 @@ pnpm cli mcp disable SERVER_ID
 ## 项目指令
 
 Agent 在创建会话时记录根 `AGENTS.md`，访问子目录或遍历搜索时发现更具体规则；不向工作区外自动扫描。每次模型请求刷新已发现的文件，最多 32 个文件、累计 64 KiB，超限明确报错。指令快照保留来源、范围、摘要与完整文本产物，修改或删除不会抹去旧版本。若生成写入后才发现新规则或规则已变，工具返回 `INSTRUCTIONS_CHANGED` 并等待模型下一步重新决定。项目规则不能扩大权限；Chat 不读取这些文件。
+
+## MCP 提示词
+
+桌面 Agent 输入区的“MCP 提示词”可列出已启用服务器的模板、填写公开参数、获取并查看完整预览，再确认加入队列或追加指导。模板的 user/assistant 角色只作为外部来源标记；应用后是一条用户选用材料，不伪造本 Session 的回答或工具动作。预览绑定会话、服务器配置版本、目录版本与内容摘要，有效期 10 分钟；服务器配置改变后需重新获取。取消、退出及服务器停用会中止预览请求。ChatBot 不连接 MCP。
+
+CLI 交互支持 `/mcp-prompts SERVER_ID`、`/mcp-preview SERVER_ID {"name":"模板","arguments":{}}`、`/mcp-apply PREVIEW_ID CONTENT_HASH [queue|steer]`。也可分两次运行：
+
+```sh
+pnpm cli mcp preview SESSION_ID SERVER_ID NAME --arguments '{"topic":"Hello World"}'
+# 阅读输出的完整 text，确认后使用其中的 previewId、contentHash：
+pnpm cli run --resume SESSION_ID --provider PROVIDER_ID --apply-prompt PREVIEW_ID --content-hash CONTENT_HASH
+```
+
+获取预览不会启动模型；应用精确的本地快照，不重新请求远端模板。文本之外的内容明确报不支持，避免悄悄丢弃模板的一部分。

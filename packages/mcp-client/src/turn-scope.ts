@@ -25,7 +25,7 @@ export interface RemoteOperation {
   authorize(): Promise<void>;
 }
 interface OperationPolicy {
-  capability: 'tools' | 'resources';
+  capability: 'tools' | 'resources' | 'prompts';
   metadataOnly: boolean;
 }
 /** Connections and tickets belong to a turn, never a global/shared SDK session. */
@@ -188,8 +188,11 @@ export class McpTurnScope {
       signal,
     );
   }
-  async close() {
+  cancel() {
     this.lifetime.abort();
+  }
+  async close() {
+    this.cancel();
     await Promise.allSettled([...this.operations]);
   }
 }

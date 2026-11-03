@@ -1,7 +1,9 @@
+import { promptFixture, promptReply } from './mcp-prompts.ts';
 import { createServer } from 'node:http';
 import { resourceReply, resourcesFixture, type ResourceFixture } from './mcp-resources.ts';
 interface RemoteFixture {
   legacy: boolean;
+  prompts: ReturnType<typeof promptFixture> | undefined;
   resources: ResourceFixture | undefined;
   description: string;
   isError: boolean;
@@ -11,7 +13,7 @@ interface RemoteFixture {
   beforeList?: (() => Promise<void>) | undefined;
   beforeCall?: (() => Promise<void>) | undefined;
 }
-export async function mcpHttpFixture(legacy = false, resources = false) {
+export async function mcpHttpFixture(legacy = false, resources = false, prompts = false) {
   const requests: Array<{
     method: string;
     headers: Record<string, unknown>;
@@ -19,6 +21,7 @@ export async function mcpHttpFixture(legacy = false, resources = false) {
   }> = [];
   const remote = {
     legacy,
+    prompts: prompts ? promptFixture() : undefined,
     resources: resources ? resourcesFixture() : undefined,
     description: 'Echo fixture',
     isError: false,
@@ -75,7 +78,11 @@ async function handle(
     return;
   }
   let result: object;
-  const capabilities = { tools: {}, ...(remote.resources ? { resources: {} } : {}) };
+  const capabilities = {
+    tools: {},
+    ...(remote.resources ? { resources: {} } : {}),
+    ...(remote.prompts ? { prompts: {} } : {}),
+  };
   if (rpc.method === 'initialize')
     result = {
       protocolVersion: '2025-11-25',
@@ -87,6 +94,8 @@ async function handle(
       supportedVersions: ['2026-07-28'],
       capabilities,
     };
+  else if (remote.prompts && rpc.method.startsWith('prompts/'))
+    result = await promptReply(remote.prompts, rpc.method, rpc.params);
   else if (remote.resources && rpc.method.startsWith('resources/'))
     result = await resourceReply(remote.resources, rpc.method, rpc.params);
   else if (rpc.method === 'tools/list') {

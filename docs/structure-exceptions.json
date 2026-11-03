@@ -135,9 +135,9 @@
     "validation": "mcp-client/model-catalog 的 DNS、重定向、私网拒绝、超时/取消测试"
   },
   "packages/ui/src/App.tsx#App:1": {
-    "maxLines": 225,
-    "reason": "连续应用装配 JSX；新增命令回调只传给 Composer，不在视图执行业务。",
-    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+    "maxLines": 227,
+    "reason": "连续应用装配 JSX，传入一个会话准备回调；没有引入 MCP 请求实现。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/Navigation.tsx#AppRail:1": {
     "maxLines": 131,
@@ -155,9 +155,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/app/useAppController.ts#useAppController:1": {
-    "maxLines": 217,
-    "reason": "应用选择与 UI 状态协调；提交门闩和创建会话提取 useSessionSubmission，插件参数表单有独立 Hook。",
-    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+    "maxLines": 218,
+    "reason": "应用状态协调，MCP 表单调用已提取的通用 Session 提交门闩；目录、预览及确认状态不在此 Hook。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useConversationSubscription:1": {
     "maxLines": 78,
@@ -185,9 +185,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/Composer.tsx#Composer:1": {
-    "maxLines": 180,
-    "reason": "连续输入区 JSX，插件命令表单及异步状态由独立组件/Hook 管理。",
-    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+    "maxLines": 193,
+    "reason": "连续输入区 JSX，MCP 提示词仅在 Agent 模式挂载独立组件。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/conversation/Conversation.tsx#Conversation:1": {
     "maxLines": 90,
@@ -335,9 +335,9 @@
     "validation": "pnpm test；tests/fixtures/ui-preview.tsx 同时纳入 TypeScript 检查及浏览器样例构建"
   },
   "tests/fixtures/mcp-http.ts#handle:1": {
-    "maxLines": 62,
-    "reason": "真实 HTTP fixture 的协议路由：初始化、工具与资源端点共用请求和响应；资源内容与工具内容的构造已分别提取。",
-    "validation": "mcp-runtime、mcp-business-failures 和 mcp-resources 验证官方 SDK 的新旧协议、请求次数、取消及不重放。"
+    "maxLines": 68,
+    "reason": "测试用协议分派器支持工具、资源及提示词；具体 payload 生成分别位于 fixtures 文件。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "apps/server/src/server-process.ts#runServer:1": {
     "maxLines": 62,
@@ -350,9 +350,9 @@
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
   },
   "apps/cli/src/run-cli.ts#runCli:1": {
-    "maxLines": 65,
-    "reason": "CLI 命令分发与 Host try/finally 生命周期，具体会话与插件业务已分离。",
-    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+    "maxLines": 67,
+    "reason": "CLI 分发入口维持同一个 Host try/finally 生命周期，新增参数互斥和 MCP 命令调用；提示词解析与执行委托独立模块。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/conversation/PluginCommands.tsx#PluginCommands:1": {
     "maxLines": 81,
@@ -378,5 +378,20 @@
     "maxLines": 93,
     "reason": "并行插件读两个真实目录的单一生命周期测试，同时检查持久快照及下一次模型输入，finally 释放全部资源。",
     "validation": "instructions、instruction-concurrency、file-search、核心测试及构建。"
+  },
+  "packages/ui/src/conversation/McpPrompts.tsx#McpPrompts:1": {
+    "maxLines": 129,
+    "reason": "连续用户选择/预览表单 JSX；远端控制请求、取消和过期回调在专用 Hook。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+  },
+  "packages/ui/src/conversation/useMcpPrompts.ts#useMcpPrompts:1": {
+    "maxLines": 146,
+    "reason": "一个有界提示词表单的目录、预览和确认状态机；共享 epoch 拒绝取消/切会话后的迟到结果，资源由 Host 监督。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+  },
+  "tests/integration/mcp-prompts.test.ts#test(real CLI previews a remote prompt, restarts and applies its exact snapshot through an installed model adapter):1": {
+    "maxLines": 126,
+    "reason": "真实数据库、HTTP、Host、CLI 两次重启及 Provider 插件的单一端到端场景；初始化 helper 已独立，统一 finally 清理。",
+    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
   }
 }

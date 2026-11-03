@@ -1,3 +1,4 @@
+import { CliMcpPrompts } from './mcp-prompts.ts';
 import type { startHost } from '@praxis/client-host';
 import { assert, deltaSchema, eventSchema, safeError, type Event } from '@praxis/contracts';
 import { randomUUID } from 'node:crypto';
@@ -14,11 +15,13 @@ export class CliSession {
   private closed = false;
   private finishWaiters: Array<() => void> = [];
   private interaction: CliInteraction;
+  private mcpPrompts: CliMcpPrompts;
   constructor(
     private host: Awaited<ReturnType<typeof startHost>>,
     private sessionId: string,
     private values: CliOptions,
   ) {
+    this.mcpPrompts = new CliMcpPrompts(host, sessionId);
     this.interaction = new CliInteraction(
       host,
       sessionId,
@@ -38,15 +41,24 @@ export class CliSession {
       sessionId: this.sessionId,
       afterSeq: previous.throughSeq,
     });
-    if (this.values.prompt || this.values.command) {
-      if (this.values.command)
+    if (this.values.prompt || this.values.command || this.values['apply-prompt']) {
+      if (this.values['apply-prompt']) {
+        assert(this.values['content-hash'], 'INVALID_ARGUMENT', '需要预览的 --content-hash。');
+        await this.input(
+          `/mcp-apply ${this.values['apply-prompt']} ${this.values['content-hash']}`,
+        );
+      } else if (this.values.command)
         await this.input(`/command ${this.values.command} ${this.values.arguments ?? '{}'}`);
       else await this.send(this.values.prompt!);
       if (!this.finished && !this.closed)
         await new Promise<void>((resolve) => this.finishWaiters.push(resolve));
       return;
     }
-    assert(process.stdin.isTTY, 'TTY_REQUIRED', '非交互运行请提供 --prompt 或 --command。');
+    assert(
+      process.stdin.isTTY,
+      'TTY_REQUIRED',
+      '非交互运行请提供 --prompt、--command 或 --apply-prompt。',
+    );
     console.log(`Praxis · ${this.sessionId}\n输入任务，/exit 退出。`);
     this.terminal = createInterface({
       input: process.stdin,
@@ -69,10 +81,17 @@ export class CliSession {
   private async input(line: string) {
     if (!line) return;
     if (line === '/cancel') {
+      await this.host.rpc.request('mcp/prompt-cancel', { sessionId: this.sessionId });
       await this.host.rpc.request('session/cancel', { sessionId: this.sessionId });
       return;
     }
     if (await this.interaction.respond(line)) return;
+    if (line.startsWith('/mcp-apply ')) this.finished = false;
+    const mcp = await this.mcpPrompts.input(line);
+    if (mcp) {
+      if (mcp === 'submitted' && !this.finished) this.active = true;
+      return;
+    }
     if (line === '/commands') {
       console.log(
         JSON.stringify(await this.host.rpc.request('plugin/commands', { kind: 'agent' }), null, 2),

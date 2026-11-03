@@ -7,10 +7,10 @@ import { mcpHttpFixture } from './mcp-http.ts';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-export async function mcpFixture(legacy = false, resources = false) {
+export async function mcpFixture(legacy = false, resources = false, prompts = false) {
   const root = await mkdtemp(path.join(tmpdir(), 'praxis-mcp-business-'));
   const store = new SessionStore(':memory:');
-  const http = await mcpHttpFixture(legacy, resources);
+  const http = await mcpHttpFixture(legacy, resources, prompts);
   const { requests, remote } = http;
   const config: McpConfig = {
     id: uuid(),
@@ -25,7 +25,7 @@ export async function mcpFixture(legacy = false, resources = false) {
       allowPrivateDestination: true,
       auth: { type: 'none' },
     },
-    capabilities: { tools: true, resources, prompts: false },
+    capabilities: { tools: true, resources, prompts },
   };
   const configs = new McpConfigService(root, (id) => {
     maintenance.cancel(id);

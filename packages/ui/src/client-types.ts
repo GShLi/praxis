@@ -1,3 +1,9 @@
+import type {
+  McpPromptGet,
+  McpPromptApply,
+  McpPromptPreview,
+  McpPromptList,
+} from '@praxis/contracts';
 import type { Event, UserCommand } from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type { ApprovalRequest } from '@praxis/permissions';
@@ -62,6 +68,10 @@ export type HostMethod =
   | 'mcp/server-disable'
   | 'mcp/server-enable'
   | 'mcp/test'
+  | 'mcp/prompt-list'
+  | 'mcp/prompt-preview'
+  | 'mcp/prompt-apply'
+  | 'mcp/prompt-cancel'
   | 'auth/bind'
   | 'auth/clear'
   | 'workspace/open'
@@ -133,6 +143,7 @@ export interface McpState {
   value: Array<{
     id: string;
     namespace: string;
+    capabilities?: { tools: boolean; resources: boolean; prompts: boolean };
     displayName: string;
     revision: number;
     enabled: boolean;
@@ -219,6 +230,10 @@ export interface PraxisClient {
   installPlugin?(source: string, digest: string, revision: number): Promise<void>;
   enablePlugin?(id: string, enabled: boolean, revision: number): Promise<void>;
   mcpServers?(): Promise<McpState>;
+  mcpPrompts?(sessionId: string, serverId: string): Promise<McpPromptList>;
+  previewMcpPrompt?(input: McpPromptGet): Promise<McpPromptPreview>;
+  applyMcpPrompt?(input: McpPromptApply, providerId: string): Promise<void>;
+  cancelMcpPrompt?(sessionId: string): Promise<void>;
   saveMcp?(config: unknown, storeRevision: number, configRevision: number | null): Promise<void>;
   disableMcp?(id: string, revision: number): Promise<void>;
   testMcp?(id: string, revision: number): Promise<McpTestResult>;

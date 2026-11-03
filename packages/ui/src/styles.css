@@ -16,3 +16,5 @@
 @import './styles/motion.css';
 @import './styles/responsive.css';
 @import './styles/plugin-commands.css';
+
+@import './styles/mcp-prompts.css';

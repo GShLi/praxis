@@ -1,3 +1,4 @@
+import { CLI_HELP } from './help.ts';
 import { startHost } from '@praxis/client-host';
 import { assert } from '@praxis/contracts';
 import { parseOptions } from './options.ts';
@@ -10,14 +11,12 @@ export async function runCli() {
   const { values, positionals } = parseOptions();
   const command = positionals[0] ?? 'help';
   assert(
-    !(values.prompt && values.command),
+    [values.prompt, values.command, values['apply-prompt']].filter(Boolean).length <= 1,
     'INVALID_COMMAND',
-    '--prompt 与 --command 不能同时使用。',
+    '--prompt、--command 与 --apply-prompt 不能同时使用。',
   );
   if (values.help || command === 'help') {
-    console.log(
-      '知行 Praxis\n\npnpm cli doctor\npnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_ID]\npnpm cli sessions\npnpm cli providers\npnpm cli plugins [list|inspect PATH|install PATH --digest SHA256|enable ID|disable ID]\npnpm cli mcp [list|import FILE|test ID|enable ID|disable ID]\n\n配置 PRAXIS_SERVER_URL 和 PRAXIS_API_KEY；厂商 Key 在统一模型设置中填写。\n插件命令：--command 插件ID/命令名 [--arguments JSON]。\n交互命令：/commands、/command 插件ID/命令名 JSON、/cancel、/steer 内容、/queue 内容、/exit。Ctrl-C 请求取消，再按一次退出。',
-    );
+    console.log(CLI_HELP);
     return;
   }
   assert(
@@ -43,14 +42,16 @@ export async function runCli() {
       serverUrl,
       praxisApiKey,
       ...(values.provider ? { providerId: values.provider } : {}),
-      interactive: Boolean(process.stdin.isTTY && !values.prompt && !values.command),
+      interactive: Boolean(
+        process.stdin.isTTY && !values.prompt && !values.command && !values['apply-prompt'],
+      ),
     });
     if (command === 'plugins') {
       await pluginCommand(host, values, positionals);
       return;
     }
     if (command === 'mcp') {
-      await mcpCommand(host, positionals);
+      await mcpCommand(host, positionals, values);
       return;
     }
     if (command === 'sessions' || command === 'providers') {

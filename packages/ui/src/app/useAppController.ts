@@ -220,6 +220,7 @@ export function useAppController(injected?: PraxisClient) {
     newSession,
     send,
     runPluginCommand,
+    prepareMcpSession: () => submit(async (id) => id),
     showChange,
     logout,
     loadingSession,

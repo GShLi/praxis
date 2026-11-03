@@ -1,3 +1,4 @@
+import { McpPrompts } from '@praxis/mcp-client/prompts';
 import { AgentRuntime } from '@praxis/agent-runtime';
 import { AuthClient } from '@praxis/auth-client';
 import { PraxisError, assert, idSchema } from '@praxis/contracts';
@@ -23,6 +24,7 @@ export class HostIdentity {
   mcpConfig: McpConfigService | undefined;
   mcpMaintenance: McpMaintenance | undefined;
   mcpRuntime: McpRuntime | undefined;
+  mcpPrompts: McpPrompts | undefined;
   pluginInstaller: PluginInstaller | undefined;
   pluginHosts: Record<'chat' | 'agent', PluginHost> | undefined;
   pluginsChanged = false;
@@ -39,6 +41,8 @@ export class HostIdentity {
     this.discoveryScope.abort();
     this.discoveryScope = new AbortController();
     this.subscriptions.clear();
+    this.mcpPrompts?.close();
+    this.mcpPrompts = undefined;
     await this.mcpMaintenance?.close();
     this.mcpMaintenance = undefined;
     await this.runtime?.close();
@@ -85,17 +89,7 @@ export class HostIdentity {
       this.store = new SessionStore(path.join(directory, 'sessions.sqlite'));
       this.store.recover();
       this.selectedProvider = input.providerId;
-      this.mcpConfig = new McpConfigService(directory, (id) => {
-        this.mcpMaintenance?.cancel(id);
-        this.mcpRuntime?.invalidate(id);
-      });
-      this.mcpMaintenance = new McpMaintenance(
-        this.mcpConfig,
-        this.store,
-        candidate.userId,
-        this.clientKind(),
-      );
-      this.mcpRuntime = new McpRuntime(this.mcpConfig, this.store, this.clientKind());
+      this.setupMcp(directory, candidate.userId);
       this.pluginInstaller = new PluginInstaller(path.join(directory, 'plugins'));
       this.pluginHosts = {
         chat: new PluginHost(new Set(Object.keys(schemas)), 'chat'),
@@ -120,6 +114,15 @@ export class HostIdentity {
         acquireWorkspace: (root, signal) =>
           acquireWorkspaceLease(root, path.join(commonData, 'workspace-locks'), signal),
       });
+      const runtime = this.runtime;
+      this.mcpPrompts = new McpPrompts(
+        this.mcpRuntime!,
+        this.mcpConfig!,
+        this.store,
+        candidate.userId,
+        (value, validate) => runtime.prompt(candidate.userId, value, validate),
+        [input.praxisApiKey],
+      );
       this.runtime.on('delta', (delta) => this.notify('session/delta', delta));
       this.runtime.on('fatal', () => {
         void this.shutdown();
@@ -131,6 +134,16 @@ export class HostIdentity {
     } finally {
       this.binding = false;
     }
+  }
+  private setupMcp(directory: string, owner: string) {
+    const store = this.store;
+    assert(store, 'STORAGE_UNAVAILABLE', '会话存储尚未初始化。');
+    this.mcpConfig = new McpConfigService(directory, (id) => {
+      this.mcpMaintenance?.cancel(id);
+      this.mcpRuntime?.invalidate(id);
+    });
+    this.mcpMaintenance = new McpMaintenance(this.mcpConfig, store, owner, this.clientKind());
+    this.mcpRuntime = new McpRuntime(this.mcpConfig, store, this.clientKind());
   }
   private async loadPlugins() {
     const installer = this.pluginInstaller,

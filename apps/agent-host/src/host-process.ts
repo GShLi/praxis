@@ -1,3 +1,4 @@
+import { mcpPromptsRoutes } from './mcp-prompts-rpc.ts';
 import { assert, initializeSchema, PraxisError, PROTOCOL } from '@praxis/contracts';
 import { JsonLines, serveRpc } from '@praxis/transport';
 import { randomUUID } from 'node:crypto';
@@ -30,9 +31,14 @@ export class HostProcess {
     );
     this.routes = Object.assign(
       {},
-      ...[providersRoutes, sessionsRoutes, mcpRoutes, pluginsRoutes, commandsRoutes].map(
-        (factory) => factory(this.identity, () => this.clientKind),
-      ),
+      ...[
+        providersRoutes,
+        sessionsRoutes,
+        mcpRoutes,
+        mcpPromptsRoutes,
+        pluginsRoutes,
+        commandsRoutes,
+      ].map((factory) => factory(this.identity, () => this.clientKind)),
     );
   }
   private notify = (method: string, params: unknown) => {

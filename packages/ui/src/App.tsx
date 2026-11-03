@@ -58,6 +58,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
     newSession,
     send,
     runPluginCommand,
+    prepareMcpSession,
     showChange,
     logout,
     loadingSession,
@@ -219,6 +220,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
             running={running}
             send={send}
             runPluginCommand={runPluginCommand}
+            prepareMcpSession={prepareMcpSession}
             loadingSession={loadingSession}
             empty={empty}
           />

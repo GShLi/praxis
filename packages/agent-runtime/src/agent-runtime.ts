@@ -61,7 +61,7 @@ export class AgentRuntime extends EventEmitter {
       return this.store.get(session.id, owner);
     });
   }
-  prompt(owner: string, raw: unknown) {
+  prompt(owner: string, raw: unknown, validate?: () => void) {
     const input = promptSchema.parse(raw);
     const session = this.store.get(input.sessionId, owner);
     assert(!this.closing, 'HOST_CLOSING', 'Host 正在退出。');
@@ -70,7 +70,7 @@ export class AgentRuntime extends EventEmitter {
       'COMMAND_ACTIVE',
       '插件命令执行期间请排队新任务，不能追加模型指导。',
     );
-    const accepted = this.store.accept(input, this.getTurn(session.id));
+    const accepted = this.store.accept(input, this.getTurn(session.id), validate);
     this.schedule(session.id);
     return accepted;
   }

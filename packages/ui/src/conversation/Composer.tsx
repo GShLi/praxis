@@ -1,3 +1,4 @@
+import { McpPrompts } from './McpPrompts.tsx';
 import { Icon } from '../Navigation.tsx';
 import { PluginCommands } from './PluginCommands.tsx';
 
@@ -23,6 +24,7 @@ export function Composer({
   running,
   send,
   runPluginCommand,
+  prepareMcpSession,
   loadingSession,
   empty,
 }: Pick<
@@ -46,6 +48,7 @@ export function Composer({
   | 'running'
   | 'send'
   | 'runPluginCommand'
+  | 'prepareMcpSession'
   | 'loadingSession'
   | 'empty'
 >) {
@@ -166,6 +169,17 @@ export function Composer({
             </button>
           ))}
         </div>
+      )}
+      {kind === 'agent' && client.mcpPrompts && (
+        <McpPrompts
+          client={client}
+          selected={selected}
+          prepareSession={prepareMcpSession}
+          providerId={providerId}
+          mode={inputMode}
+          turnId={snapshot?.turnId ?? null}
+          disabled={sending || loadingSession}
+        />
       )}
       {client.pluginCommands && client.runPluginCommand && (
         <PluginCommands
