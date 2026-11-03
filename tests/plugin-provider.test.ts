@@ -1,5 +1,5 @@
 import { AgentRuntime } from '@praxis/agent-runtime';
-import type { ModelConfig } from '@praxis/contracts';
+import { PraxisError, type ModelConfig } from '@praxis/contracts';
 import { PluginHost, type InstalledPlugin } from '@praxis/plugin-host';
 import { SessionStore, uuid } from '@praxis/storage-local';
 import assert from 'node:assert/strict';
@@ -200,6 +200,27 @@ test('plugin final response rejects credentials containing JSON escape character
     );
   } finally {
     await f.host.dispose();
+  }
+});
+
+test('plugins may report a sanitized overflow only before any raw output, including buffered deltas', async () => {
+  for (const partial of [false, true]) {
+    const f = await pluginClient({
+      async complete(input) {
+        if (partial) input.onDelta('x');
+        throw new PraxisError('MODEL_CONTEXT_OVERFLOW', 'private remote error text');
+      },
+    });
+    try {
+      await assert.rejects(f.model.complete(request()), (error: unknown) => {
+        assert.ok(error instanceof PraxisError);
+        assert.equal(error.code, partial ? 'PLUGIN_PROVIDER_FAILED' : 'MODEL_CONTEXT_OVERFLOW');
+        assert.ok(!error.message.includes('private remote'));
+        return true;
+      });
+    } finally {
+      await f.host.dispose();
+    }
   }
 });
 

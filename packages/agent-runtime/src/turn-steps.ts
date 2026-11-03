@@ -1,4 +1,4 @@
-import { ContextBuilder } from '@praxis/context';
+import { ContextBuilder, completeWithContextRecovery } from '@praxis/context';
 import type { Message, ModelConfig, Session, ToolDefinition } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import { SessionStore, uuid } from '@praxis/storage-local';
@@ -34,30 +34,11 @@ export class TurnSteps {
         '模型步骤预算已用完。',
       );
       this.store.claim(id, turn.id, false);
-      const fixed = await fixedPrompt(session, turn, this.store, this.options);
       turn.executor?.boundary();
       const tools = turn.executor?.definitions ?? [];
-      const messages = await context.build(id, fixed, tools, config, signal, () =>
-        this.consumeAttempt(turn),
-      );
-      this.consumeAttempt(turn);
-      this.attemptId = uuid();
-      this.partial = '';
       const stepId = uuid();
-      this.snapshot(session, turn, config, stepId, messages, tools);
       this.store.append(id, 'step/started', { turnId: turn.id, stepId, ordinal: turn.steps });
-      const response = await this.options.model.complete({
-        messages,
-        tools,
-        config,
-        signal,
-        purpose: session.kind === 'chat' ? 'chat_generation' : 'agent_step',
-        beforeRetry: () => this.consumeAttempt(turn),
-        onDelta: (text) => {
-          this.partial += text;
-          this.emit('delta', { sessionId: id, turnId: turn.id, attemptId: this.attemptId, text });
-        },
-      });
+      const response = await this.complete(session, turn, config, context, stepId, tools);
       signal.throwIfAborted();
       const message = { ...response.message, id: uuid() };
       validateResponse(message, session.kind);
@@ -69,6 +50,53 @@ export class TurnSteps {
       assert(turn.tools <= (this.options.maxTools ?? 200), 'BUDGET_EXHAUSTED', '工具预算已用完。');
       if (!message.toolCalls?.length && (await this.done(id, turn))) break;
     }
+  }
+  private complete(
+    session: Session,
+    turn: Active,
+    config: ModelConfig,
+    context: ContextBuilder,
+    stepId: string,
+    tools: ToolDefinition[],
+  ) {
+    return completeWithContextRecovery(this.options.model, async (force) => {
+      const fixed = await fixedPrompt(session, turn, this.store, this.options);
+      if (force)
+        this.store.append(session.id, 'context/overflow-recovery', { turnId: turn.id, stepId });
+      const messages = await context.build(
+        session.id,
+        fixed,
+        tools,
+        config,
+        turn.controller.signal,
+        () => this.consumeAttempt(turn),
+        force,
+      );
+      this.consumeAttempt(turn);
+      this.attemptId = uuid();
+      this.partial = '';
+      this.snapshot(session, turn, config, stepId, messages, tools);
+      return {
+        contextVersion: this.store.context(session.id).version,
+        request: {
+          messages,
+          tools,
+          config,
+          signal: turn.controller.signal,
+          purpose: session.kind === 'chat' ? 'chat_generation' : 'agent_step',
+          beforeRetry: () => this.consumeAttempt(turn),
+          onDelta: (text: string) => {
+            this.partial += text;
+            this.emit('delta', {
+              sessionId: session.id,
+              turnId: turn.id,
+              attemptId: this.attemptId,
+              text,
+            });
+          },
+        },
+      };
+    });
   }
   private snapshot(
     session: Session,

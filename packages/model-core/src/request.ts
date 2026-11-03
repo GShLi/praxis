@@ -1,6 +1,7 @@
 import { assert, PraxisError } from '@praxis/contracts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ModelRequest } from './types.ts';
+import { isOverflowResponse } from './overflow-error.ts';
 
 export async function requestCompletion(
   fetcher: typeof fetch,
@@ -35,7 +36,10 @@ export async function requestCompletion(
       Math.max(0, Number(response.headers.get('retry-after') ?? 0) * 1000),
     );
     // Error bodies may contain secrets echoed by gateways; never persist or display them.
-    await response.body?.cancel();
+    if (status === 400 || status === 422) {
+      if (await isOverflowResponse(response, signal))
+        throw new PraxisError('MODEL_CONTEXT_OVERFLOW', '模型明确报告输入超过上下文窗口。');
+    } else await response.body?.cancel();
     if ([408, 429, 500, 502, 503, 504].includes(status) && attempt < 2) {
       await delay(Math.max(retryAfter, 500 * 2 ** attempt), undefined, { signal });
       continue;

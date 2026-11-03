@@ -130,3 +130,8 @@
 
 - 模型输出修复：内置兼容接口与可信插件复用有界增量保护及最终响应检查，分片回显 Key 在发布前拒绝，reasoning 和解码工具 JSON 也不得携带当前厂商凭据。失败关闭 SSE reader，不把原始错误正文持久化；短文本和 Unicode 尾部完整发布。该检查针对当前已知凭据，不声称检测任意变换或未知秘密。
 - 本批验证：195 项核心测试全部通过（含真实 macOS Keychain）、27 项 PostgreSQL/HTTP/CLI 集成、结构/类型检查及全部应用构建通过。回归覆盖增量分片、JSON 转义、reasoning、工具参数和真实 AgentRuntime 落盘/事件边界，已有插件及取消测试保持通过。
+
+- 明确溢出下一切片：model-core 只从有界 JSON 错误体识别 error.code=context_length_exceeded，不匹配错误正文；普通 400/422 和未知网络错误不推断。context 的单次恢复协调器要求未发布增量、有效视图版本已前进；本地/Web 分别强制保留最新输入并压缩更老完整组，重新记录请求和预算后只重试一次。候选没有缩小输入时不提交。厂商信息依据：[DeepSeek 错误码](https://api-docs.deepseek.com/quick_start/error_codes/)仅把 400/422 列为格式/参数错误；[OpenAI 错误与恢复](https://developers.openai.com/api/docs/guides/agents-api/errors)列出 context_length_exceeded。此处是兼容适配器对明确机器码的识别，不假定所有 DeepSeek 400 都能自动恢复。
+
+- 明确溢出实现：错误体读取上限 16 KiB/5 秒，仅识别明确机器码并释放 reader；普通参数错误、截断流和网络未知结果不压缩重试。共享恢复协调器只允许未发布增量时重试一次，强制压缩须缩小输入且推进版本，保留最近用户输入和所有原始事实。插件即使只产生尚未发布的短增量，也不得再把错误转成可恢复溢出。
+- 本批验证：203 项核心测试全部通过（含真实 macOS Keychain）、29 项 PostgreSQL/HTTP/CLI 集成、结构/类型检查和全部应用构建通过。回归覆盖低于自动阈值的恢复、二次溢出、部分输出、未推进版本、不缩小候选、预算、错误体大小/格式/取消与 Web 两次请求快照。usage 校准和旧工具正文裁剪仍是上下文剩余项。

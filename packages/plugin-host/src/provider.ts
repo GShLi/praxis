@@ -75,18 +75,22 @@ class PluginModel implements ModelClient {
       async (signal) => {
         const stream = new ModelOutputGuard(request.config.apiKey, request.onDelta);
         let raw: unknown;
+        let received = false;
         try {
           raw = await this.client.complete({
             ...request,
             config: Object.freeze({ ...request.config }),
             signal,
             onDelta: (text) => {
+              received ||= text.length > 0;
               if (!signal.aborted) stream.push(text);
             },
           });
-        } catch {
+        } catch (error) {
           if (signal.aborted) throw signal.reason;
           if (stream.failure) throw stream.failure;
+          if (!received && error instanceof PraxisError && error.code === 'MODEL_CONTEXT_OVERFLOW')
+            throw new PraxisError('MODEL_CONTEXT_OVERFLOW', '模型适配器报告输入超过上下文窗口。');
           throw new PraxisError('PLUGIN_PROVIDER_FAILED', '插件模型调用失败，请检查适配器配置。');
         }
         signal.throwIfAborted();
