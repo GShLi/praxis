@@ -1,8 +1,8 @@
 {
   "apps/agent-host/src/identity.ts#bind:1": {
-    "maxLines": 69,
-    "reason": "bind 按身份顺序装配存储、运行时、插件和 MCP；clear 是对应统一释放路径，业务已委托服务。",
-    "validation": "client-lifecycle、runtime、plugins-mcp、mcp-client 测试及 CLI doctor"
+    "maxLines": 72,
+    "reason": "身份绑定按顺序装配资源；命令新增独立 profile 校验，clear 保持统一释放。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "apps/agent-host/src/sessions-rpc.ts#sessionsRoutes:1": {
     "maxLines": 163,
@@ -15,9 +15,9 @@
     "validation": "auth-http 测试、Server 构建"
   },
   "packages/agent-runtime/src/turn-executor.ts#run:1": {
-    "maxLines": 113,
-    "reason": "已有 turn 生命周期新增一次性模型适配器选择，step/压缩共用固定版本；未增加独立业务算法。",
-    "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
+    "maxLines": 100,
+    "reason": "turn 的 claim、执行、错误和 finally/checkpoint 保持同一生命周期；工具装配提取到 turn-tools，插件命令提取到 user-command。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "packages/chat-runtime/src/context.ts#buildChatContext:1": {
     "maxLines": 119,
@@ -75,9 +75,9 @@
     "validation": "permissions 的真实写入前审批、过期、取消、权限变化测试"
   },
   "packages/plugin-host/src/activation-scope.ts#activationScope:1": {
-    "maxLines": 107,
-    "reason": "PluginContext 注册表及私有暂存集合，激活窗口关闭后禁止继续注册；各贡献项只校验与入表。",
-    "validation": "plugins-mcp 激活失败回滚、名称冲突、卸载与能力声明测试"
+    "maxLines": 118,
+    "reason": "插件注册表在单一作用域原子接纳/回滚；新增命令 schema 与执行包装，不承担命令调度。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "packages/schema/src/compile.ts#compileSchema:1": {
     "maxLines": 161,
@@ -135,9 +135,9 @@
     "validation": "mcp-client/model-catalog 的 DNS、重定向、私网拒绝、超时/取消测试"
   },
   "packages/ui/src/App.tsx#App:1": {
-    "maxLines": 223,
-    "reason": "主视图组合和明确组件 props，状态与网络均由 hooks/client 管理；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
+    "maxLines": 225,
+    "reason": "连续应用装配 JSX；新增命令回调只传给 Composer，不在视图执行业务。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/Navigation.tsx#AppRail:1": {
     "maxLines": 131,
@@ -155,9 +155,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/app/useAppController.ts#useAppController:1": {
-    "maxLines": 213,
-    "reason": "页面状态协调与对外控制合同；身份/列表、导航、订阅已各自抽离，发送、新会话、变更预览各操作小于阈值，不含传输实现。",
-    "validation": "TS、UI 浏览器样例和 Web/Desktop 构建"
+    "maxLines": 217,
+    "reason": "应用选择与 UI 状态协调；提交门闩和创建会话提取 useSessionSubmission，插件参数表单有独立 Hook。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useConversationSubscription:1": {
     "maxLines": 78,
@@ -185,9 +185,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/Composer.tsx#Composer:1": {
-    "maxLines": 170,
-    "reason": "连续输入区 JSX，模型选择/队列模式/取消控件展示；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
+    "maxLines": 180,
+    "reason": "连续输入区 JSX，插件命令表单及异步状态由独立组件/Hook 管理。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
   },
   "packages/ui/src/conversation/Conversation.tsx#Conversation:1": {
     "maxLines": 90,
@@ -348,5 +348,30 @@
     "maxLines": 65,
     "reason": "高级设置的连续 JSX，增加用户选择插件适配器；不包含 I/O 或异步状态。",
     "validation": "plugin-provider、model-catalog、真实 PostgreSQL adapter/Key 版本测试、类型检查与应用构建。"
+  },
+  "apps/cli/src/run-cli.ts#runCli:1": {
+    "maxLines": 65,
+    "reason": "CLI 命令分发与 Host try/finally 生命周期，具体会话与插件业务已分离。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+  },
+  "packages/ui/src/conversation/PluginCommands.tsx#PluginCommands:1": {
+    "maxLines": 81,
+    "reason": "单个连续命令表单 JSX；异步列表、参数解析和提交在 usePluginCommands。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+  },
+  "packages/ui/src/conversation/usePluginCommands.ts#usePluginCommands:1": {
+    "maxLines": 76,
+    "reason": "命令弹层状态、异步目录过期保护与一次提交生命周期，全部状态属于本 Hook。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+  },
+  "tests/plugin-command.test.ts#test(a user command writes through core tools once, without a model, and retains its receipt):1": {
+    "maxLines": 63,
+    "reason": "真实插件与临时工作区的测试生命周期，覆盖去重、工具执行、取消后撤权、只读限制与清理。",
+    "validation": "plugin-command 核心测试、真实 CLI/HTTP/PostgreSQL 集成、结构/类型检查与应用构建。"
+  },
+  "tests/integration/plugin-command.test.ts#test(CLI authenticates over HTTP, reloads an installed command and creates a real file without model configuration):1": {
+    "maxLines": 76,
+    "reason": "真实隔离 PostgreSQL、HTTP、Host 安装启用与子进程 CLI 的单一端到端场景；所有资源在 finally 释放。",
+    "validation": "真实 PostgreSQL 集成 10 项通过，包括无厂商配置执行插件命令。"
   }
 }

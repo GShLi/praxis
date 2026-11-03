@@ -12,6 +12,10 @@ export interface PluginTool {
   parameters: JsonSchema;
   execute(input: unknown, services: PluginServices): Promise<unknown>;
 }
+export interface PluginCommand {
+  parameters: JsonSchema;
+  execute(input: unknown, services: PluginServices): Promise<unknown>;
+}
 export interface PluginHookContext {
   readonly signal: AbortSignal;
   readonly sessionId: string;
@@ -26,6 +30,7 @@ export interface PluginContext {
   registerCommand(
     name: string,
     command: (input: unknown, services: PluginServices) => Promise<unknown>,
+    parameters?: JsonSchema,
   ): void;
   contributeContext(contributor: (context: PluginHookContext) => Promise<string>): void;
   beforeExecute(check: (tool: string, input: unknown) => Promise<'deny' | 'ask' | 'pass'>): void;

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { descriptions, ids } from './definitions.ts';
 import { executeFilesTool } from './files-tools.ts';
 import { WorkspaceFiles } from './files.ts';
-import { invokePlugin } from './invoke-plugin.ts';
+import { delegatedServices, invokePlugin } from './invoke-plugin.ts';
 import { readPlan } from './plan.ts';
 import { checkPluginPolicies } from './plugin-policy.ts';
 import { executeProcessesTool } from './processes-tools.ts';
@@ -20,6 +20,9 @@ import type { Ask, ProcessService, ToolExtension } from './types.ts';
 export class ToolExecutor {
   private readonly coreDefinitions: ToolDefinition[];
   private extensionDefinitions = new Map<string, ToolDefinition>();
+  private lifetime = new AbortController();
+  private pending = new Set<Promise<unknown>>();
+  private closing: Promise<void> | undefined;
   get definitions() {
     return [...this.coreDefinitions, ...this.extensionDefinitions.values()];
   }
@@ -62,7 +65,18 @@ export class ToolExecutor {
     }
     this.extensionDefinitions = next;
   }
-  async execute(call: ToolCall, callId: string, signal: AbortSignal): Promise<ToolResult> {
+  execute(call: ToolCall, callId: string, signal: AbortSignal): Promise<ToolResult> {
+    return this.track(this.run(call, callId, AbortSignal.any([signal, this.lifetime.signal])));
+  }
+  private track<T>(operation: Promise<T>): Promise<T> {
+    this.pending.add(operation);
+    void operation.then(
+      () => this.pending.delete(operation),
+      () => this.pending.delete(operation),
+    );
+    return operation;
+  }
+  private async run(call: ToolCall, callId: string, signal: AbortSignal): Promise<ToolResult> {
     const started = performance.now();
     let effect = false;
     const result: ToolResult = {
@@ -89,13 +103,8 @@ export class ToolExecutor {
         result.data = await invokePlugin(
           plugin,
           call,
-          callId,
           raw,
-          signal,
-          this.sessionId,
-          this.store,
-          this.execute.bind(this),
-          this.consumeDelegatedTool,
+          this.delegate(plugin.manifest.id, callId, signal),
         );
         result.effectState = 'unknown';
         result.durationMs = Math.round(performance.now() - started);
@@ -193,8 +202,29 @@ export class ToolExecutor {
   plan() {
     return readPlan(this.store, this.sessionId);
   }
-  async close() {
+  delegate(pluginId: string, callId: string, signal: AbortSignal) {
+    const services = delegatedServices(
+      pluginId,
+      callId,
+      AbortSignal.any([signal, this.lifetime.signal]),
+      this.sessionId,
+      this.store,
+      this.execute.bind(this),
+      this.consumeDelegatedTool,
+    );
+    return {
+      ...services,
+      invokeCore: (name: string, args: Record<string, unknown>) =>
+        this.track(services.invokeCore(name, args)),
+    };
+  }
+  close(): Promise<void> {
+    return (this.closing ??= this.drain());
+  }
+  private async drain() {
+    this.lifetime.abort();
     const closed = await Promise.allSettled([this.extension?.close(), this.processes?.close()]);
+    await Promise.allSettled([...this.pending]);
     for (const result of closed) if (result.status === 'rejected') throw result.reason;
   }
 }

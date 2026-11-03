@@ -5,17 +5,24 @@ import { schemas } from './schemas.ts';
 export async function invokePlugin(
   plugin: ActivePlugin,
   call: ToolCall,
-  callId: string,
   raw: unknown,
+  services: ReturnType<typeof delegatedServices>,
+) {
+  return await plugin.tools.get(call.name)!.execute(raw, services);
+}
+export function delegatedServices(
+  pluginId: string,
+  callId: string,
   signal: AbortSignal,
   sessionId: string,
   store: Pick<SessionStore, 'append'>,
   execute: (call: ToolCall, id: string, signal: AbortSignal) => Promise<ToolResult>,
   consume?: () => void,
 ) {
-  return await plugin.tools.get(call.name)!.execute(raw, {
+  return {
     signal,
-    invokeCore: async (name, args) => {
+    invokeCore: async (name: string, args: Record<string, unknown>) => {
+      signal.throwIfAborted();
       assert(
         Object.hasOwn(schemas, name),
         'TOOL_NOT_AVAILABLE',
@@ -24,7 +31,7 @@ export async function invokePlugin(
       consume?.();
       const delegatedId = uuid();
       store.append(sessionId, 'plugin/tool-intent', {
-        pluginId: plugin.manifest.id,
+        pluginId,
         parentCallId: callId,
         delegatedId,
         name,
@@ -37,10 +44,10 @@ export async function invokePlugin(
       store.append(
         sessionId,
         'plugin/tool-result',
-        { pluginId: plugin.manifest.id, parentCallId: callId, result: value },
+        { pluginId, parentCallId: callId, result: value },
         'tool',
       );
       return value;
     },
-  });
+  };
 }

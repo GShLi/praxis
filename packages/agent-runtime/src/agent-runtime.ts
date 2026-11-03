@@ -1,4 +1,5 @@
-import { assert, promptSchema } from '@praxis/contracts';
+import { assert, promptSchema, userCommandSchema } from '@praxis/contracts';
+import { findPluginCommand } from '@praxis/plugin-host';
 import { ApprovalGate } from '@praxis/permissions';
 import { SessionStore, uuid } from '@praxis/storage-local';
 import { EventEmitter } from 'node:events';
@@ -49,7 +50,32 @@ export class AgentRuntime extends EventEmitter {
     const input = promptSchema.parse(raw);
     const session = this.store.get(input.sessionId, owner);
     assert(!this.closing, 'HOST_CLOSING', 'Host 正在退出。');
+    assert(
+      input.mode !== 'steer' || !this.active.get(session.id)?.command,
+      'COMMAND_ACTIVE',
+      '插件命令执行期间请排队新任务，不能追加模型指导。',
+    );
     const accepted = this.store.accept(input, this.getTurn(session.id));
+    this.schedule(session.id);
+    return accepted;
+  }
+  command(owner: string, raw: unknown) {
+    const input = userCommandSchema.parse(raw);
+    const session = this.store.get(input.sessionId, owner);
+    assert(!this.closing, 'HOST_CLOSING', 'Host 正在退出。');
+    const accepted = this.store.accept(
+      {
+        sessionId: input.sessionId,
+        requestId: input.requestId,
+        text: `用户执行插件命令 ${input.pluginId}/${input.name}`,
+        mode: 'queue',
+        command: input,
+      },
+      this.getTurn(session.id),
+      () => {
+        findPluginCommand(this.options.plugins?.(session.kind) ?? [], input);
+      },
+    );
     this.schedule(session.id);
     return accepted;
   }
@@ -69,6 +95,9 @@ export class AgentRuntime extends EventEmitter {
       steps: 0,
       attempts: 0,
       tools: 0,
+      command: Boolean(
+        this.store.inputs(id, 'pending').find((input) => input.mode === 'queue')?.command,
+      ),
       deadline:
         Date.now() +
         Math.min(

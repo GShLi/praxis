@@ -10,6 +10,8 @@ const allowed = new Set([
   'plugin/inspect',
   'plugin/install',
   'plugin/set-enabled',
+  'plugin/commands',
+  'plugin/run-command',
   'mcp/server-list',
   'mcp/server-upsert',
   'mcp/server-disable',

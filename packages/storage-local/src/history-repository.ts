@@ -1,4 +1,4 @@
-import type { Message } from '@praxis/contracts';
+import type { Message, Event } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import { uuid } from './identity.ts';
 import type { StoreAccess } from './store-access.ts';
@@ -24,6 +24,32 @@ export class HistoryRepository {
         .prepare('SELECT document FROM messages WHERE session_id=? ORDER BY ordinal')
         .all(id) as Row[]
     ).map((r) => JSON.parse(String(r.document)) as Message);
+  }
+  timeline(id: string): Message[] {
+    const rows = this.store.db
+      .prepare(
+        "SELECT document FROM events WHERE session_id=? AND (json_extract(document,'$.type') LIKE '%/message' OR json_extract(document,'$.type') IN ('plugin/tool-result','plugin/command-result')) ORDER BY seq",
+      )
+      .all(id) as Row[];
+    return rows.flatMap((row) => {
+      const event = JSON.parse(String(row.document)) as Event;
+      if (event.type.endsWith('/message')) return [event.payload.message as Message];
+      const result =
+        event.type === 'plugin/tool-result'
+          ? event.payload.result
+          : {
+              callId: event.eventId,
+              toolId: `${String(event.payload.pluginId)}/${String(event.payload.name)}`,
+              toolVersion: 1,
+              status: 'succeeded',
+              effectState: 'unknown',
+              artifactIds: [event.payload.artifactId],
+              truncated: event.payload.truncated,
+              durationMs: 0,
+              data: { preview: event.payload.preview },
+            };
+      return [{ id: event.eventId, role: 'tool' as const, content: JSON.stringify(result) }];
+    });
   }
   context(id: string): {
     version: number;

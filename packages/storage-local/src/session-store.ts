@@ -148,6 +148,9 @@ export class SessionStore extends EventEmitter {
   messages(...args: Parameters<HistoryRepository['messages']>) {
     return this.historyRepository.messages(...args);
   }
+  timeline(id: string) {
+    return this.historyRepository.timeline(id);
+  }
   context(...args: Parameters<HistoryRepository['context']>) {
     return this.historyRepository.context(...args);
   }

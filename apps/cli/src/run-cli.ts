@@ -9,9 +9,14 @@ import { CliSession } from './session.ts';
 export async function runCli() {
   const { values, positionals } = parseOptions();
   const command = positionals[0] ?? 'help';
+  assert(
+    !(values.prompt && values.command),
+    'INVALID_COMMAND',
+    '--prompt 与 --command 不能同时使用。',
+  );
   if (values.help || command === 'help') {
     console.log(
-      '知行 Praxis\n\npnpm cli doctor\npnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_ID]\npnpm cli sessions\npnpm cli providers\npnpm cli plugins [list|inspect PATH|install PATH --digest SHA256|enable ID|disable ID]\npnpm cli mcp [list|import FILE|test ID|enable ID|disable ID]\n\n配置 PRAXIS_SERVER_URL 和 PRAXIS_API_KEY；厂商 Key 在统一模型设置中填写。\n交互命令：/cancel、/steer 内容、/queue 内容、/exit。Ctrl-C 请求取消，再按一次退出。',
+      '知行 Praxis\n\npnpm cli doctor\npnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_ID]\npnpm cli sessions\npnpm cli providers\npnpm cli plugins [list|inspect PATH|install PATH --digest SHA256|enable ID|disable ID]\npnpm cli mcp [list|import FILE|test ID|enable ID|disable ID]\n\n配置 PRAXIS_SERVER_URL 和 PRAXIS_API_KEY；厂商 Key 在统一模型设置中填写。\n插件命令：--command 插件ID/命令名 [--arguments JSON]。\n交互命令：/commands、/command 插件ID/命令名 JSON、/cancel、/steer 内容、/queue 内容、/exit。Ctrl-C 请求取消，再按一次退出。',
     );
     return;
   }
@@ -38,7 +43,7 @@ export async function runCli() {
       serverUrl,
       praxisApiKey,
       ...(values.provider ? { providerId: values.provider } : {}),
-      interactive: Boolean(process.stdin.isTTY && !values.prompt),
+      interactive: Boolean(process.stdin.isTTY && !values.prompt && !values.command),
     });
     if (command === 'plugins') {
       await pluginCommand(host, values, positionals);

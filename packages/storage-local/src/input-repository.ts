@@ -1,4 +1,4 @@
-import type { Prompt } from '@praxis/contracts';
+import type { Prompt, UserCommand } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import { hash, uuid } from './identity.ts';
 import type { StoreAccess } from './store-access.ts';
@@ -8,8 +8,9 @@ export class InputRepository {
     private store: Pick<StoreAccess, 'transaction' | 'db' | 'get' | 'append' | 'message'>,
   ) {}
   accept(
-    prompt: Prompt,
+    prompt: Prompt & { command?: UserCommand },
     activeTurn?: string,
+    validate?: () => void,
   ): { accepted: true; inputId: string; acceptedSeq: number } {
     const digest = hash(JSON.stringify(prompt));
     return this.store.transaction(() => {
@@ -25,6 +26,7 @@ export class InputRepository {
         };
       }
       const session = this.store.get(prompt.sessionId);
+      validate?.();
       assert(!session.archived, 'SESSION_ARCHIVED', '归档会话不能接收新任务。');
       assert(
         !prompt.expectedTurnId || prompt.expectedTurnId === activeTurn,

@@ -57,6 +57,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
     running,
     newSession,
     send,
+    runPluginCommand,
     showChange,
     logout,
     loadingSession,
@@ -217,6 +218,7 @@ export function App({ client: injected }: { client?: PraxisClient }) {
             fail={fail}
             running={running}
             send={send}
+            runPluginCommand={runPluginCommand}
             loadingSession={loadingSession}
             empty={empty}
           />

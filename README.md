@@ -102,3 +102,9 @@ pnpm cli mcp disable SERVER_ID
 ```
 
 使用 `pnpm cli run --workspace /absolute/path/project` 进入交互模式才能确认 MCP 业务调用；非交互运行在需要审批时返回明确错误。资源 URI 只交给远端 MCP 服务处理，不直接读取 Host 文件或访问任意 URL；文本保存为会话快照，二进制明确标为不支持。stdio、Bearer/OAuth、提示词及 MRTR 表单续交尚未接入。详见 [实现记录](docs/implementation.md)。
+
+## 用户主动执行插件命令
+
+可信插件可以注册 `registerCommand(name, callback, parameters)`；第三个参数为 JSON Schema，省略时只接受空对象。命令仅在用户明确选择时执行，不暴露为模型工具。桌面端输入框旁的“插件命令”可选择命令、查看参数结构并提交；CLI 交互使用 `/commands` 和 `/command 插件ID/命令名 {"参数":"值"}`，非交互使用 `pnpm cli run --workspace /path/to/project --command 插件ID/命令名 --arguments '{"参数":"值"}'`。
+
+命令需要有效 Praxis 身份，不需要模型厂商配置；每次提交使用请求 ID 去重，并保存命令身份、委托工具记录和结果产物。Agent 命令通过 `services.invokeCore` 使用原有权限、预算和审批通道；Chat 命令不能取得 Agent 工具。单次命令限时 120 秒，取消或退出后撤销本次委托能力。插件仍是用户信任的本地代码，不构成隔离边界；服务端 Web 暂不开放用户命令插件安装。

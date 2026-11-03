@@ -44,7 +44,7 @@ export function sessionsRoutes(
       const session = store.get(input.sessionId, owner);
       return {
         session,
-        messages: store.messages(session.id),
+        messages: store.timeline(session.id),
         suspended: store.inputs(session.id, 'suspended'),
         contextVersion: store.context(session.id).version,
         throughSeq: session.latestSeq,

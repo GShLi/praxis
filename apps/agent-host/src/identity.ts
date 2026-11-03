@@ -107,6 +107,9 @@ export class HostIdentity {
         model: new DeepSeekClient(),
         interactive: input.interactive,
         beginUse: (_owner, signal) => candidate.beginUse(this.selectedProvider, signal),
+        authorizeCommand: async (_owner, signal) => {
+          await candidate.profile(signal);
+        },
         protectedPaths: [baseData, commonData],
         plugins: (kind) => this.pluginHosts?.[kind].snapshot() ?? [],
         toolExtension: (session, config, approve, signal) =>

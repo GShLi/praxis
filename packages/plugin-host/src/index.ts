@@ -7,3 +7,4 @@ export type { ActivePlugin } from './types.ts';
 export { pluginContext, finishPluginTurn } from './turn-hooks.ts';
 export type { HookBudgets } from './turn-hooks.ts';
 export { resolvePluginModel } from './provider.ts';
+export { findPluginCommand, invokeUserCommand } from './user-command.ts';

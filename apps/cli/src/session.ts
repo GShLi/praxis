@@ -38,13 +38,15 @@ export class CliSession {
       sessionId: this.sessionId,
       afterSeq: previous.throughSeq,
     });
-    if (this.values.prompt) {
-      await this.send(this.values.prompt);
+    if (this.values.prompt || this.values.command) {
+      if (this.values.command)
+        await this.input(`/command ${this.values.command} ${this.values.arguments ?? '{}'}`);
+      else await this.send(this.values.prompt!);
       if (!this.finished && !this.closed)
         await new Promise<void>((resolve) => this.finishWaiters.push(resolve));
       return;
     }
-    assert(process.stdin.isTTY, 'TTY_REQUIRED', '非交互运行请提供 --prompt。');
+    assert(process.stdin.isTTY, 'TTY_REQUIRED', '非交互运行请提供 --prompt 或 --command。');
     console.log(`Praxis · ${this.sessionId}\n输入任务，/exit 退出。`);
     this.terminal = createInterface({
       input: process.stdin,
@@ -71,6 +73,26 @@ export class CliSession {
       return;
     }
     if (await this.interaction.respond(line)) return;
+    if (line === '/commands') {
+      console.log(
+        JSON.stringify(await this.host.rpc.request('plugin/commands', { kind: 'agent' }), null, 2),
+      );
+      return;
+    }
+    if (line.startsWith('/command ')) {
+      const match = /^\/command ([^/\s]+)\/([^\s]+)(?:\s+([\s\S]+))?$/.exec(line);
+      assert(match, 'INVALID_COMMAND', '格式：/command 插件ID/命令名 {"参数":"值"}');
+      this.finished = false;
+      await this.host.rpc.request('plugin/run-command', {
+        sessionId: this.sessionId,
+        requestId: randomUUID(),
+        pluginId: match[1],
+        name: match[2],
+        arguments: JSON.parse(match[3] ?? '{}'),
+      });
+      if (!this.finished) this.active = true;
+      return;
+    }
     if (line.startsWith('/steer ')) await this.send(line.slice(7), 'steer');
     else await this.send(line.startsWith('/queue ') ? line.slice(7) : line);
   }
@@ -112,6 +134,10 @@ export class CliSession {
       this.interrupted = false;
     }
     this.interaction.event(event);
+    if (event.type === 'plugin/command-result' && !this.values.json)
+      console.log(
+        `\n[插件命令 ${String(event.payload.name)}]\n${String(event.payload.preview)}\n产物：${String(event.payload.artifactId)}`,
+      );
     if (event.type === 'tool/result' && !this.values.json) {
       const result = event.payload.result;
       if (result && typeof result === 'object' && 'toolId' in result && 'status' in result)

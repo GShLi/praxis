@@ -1,4 +1,6 @@
+import type { UserCommand } from '@praxis/contracts';
 export interface InputRow {
+  command?: UserCommand;
   id: string;
   sessionId: string;
   requestId: string;

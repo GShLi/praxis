@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react';
+import type { UserCommand } from '@praxis/contracts';
 import { useEffect, useRef, useState } from 'react';
 import type { PraxisClient, Snapshot, ViewSession } from '../client-types.ts';
 import { LocalClient } from '../clients/LocalClient.ts';
@@ -6,6 +7,7 @@ import { WebClient } from '../clients/WebClient.ts';
 import { useConversationSubscription } from './useConversationSubscription.ts';
 import { useIdentity } from './useIdentity.ts';
 import { useShell } from './useShell.ts';
+import { useSessionSubmission } from './useSessionSubmission.ts';
 
 import type { Question } from '../conversation/types.ts';
 export function useAppController(injected?: PraxisClient) {
@@ -17,7 +19,6 @@ export function useAppController(injected?: PraxisClient) {
     [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState(''),
     [partial, setPartial] = useState(''),
-    [sending, setSending] = useState(false),
     [error, setError] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0),
     [workspace, setWorkspace] = useState('');
@@ -55,6 +56,14 @@ export function useAppController(injected?: PraxisClient) {
     openSettings,
     closeSettings,
   } = useShell(authenticated);
+  const { sending, submit } = useSessionSubmission(
+    client,
+    kind,
+    selected,
+    workspace,
+    setSelected,
+    reloadLists,
+  );
   useEffect(() => {
     const field = input.current;
     if (field) {
@@ -114,23 +123,14 @@ export function useAppController(injected?: PraxisClient) {
       return;
     }
     const text = draft.trim();
-    setSending(true);
     setError('');
     try {
-      let id = selected;
-      if (!id) {
-        const created = await client.create(kind, workspace || undefined);
-        id = created.id;
-        setSelected(id);
-      }
-      await client.send(id, text, providerId, inputMode, snapshot?.turnId ?? null);
+      await submit((id) => client.send(id, text, providerId, inputMode, snapshot?.turnId ?? null));
       setDraft('');
       setFollow(true);
-      await reloadLists();
     } catch (e) {
       fail(e);
     } finally {
-      setSending(false);
       input.current?.focus();
     }
   }
@@ -145,6 +145,11 @@ export function useAppController(injected?: PraxisClient) {
     } catch (e) {
       fail(e);
     }
+  };
+  const runPluginCommand = async (command: Omit<UserCommand, 'sessionId' | 'requestId'>) => {
+    const run = client.runPluginCommand?.bind(client);
+    if (!run) throw new Error('当前客户端不能执行插件命令。');
+    await submit((id) => run({ ...command, sessionId: id, requestId: crypto.randomUUID() }));
   };
   const logout = async () => {
     await client.logout();
@@ -214,6 +219,7 @@ export function useAppController(injected?: PraxisClient) {
     running,
     newSession,
     send,
+    runPluginCommand,
     showChange,
     logout,
     loadingSession,

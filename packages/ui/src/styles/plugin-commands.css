@@ -1,0 +1,36 @@
+.plugin-commands {
+  margin-top: 8px;
+}
+.plugin-command-panel {
+  margin-top: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.plugin-command-panel label {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+.plugin-command-panel textarea,
+.plugin-command-panel select {
+  width: 100%;
+  padding: 8px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.plugin-command-panel textarea {
+  resize: vertical;
+  font-family: monospace;
+}
+.plugin-command-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.plugin-command-panel p {
+  font-size: 13px;
+}

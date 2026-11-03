@@ -9,6 +9,7 @@ import { ToolExecutor } from '@praxis/tools';
 export interface RuntimeOptions {
   model: ModelClient;
   beginUse: (owner: string, signal: AbortSignal) => Promise<ModelConfig>;
+  authorizeCommand?: (owner: string, signal: AbortSignal) => Promise<void>;
   interactive?: boolean;
   protectedPaths?: string[];
   plugins?: (kind: 'chat' | 'agent') => readonly ActivePlugin[];
@@ -30,6 +31,7 @@ export interface RuntimeOptions {
 }
 
 export interface Active {
+  command?: boolean;
   id: string;
   controller: AbortController;
   done: Promise<void>;

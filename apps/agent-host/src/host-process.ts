@@ -9,6 +9,7 @@ import { providersRoutes } from './providers-rpc.ts';
 import type { RpcRoutes } from './rpc-schema.ts';
 import { noArgs } from './rpc-schema.ts';
 import { sessionsRoutes } from './sessions-rpc.ts';
+import { commandsRoutes } from './commands-rpc.ts';
 
 /** Owns process listeners, timers and the authenticated resource scope. */
 export class HostProcess {
@@ -29,8 +30,8 @@ export class HostProcess {
     );
     this.routes = Object.assign(
       {},
-      ...[providersRoutes, sessionsRoutes, mcpRoutes, pluginsRoutes].map((factory) =>
-        factory(this.identity, () => this.clientKind),
+      ...[providersRoutes, sessionsRoutes, mcpRoutes, pluginsRoutes, commandsRoutes].map(
+        (factory) => factory(this.identity, () => this.clientKind),
       ),
     );
   }

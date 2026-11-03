@@ -8,6 +8,8 @@ export function parseOptions() {
       provider: { type: 'string' },
       resume: { type: 'string' },
       prompt: { type: 'string' },
+      command: { type: 'string' },
+      arguments: { type: 'string' },
       digest: { type: 'string' },
       json: { type: 'boolean' },
       'read-only': { type: 'boolean' },

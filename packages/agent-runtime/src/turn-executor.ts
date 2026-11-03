@@ -9,12 +9,12 @@ import {
 } from '@praxis/contracts';
 import { ApprovalGate } from '@praxis/permissions';
 import { SessionStore } from '@praxis/storage-local';
-import { ToolExecutor } from '@praxis/tools';
-import { WorkspaceFiles } from '@praxis/tools/files';
+import { createTurnTools } from './turn-tools.ts';
 import { realpath } from 'node:fs/promises';
 import { QuestionGate } from './questions.ts';
 import { TurnSteps } from './turn-steps.ts';
 import type { Active, RuntimeOptions } from './types.ts';
+import { executeUserCommand } from './user-command.ts';
 export class TurnExecutor {
   private workspaceOwners = new Map<string, string>();
   constructor(
@@ -40,58 +40,45 @@ export class TurnExecutor {
       Math.max(1, turn.deadline - Date.now()),
     );
     try {
-      const config = await this.options.beginUse(session.ownerUserId, signal);
+      if (turn.command) await this.options.authorizeCommand?.(session.ownerUserId, signal);
+      const config = turn.command
+        ? undefined
+        : await this.options.beginUse(session.ownerUserId, signal);
       signal.throwIfAborted();
-      const provider = resolvePluginModel(plugins, config, this.options.model);
-      turn.providerDescriptor = provider.descriptor;
-      steps = new TurnSteps(this.store, { ...this.options, model: provider.model }, this.emit);
+      if (config) {
+        const provider = resolvePluginModel(plugins, config, this.options.model);
+        turn.providerDescriptor = provider.descriptor;
+        steps = new TurnSteps(this.store, { ...this.options, model: provider.model }, this.emit);
+      }
       if (session.kind === 'agent') {
         workspace = await realpath(session.workspace!);
         assert(!this.workspaceOwners.has(workspace), 'WORKSPACE_BUSY', '此工作区已有活动执行。');
         this.workspaceOwners.set(workspace, id);
         workspaceLease = await this.options.acquireWorkspace?.(workspace, signal);
         workspaceLease?.onLost(() => turn.controller.abort());
-        const files = await WorkspaceFiles.open(
-          workspace,
-          (kind, text) => this.store.artifact(id, kind, text),
-          this.options.protectedPaths,
-          () =>
-            assert(
-              this.store.get(id).permission.mode === 'workspace-write',
-              'ACCESS_DENIED',
-              '当前权限禁止写入。',
-            ),
-        );
-        turn.executor = new ToolExecutor(
-          id,
+        turn.executor = await createTurnTools(
           this.store,
-          files,
-          this.questions.ask(id, turn),
-          this.options.processes?.(session, this.store),
+          this.options,
+          session,
+          turn,
+          workspace,
           plugins,
-          this.approvals.forTurn(id, turn.id),
-          () => {
-            signal.throwIfAborted();
-            assert(
-              ++turn.tools <= (this.options.maxTools ?? 200),
-              'BUDGET_EXHAUSTED',
-              '工具预算已用完。',
-            );
-          },
-          await this.options.toolExtension?.(
-            session,
-            config,
-            this.approvals.forTurn(id, turn.id),
-            signal,
-          ),
+          this.questions,
+          this.approvals,
+          config,
         );
       }
       signal.throwIfAborted();
-      turn.pluginContext = await pluginContext(plugins, session, signal);
+      if (!turn.command) turn.pluginContext = await pluginContext(plugins, session, signal);
       const inputs = this.claim(session, turn, config);
       if (!inputs.length) return;
       claimed = true;
-      await steps.run(session, turn, config);
+      const command = inputs[0]?.command;
+      if (command) await executeUserCommand(this.store, turn, command, plugins);
+      else {
+        assert(steps && config, 'TURN_INPUT_CONFLICT', '任务输入与执行方式不匹配。');
+        await steps.run(session, turn, config);
+      }
     } catch (error) {
       terminal = signal.aborted ? 'cancelled' : 'failed';
       if (steps?.partial)
@@ -137,7 +124,7 @@ export class TurnExecutor {
         });
     }
   }
-  private claim(session: Session, turn: Active, config: ModelConfig) {
+  private claim(session: Session, turn: Active, config?: ModelConfig) {
     const id = session.id;
     return this.store.transaction(() => {
       const inputs = this.store.claim(id, turn.id, true);
@@ -149,8 +136,9 @@ export class TurnExecutor {
       this.store.append(id, 'turn/started', {
         turnId: turn.id,
         inputIds: inputs.map((i) => i.id),
-        providerId: config.id,
-        configRevision: config.revision,
+        providerId: config?.id ?? null,
+        configRevision: config?.revision ?? null,
+        kind: turn.command ? 'plugin-command' : 'model',
       });
       return inputs;
     });

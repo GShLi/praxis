@@ -30,3 +30,5 @@ export {
   deltaSchema,
 } from './interaction.ts';
 export type { PendingQuestion, QuestionAnswer } from './interaction.ts';
+export { userCommandSchema } from './user-command.ts';
+export type { UserCommand } from './user-command.ts';

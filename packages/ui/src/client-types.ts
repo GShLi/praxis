@@ -1,4 +1,4 @@
-import type { Event } from '@praxis/contracts';
+import type { Event, UserCommand } from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type { ApprovalRequest } from '@praxis/permissions';
 
@@ -55,6 +55,8 @@ export type HostMethod =
   | 'plugin/inspect'
   | 'plugin/install'
   | 'plugin/set-enabled'
+  | 'plugin/commands'
+  | 'plugin/run-command'
   | 'mcp/server-list'
   | 'mcp/server-upsert'
   | 'mcp/server-disable'
@@ -149,6 +151,12 @@ export interface McpTestResult {
 }
 
 export interface PraxisClient {
+  pluginCommands?(
+    kind: 'chat' | 'agent',
+  ): Promise<
+    Array<{ pluginId: string; version: string; name: string; parameters: Record<string, unknown> }>
+  >;
+  runPluginCommand?(input: UserCommand): Promise<void>;
   respondApproval?(input: {
     sessionId: string;
     turnId: string;

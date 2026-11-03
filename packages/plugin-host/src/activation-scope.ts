@@ -1,6 +1,6 @@
 import { assert } from '@praxis/contracts';
 import type { ModelClient } from '@praxis/model-core';
-import type { PluginContext, PluginTool } from '@praxis/plugin-sdk';
+import type { PluginCommand, PluginContext, PluginTool } from '@praxis/plugin-sdk';
 import { compileSchema } from '@praxis/schema';
 import type { InstalledPlugin, Manifest } from './manifest.ts';
 import type { ActivePlugin } from './types.ts';
@@ -15,7 +15,7 @@ export function activationScope(
   const cleanups: Array<() => void | Promise<void>> = [];
   const tools = new Map<string, PluginTool>(),
     providers = new Map<string, ModelClient>(),
-    commands = new Map<string, Parameters<PluginContext['registerCommand']>[1]>();
+    commands = new Map<string, PluginCommand>();
   const checks: ActivePlugin['checks'] = [],
     contributors: ActivePlugin['contributors'] = [],
     finished: ActivePlugin['finished'] = [];
@@ -71,14 +71,25 @@ export function activationScope(
       );
       providers.set(id, provider);
     },
-    registerCommand: (name, command) => {
+    registerCommand: (
+      name,
+      command,
+      parameters = { type: 'object', additionalProperties: false },
+    ) => {
       capability('user-command');
       unique(
         name,
         commands,
         active().map((p) => p.commands),
       );
-      commands.set(name, command);
+      const schema = compileSchema(parameters);
+      commands.set(name, {
+        parameters: schema.schema,
+        execute: (input, services) => {
+          schema.validate(input);
+          return command(input, services);
+        },
+      });
     },
     beforeExecute: (check) => {
       capability('policy-check');

@@ -1,5 +1,5 @@
 import type { ModelClient } from '@praxis/model-core';
-import type { PluginContext, PluginTool } from '@praxis/plugin-sdk';
+import type { PluginCommand, PluginContext, PluginTool } from '@praxis/plugin-sdk';
 import type { Manifest } from './manifest.ts';
 
 export type ActivePlugin = {
@@ -7,7 +7,7 @@ export type ActivePlugin = {
   digest: string;
   tools: ReadonlyMap<string, PluginTool>;
   providers: ReadonlyMap<string, ModelClient>;
-  commands: ReadonlyMap<string, Parameters<PluginContext['registerCommand']>[1]>;
+  commands: ReadonlyMap<string, PluginCommand>;
   checks: Array<Parameters<PluginContext['beforeExecute']>[0]>;
   contributors: Array<Parameters<PluginContext['contributeContext']>[0]>;
   finished: Array<Parameters<PluginContext['onTurnFinished']>[0]>;

@@ -1,4 +1,4 @@
-import type { Event, Message, Session } from '@praxis/contracts';
+import type { Event, Message, Session, UserCommand } from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type {
   DesktopBridge,
@@ -124,6 +124,19 @@ export class LocalClient implements PraxisClient {
   }
   plugins() {
     return this.bridge.call<PluginState>('plugin/list');
+  }
+  pluginCommands(kind: 'chat' | 'agent') {
+    return this.bridge.call<
+      Array<{
+        pluginId: string;
+        version: string;
+        name: string;
+        parameters: Record<string, unknown>;
+      }>
+    >('plugin/commands', { kind });
+  }
+  async runPluginCommand(input: UserCommand) {
+    await this.bridge.call('plugin/run-command', input);
   }
   inspectPlugin(source: string) {
     return this.bridge.call<PluginReview>('plugin/inspect', { source });

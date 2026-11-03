@@ -1,4 +1,5 @@
 import { Icon } from '../Navigation.tsx';
+import { PluginCommands } from './PluginCommands.tsx';
 
 import type { AppController } from '../app/useAppController.ts';
 
@@ -21,6 +22,7 @@ export function Composer({
   fail,
   running,
   send,
+  runPluginCommand,
   loadingSession,
   empty,
 }: Pick<
@@ -43,6 +45,7 @@ export function Composer({
   | 'fail'
   | 'running'
   | 'send'
+  | 'runPluginCommand'
   | 'loadingSession'
   | 'empty'
 >) {
@@ -163,6 +166,14 @@ export function Composer({
             </button>
           ))}
         </div>
+      )}
+      {client.pluginCommands && client.runPluginCommand && (
+        <PluginCommands
+          client={client}
+          kind={kind}
+          disabled={sending || loadingSession || running}
+          run={runPluginCommand}
+        />
       )}
       <p className="composer-hint">
         {kind === 'agent'
