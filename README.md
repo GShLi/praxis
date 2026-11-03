@@ -15,6 +15,8 @@
 
 提供 Linux/Windows 测试机器时，填写被 Git 忽略的 `.runtime/validation-targets.local.json`；字段清单、空白模板和 Windows SSH 准备步骤见 [远端验收环境配置](docs/remote-validation.md)。
 
+macOS/Linux 桌面操作、真实模型及可重复手动测试入口见 [实机验收记录](docs/platform-acceptance.md)。
+
 设计入口：[文档索引](docs/README.md)。[UI 基线](docs/superpowers/specs/2026-11-03-praxis-ui-design.md)参考 ChatGPT、Codex，保留 Praxis 的产品名称和模式边界；[开发计划](docs/superpowers/plans/2026-11-03-praxis-development-plan.md)规定工程基座、核心闭环、三端交付及平台验证的顺序。
 
 ## 开发与提交
