@@ -62,6 +62,8 @@ sudo apt-get install --no-install-recommends build-essential libsecret-tools
 
 `pnpm test:linux-credentials` 要求安装真实 `secret-tool`，通过独立测试进程连接不存在的私有 D-Bus 地址，验证服务故障不会被误判为凭据不存在或删除成功，MCP 配置保留清理引用，新凭据仍可显式降级到内存。它不连接真实凭据服务、不弹出解锁界面，也不能作为系统凭据持久化成功的证据。
 
+`pnpm test:linux-keyring` 在独立 D-Bus 会话、临时 HOME 和独立数据目录启动 GNOME Keyring，仅使用一次性测试密码和假凭据。测试真实持久化、服务重启、删除、尾随换行及 8 KiB 输入边界，并在结束时停止服务、删除测试数据。需要 `dbus-run-session`、`busctl`、`secret-tool` 与 `gnome-keyring-daemon`；后者可通过 `PRAXIS_TEST_KEYRING_HELPER=/绝对路径/gnome-keyring-daemon` 指向解包在专用目录的程序，无需启用用户真实登录会话的 Keyring。
+
 ## Windows
 
 需要 Windows 的 **OpenSSH Server**，并配置从这台 Mac 到 Windows 账号的公钥登录。账号和 IP 与 Linux 一样填写，另外提供 Windows 形式的专用测试目录。

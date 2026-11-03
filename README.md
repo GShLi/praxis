@@ -147,7 +147,9 @@ CLI 获取预览期间仍可回答问题、`/approve`、`/deny` 或 `/cancel`。
 
 桌面端在“设置 → MCP 连接”展开服务器的“设置 Bearer Token”。Token 只用于当前用户/客户端的固定服务器端点；保存或更换后连接停用，需要重新检查并启用。设置页分别显示系统存储、仅本次运行有效和凭据缺失。清除只删除本地凭据，不代表远端撤销 Token。
 
-macOS 使用 Keychain（已在本机完成真实读写/删除测试）；Windows Credential Manager 适配仍待目标系统实测。Linux 使用 Secret Service，需要 `secret-tool` 及用户可访问的凭据服务；目前已验证服务不可用时的错误处理和内存降级，系统凭据持久化仍待验收。新设置的凭据在系统存储不可用时明确使用当前 Host 内存，不写入 JSON、Session、日志或 checkpoint。读取、删除旧系统凭据失败会报错并保留清理引用，不伪报不存在或删除成功。`PRAXIS_SECRET_STORE=memory` 可显式选择临时存储。退出后内存凭据失效。
+macOS 使用 Keychain（已在本机完成真实读写/删除测试）；Windows Credential Manager 适配仍待目标系统实测。Linux 使用 Secret Service，需要 `secret-tool` 及用户可访问的凭据服务；已在独立临时 GNOME Keyring 中验证写入、服务重启后读取、删除，并验证服务不可用时的错误处理和内存降级。测试不会替用户配置登录环境的凭据服务。新设置的凭据在系统存储不可用时明确使用当前 Host 内存，不写入 JSON、Session、日志或 checkpoint。读取、删除旧系统凭据失败会报错并保留清理引用，不伪报不存在或删除成功。`PRAXIS_SECRET_STORE=memory` 可显式选择临时存储。退出后内存凭据失效。
+
+Linux 的 `secret-tool` 兼容后端按 UTF-8 字节数限制单项系统存储为 8 KiB，避免旧版工具静默截断。超过此限制的新凭据（总上限仍为 64 KiB）明确使用内存；更新已有系统凭据时会在写入前拒绝超限值，保留旧值。读取保留换行等原始内容。
 
 CLI 从 `PRAXIS_MCP_BEARER` 一次性读取专用 Token，并在启动 Host 前从继承环境移除；不要将 Token 放在命令行参数中。设置后状态输出不含 Token：
 

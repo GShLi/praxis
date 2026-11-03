@@ -34,6 +34,13 @@ export class NativeSecretBackend implements SecretBackend {
     assert(this.mode !== 'memory', 'SECRET_STORE_UNAVAILABLE', '已选择仅内存凭据存储。');
     assert(/^[a-f0-9]{64}$/.test(key), 'SECRET_REFERENCE_INVALID', '凭据引用无效。');
     const linux = process.platform === 'linux';
+    // Ubuntu's secret-tool 0.20.5 silently stops reading stdin at 8192 bytes.
+    // New credentials can use the explicit memory fallback; OS rotation must fail before writing.
+    assert(
+      !linux || action !== 'set' || Buffer.byteLength(value) <= 8192,
+      'SECRET_STORE_UNAVAILABLE',
+      'Linux 凭据组件无法可靠保存超过 8 KiB 的内容。',
+    );
     const args = linux
       ? [
           ...(action === 'set'
@@ -51,7 +58,8 @@ export class NativeSecretBackend implements SecretBackend {
     if (absent && (!linux || (!result.stderrPresent && result.output.length === 0)))
       return undefined;
     assert(result.code === 0, 'SECRET_STORE_UNAVAILABLE', '系统凭据存储不可用。');
-    return linux ? result.output.replace(/\n$/, '') : result.output;
+    // secret-tool appends a newline only for a terminal; our stdout is always a private pipe.
+    return result.output;
   }
   async set(key: string, value: string, signal: AbortSignal) {
     await this.invoke('set', key, value, signal);
