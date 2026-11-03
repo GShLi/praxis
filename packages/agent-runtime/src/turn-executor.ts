@@ -16,6 +16,7 @@ import { TurnSteps } from './turn-steps.ts';
 import type { Active, RuntimeOptions } from './types.ts';
 import { executeUserCommand } from './user-command.ts';
 import { snapshotUserInstructions } from './user-instructions.ts';
+import { snapshotEffectiveConfig } from './effective-config.ts';
 import type { ActivePlugin } from '@praxis/plugin-host';
 export class TurnExecutor {
   private workspaceOwners = new Map<string, string>();
@@ -68,6 +69,7 @@ export class TurnExecutor {
       }
       signal.throwIfAborted();
       if (!turn.command) turn.pluginContext = await pluginContext(plugins, session, signal);
+      snapshotEffectiveConfig(this.store, session, turn, this.options, plugins, config);
       const inputs = this.claim(session, turn, config);
       if (!inputs.length) return;
       claimed = true;

@@ -15,6 +15,14 @@ import { installProvider } from './prompt-provider.ts';
 import { mcpHttpFixture } from '../fixtures/mcp-http.ts';
 const execute = promisify(execFile);
 
+async function fileHelpers(directory: string) {
+  await mkdir(directory);
+  for (const name of ['praxis-lease', 'praxis-files']) {
+    const executable = `${name}${process.platform === 'win32' ? '.exe' : ''}`;
+    await copyFile(path.resolve('build/native', executable), path.join(directory, executable));
+  }
+}
+
 test('CLI consumes a one-time Bearer input, reports memory fallback, and enables it for a foreground run', async () => {
   const f = await chatFixture(),
     remote = await mcpHttpFixture();
@@ -34,10 +42,8 @@ test('CLI consumes a one-time Bearer input, reports memory fallback, and enables
   try {
     const native = path.join(root, 'native'),
       workspace = path.join(root, 'workspace');
-    await mkdir(native);
+    await fileHelpers(native);
     await mkdir(workspace);
-    const lease = `praxis-lease${process.platform === 'win32' ? '.exe' : ''}`;
-    await copyFile(path.resolve('build/native', lease), path.join(native, lease));
     // No credential helper: use the documented fallback without touching a real keychain.
     await f.auth.saveProvider(
       f.identity,

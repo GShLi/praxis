@@ -4,7 +4,14 @@ import type {
   McpPromptPreview,
   McpPromptList,
 } from '@praxis/contracts';
-import type { Event, Message, Session, UserCommand } from '@praxis/contracts';
+import type {
+  Event,
+  Message,
+  Session,
+  UserCommand,
+  EffectiveConfig,
+  Permission,
+} from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type {
   DesktopBridge,
@@ -81,6 +88,12 @@ export class LocalClient implements PraxisClient {
         permissionMode: result.session.permission.mode,
       },
     };
+  }
+  effectiveConfig(sessionId: string) {
+    return this.bridge.call<{ snapshot: EffectiveConfig | null; currentPermission: Permission }>(
+      'session/config',
+      { sessionId },
+    );
   }
   async send(
     id: string,

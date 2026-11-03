@@ -23,7 +23,16 @@ async function configurationCommand(
   if (command === 'plugins') await pluginCommand(host, values, positionals);
   else if (command === 'mcp') await mcpCommand(host, positionals, values, bearer);
   else if (command === 'instructions') await userInstructionsCommand(host, values, positionals);
-  else return false;
+  else if (command === 'config') {
+    assert(positionals[1], 'INVALID_COMMAND', '请提供会话 ID：config SESSION_ID。');
+    console.log(
+      JSON.stringify(
+        await host.rpc.request('session/config', { sessionId: positionals[1] }),
+        null,
+        2,
+      ),
+    );
+  } else return false;
   return true;
 }
 
@@ -40,9 +49,17 @@ export async function runCli() {
     return;
   }
   assert(
-    ['doctor', 'run', 'sessions', 'providers', 'plugins', 'mcp', 'data', 'instructions'].includes(
-      command,
-    ),
+    [
+      'doctor',
+      'run',
+      'sessions',
+      'providers',
+      'plugins',
+      'mcp',
+      'data',
+      'instructions',
+      'config',
+    ].includes(command),
     'INVALID_COMMAND',
     '未知命令，使用 --help 查看帮助。',
   );

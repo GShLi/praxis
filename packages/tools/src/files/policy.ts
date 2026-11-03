@@ -1,4 +1,4 @@
-import { assert } from '@praxis/contracts';
+import { assert, PraxisError } from '@praxis/contracts';
 import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import { NativeWorkspaceIo } from './native/io.ts';
@@ -28,6 +28,27 @@ export class WorkspacePathPolicy {
     rootIdentity: string,
   ) {
     this.io = new NativeWorkspaceIo(root, rootIdentity);
+  }
+  /** Host-only fixed configuration read; model path resolution still denies all .praxis paths. */
+  async configuration(signal?: AbortSignal) {
+    const target = path.join(this.root, '.praxis', 'config.json');
+    assert(
+      !this.protectedPaths.some((p) => isInside(p, target)),
+      'ACCESS_DENIED',
+      '目标属于受保护的应用数据。',
+    );
+    try {
+      const { buffer } = await this.io.read(target, signal);
+      assert(buffer.length <= 32 * 1024, 'WORKSPACE_CONFIG_LIMIT', '工作区配置不能超过 32 KiB。');
+      try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+      } catch {
+        throw new PraxisError('WORKSPACE_CONFIG_INVALID', '工作区配置必须是 UTF-8 文本。');
+      }
+    } catch (error) {
+      if (error instanceof PraxisError && error.code === 'FILE_NOT_FOUND') return null;
+      throw error;
+    }
   }
   async resolve(input: string, writing = false): Promise<string> {
     assert(!input.includes('\0'), 'INVALID_ARGUMENT', '路径包含非法字符。');

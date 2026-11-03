@@ -1,4 +1,5 @@
 import { assert, PraxisError } from '@praxis/contracts';
+import { parseWorkspaceConfig } from '@praxis/config';
 import { hash } from '@praxis/storage-local';
 import { WorkspaceFiles } from '@praxis/tools/files';
 import path from 'node:path';
@@ -18,6 +19,7 @@ export async function prepareSessionInstructions(
     protectedPaths,
   );
   let source: InstructionSource | undefined;
+  parseWorkspaceConfig(await files.readConfiguration());
   try {
     const target = path.join(files.root, 'AGENTS.md');
     const content = await files.readText(target, 64 * 1024);

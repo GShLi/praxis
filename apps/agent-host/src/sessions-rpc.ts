@@ -1,16 +1,18 @@
 import { assert, idSchema, permissionSchema } from '@praxis/contracts';
+import { sessionReadRoutes } from './session-read-rpc.ts';
 import { approvalResponseSchema } from '@praxis/permissions';
 import { hash } from '@praxis/storage-local';
 import { realpath, stat } from 'node:fs/promises';
 import { z } from 'zod';
 import type { HostIdentity } from './identity.ts';
 import type { RpcRoutes } from './rpc-schema.ts';
-import { noArgs, sessionArg } from './rpc-schema.ts';
+import { sessionArg } from './rpc-schema.ts';
 export function sessionsRoutes(
   identity: HostIdentity,
   clientKind: () => 'cli' | 'desktop',
 ): RpcRoutes {
   return {
+    ...sessionReadRoutes(identity),
     'workspace/open': async (params: unknown) => {
       identity.require();
       const input = z.strictObject({ path: z.string().min(1).max(4096) }).parse(params);
@@ -32,26 +34,6 @@ export function sessionsRoutes(
       );
       const workspace = input.workspaceId ? identity.workspaces.get(input.workspaceId) : undefined;
       return runtime.create(owner, input.kind, workspace);
-    },
-    'session/list': async (params: unknown) => {
-      const { store, owner } = identity.require();
-      noArgs.parse(params);
-      return store.list(owner);
-    },
-    'session/read': async (params: unknown) => {
-      const { store, runtime, owner } = identity.require();
-      const input = sessionArg.parse(params);
-      const session = store.get(input.sessionId, owner);
-      return {
-        session,
-        messages: store.timeline(session.id),
-        suspended: store.inputs(session.id, 'suspended'),
-        contextVersion: store.context(session.id).version,
-        throughSeq: session.latestSeq,
-        turnId: runtime.getTurn(session.id) ?? null,
-        question: runtime.pendingQuestion(session.id),
-        approval: runtime.approvals.snapshot(session.id),
-      };
     },
     'session/prompt': async (params: unknown) => {
       const { runtime, owner } = identity.require();
@@ -161,12 +143,6 @@ export function sessionsRoutes(
       identity.subscriptions.delete(input.sessionId);
       store.delete(input.sessionId);
       return { ok: true };
-    },
-    'artifact/read': async (params: unknown) => {
-      const { store, owner } = identity.require();
-      const input = z.strictObject({ sessionId: idSchema, artifactId: idSchema }).parse(params);
-      store.get(input.sessionId, owner);
-      return store.readArtifact(input.sessionId, input.artifactId);
     },
   };
 }

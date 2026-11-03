@@ -10,6 +10,7 @@ import { promisify } from 'node:util';
 import test from 'node:test';
 import { chatFixture } from './chat-fixture.ts';
 import { checkDiagnosticExport } from './diagnostic-assertions.ts';
+import { checkEffectiveConfig } from './config-assertions.ts';
 const execute = promisify(execFile);
 
 async function commandPackage(root: string) {
@@ -36,6 +37,21 @@ async function commandPackage(root: string) {
   },{type:'object',properties:{},additionalProperties:false});}}`,
   );
   return source;
+}
+
+async function configuredWorkspace(root: string) {
+  const workspace = path.join(root, 'workspace');
+  await mkdir(workspace);
+  await mkdir(path.join(workspace, '.praxis'));
+  await writeFile(
+    path.join(workspace, '.praxis/config.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      ignore: ['generated/'],
+      validationCommands: ['echo advisory only'],
+    }),
+  );
+  return workspace;
 }
 
 test('CLI authenticates over HTTP, reloads an installed command and creates a real file without model configuration', async () => {
@@ -84,8 +100,7 @@ test('CLI authenticates over HTTP, reloads an installed command and creates a re
     });
     await host.close();
     host = undefined;
-    const workspace = path.join(root, 'workspace');
-    await mkdir(workspace);
+    const workspace = await configuredWorkspace(root);
     const result = await execute(
       process.execPath,
       [
@@ -108,6 +123,7 @@ test('CLI authenticates over HTTP, reloads an installed command and creates a re
     assert.ok(!result.stdout.includes(key.key));
     const report = await checkDiagnosticExport(root, env);
     assert.ok(report.records.some((record) => record.kind === 'tool'));
+    await checkEffectiveConfig(env);
   } finally {
     await host?.close();
     server.close();

@@ -89,6 +89,9 @@ export class TurnSteps {
       model: config.model,
       ...turn.providerDescriptor,
       contextVersion: this.store.context(session.id).version,
+      effectiveConfig: turn.effectiveConfig
+        ? { revision: turn.effectiveConfig.revision, hash: turn.effectiveConfig.hash }
+        : null,
       instructionRevision: turn.instructions?.revision ?? 0,
       userInstructions: turn.userInstructions
         ? { revision: turn.userInstructions.revision, hash: turn.userInstructions.hash }

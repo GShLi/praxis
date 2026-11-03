@@ -7,7 +7,7 @@ import type {
   McpPromptPreview,
   McpPromptList,
 } from '@praxis/contracts';
-import type { Event, UserCommand } from '@praxis/contracts';
+import type { Event, UserCommand, EffectiveConfig, Permission } from '@praxis/contracts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type { ApprovalRequest } from '@praxis/permissions';
 
@@ -94,6 +94,7 @@ export type HostMethod =
   | 'session/create'
   | 'session/list'
   | 'session/read'
+  | 'session/config'
   | 'session/prompt'
   | 'session/cancel'
   | 'session/subscribe'
@@ -180,6 +181,9 @@ export interface McpTestResult {
 }
 
 export interface PraxisClient {
+  effectiveConfig?(
+    sessionId: string,
+  ): Promise<{ snapshot: EffectiveConfig | null; currentPermission: Permission }>;
   pluginCommands?(
     kind: 'chat' | 'agent',
   ): Promise<

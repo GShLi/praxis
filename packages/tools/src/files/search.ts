@@ -15,6 +15,7 @@ interface DirectorySnapshot {
   incomplete: boolean;
 }
 export class FileSearch {
+  ignorePatterns: string[] = [];
   beforeDirectory: ((directory: string) => Promise<void>) | undefined;
   private snapshots = new Map<string, DirectorySnapshot>();
   constructor(
@@ -89,7 +90,14 @@ export class FileSearch {
     input: { path: string; includeHidden: boolean; respectIgnore: boolean },
     signal: AbortSignal,
   ) {
-    return scanFiles(this.paths, this.content, input, signal, this.beforeDirectory);
+    return scanFiles(
+      this.paths,
+      this.content,
+      input,
+      signal,
+      this.beforeDirectory,
+      this.ignorePatterns,
+    );
   }
   async find(
     input: {

@@ -38,6 +38,8 @@ export {
   saveUserInstructionsSchema,
 } from './user-instructions.ts';
 export type { UserInstructionSettings, SaveUserInstructions } from './user-instructions.ts';
+export { workspaceConfigSchema, effectiveConfigSchema } from './workspace-config.ts';
+export type { WorkspaceConfig, EffectiveConfig } from './workspace-config.ts';
 export {
   mcpPromptEntrySchema,
   mcpPromptGetSchema,

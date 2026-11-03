@@ -39,6 +39,7 @@ const allowed = new Set([
   'session/create',
   'session/list',
   'session/read',
+  'session/config',
   'session/prompt',
   'session/cancel',
   'session/subscribe',

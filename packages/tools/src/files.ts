@@ -67,6 +67,12 @@ export class WorkspaceFiles {
   observeSearchDirectories(observer: (directory: string) => Promise<void>) {
     this.searcher.beforeDirectory = observer;
   }
+  readConfiguration(signal?: AbortSignal) {
+    return this.paths.configuration(signal);
+  }
+  setSearchIgnores(patterns: readonly string[]) {
+    this.searcher.ignorePatterns = [...patterns];
+  }
   resolve(...args: Parameters<WorkspacePathPolicy['resolve']>) {
     return this.paths.resolve(...args);
   }

@@ -227,3 +227,20 @@ pnpm cli data restore /absolute/path/praxis-backup-... --client cli --confirm SH
 文件读取、目录遍历与写入现在依赖 `pnpm native:build` 生成的 `praxis-files`。它固定根目录身份，通过原生目录句柄逐段访问；写入准备完成后再次向 Host 获取权限确认。组件缺失时明确失败，不自动降低文件访问边界。目录列表超过单目录 10,000 项会标明 `incomplete`，搜索继续使用总遍历预算。
 
 当前 macOS ARM64 已完成真实文件回归。Linux 与 Windows 的源码和构建入口已提供，目标系统验证仍待完成；Windows 仅设计支持本地盘符路径。实现边界见 [原生组件说明](native/files/README.md)，命令执行沙箱仍未开放。
+
+## 工作区配置与生效快照
+
+Agent 可以读取工作区根目录的 `.praxis/config.json`（UTF-8 JSON，最多 32 KiB），例如：
+
+```json
+{
+  "schemaVersion": 1,
+  "ignore": ["node_modules/", "dist/"],
+  "context": { "language": "zh-CN", "responseStyle": "concise" },
+  "validationCommands": ["pnpm check"]
+}
+```
+
+`ignore` 使用 Git ignore 语法，只影响 `respectIgnore: true` 的文件查找和文本搜索；直接读取仍按权限和路径策略检查。`context.language` 支持 auto/zh-CN/en，`responseStyle` 支持 auto/concise/detailed。验证命令只是模型可见建议，保存配置不会执行它们。未识别字段、非法类型、符号链接和超限内容会明确报错。模型文件工具不能读写 `.praxis`；配置由用户在编辑器维护，不能设置模型 Key、安装插件、改变服务地址或扩大权限。ChatBot 不读取此文件。
+
+每次任务固定配置，修改下次任务生效；原配置版本与来源/hash 留在 Session。桌面“设置 → Agent → 工作区配置”可以查看最近任务快照，CLI 使用 `pnpm cli config SESSION_ID`。快照列出实际预算、模型引用、插件版本和任务开始时的权限，查询另返回当前权限；权限控制仍即时生效。用户指令正文保留在其专用快照中，配置查询只显示版本和摘要。不要把任何凭据放进项目配置。

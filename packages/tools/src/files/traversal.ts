@@ -17,10 +17,16 @@ export async function scanFiles(
   input: ScanInput,
   signal: AbortSignal,
   observer?: (directory: string) => Promise<void>,
+  patterns: readonly string[] = [],
 ) {
   const root = await paths.resolve(input.path);
   const walk = new DirectoryWalk(paths, content, input, root, signal, observer);
-  await walk.visit(root, []);
+  await walk.visit(
+    root,
+    input.respectIgnore && patterns.length
+      ? [{ root: paths.root, matcher: ignore().add([...patterns]) }]
+      : [],
+  );
   return { root, files: walk.files, incomplete: walk.incomplete };
 }
 class DirectoryWalk {

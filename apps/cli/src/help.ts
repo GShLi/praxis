@@ -5,6 +5,7 @@ pnpm cli run --workspace /path/to/project [--prompt "任务"] [--resume SESSION_
 pnpm cli sessions
 pnpm cli providers
 pnpm cli instructions show
+pnpm cli config SESSION_ID
 pnpm cli instructions set FILE --revision N
 pnpm cli instructions disable --revision N
 pnpm cli data backup DIRECTORY [--client cli|desktop]

@@ -1,4 +1,6 @@
 import type { ProjectInstructions } from './instructions.ts';
+import type { parseWorkspaceConfig } from '@praxis/config';
+import type { EffectiveConfig } from '@praxis/contracts';
 import type { Message, ModelConfig, Session, UserInstructionSettings } from '@praxis/contracts';
 import type { userInstructionMaterial } from '@praxis/context';
 import type { ModelClient } from '@praxis/model-core';
@@ -35,6 +37,8 @@ export interface RuntimeOptions {
 }
 
 export interface Active {
+  workspaceConfig?: ReturnType<typeof parseWorkspaceConfig>;
+  effectiveConfig?: EffectiveConfig;
   userInstructions?: ReturnType<typeof userInstructionMaterial>;
   instructions?: ProjectInstructions;
   command?: boolean;

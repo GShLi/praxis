@@ -5,7 +5,7 @@
     "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
   "apps/agent-host/src/sessions-rpc.ts#sessionsRoutes:1": {
-    "maxLines": 164,
+    "maxLines": 140,
     "reason": "RPC 路由表保持输入与处理器对应；删除会话前等待 MCP 控制操作退出。",
     "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
   },
@@ -187,11 +187,6 @@
   "packages/ui/src/settings/Account.tsx#Account:1": {
     "maxLines": 160,
     "reason": "账户与 API Key 设置 JSX，表单短回调委托客户端；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
-  },
-  "packages/ui/src/settings/AgentSettings.tsx#AgentSettings:1": {
-    "maxLines": 74,
-    "reason": "权限与工作区设置 JSX，决策留在 Host；保留 JSX 连续性避免仅按行数切割。",
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/settings/DataSettings.tsx#DataSettings:1": {
@@ -398,11 +393,6 @@
     "maxLines": 63,
     "reason": "连续问题表单 JSX；保留真实 option ID，显示标签与发送值分开，未加入传输逻辑。",
     "validation": "类型检查、全部应用构建、MCP 表单及 CLI 交互测试。"
-  },
-  "packages/agent-runtime/src/turn-tools.ts#createTurnTools:1": {
-    "maxLines": 66,
-    "reason": "一次 turn 工具装配的资源转移与部分失败回滚必须成对；两个 close 独立结算，避免同步抛错阻断另一资源清理。",
-    "validation": "runtime-initialization、plugin-provider 回归及全量检查/构建。"
   },
   "tests/runtime-initialization.test.ts#test callback:1": {
     "maxLines": 79,
