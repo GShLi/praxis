@@ -1,0 +1,245 @@
+/* Shared by Web and Desktop. Layout remains owned by each screen. */
+:root {
+  --control-border: #858585;
+  --control-border-hover: #555;
+  --control-background: var(--bg);
+  --control-radius: 8px;
+  --control-height: 40px;
+  --control-font-size: 14px;
+  --control-padding: 9px 12px;
+  --control-focus: var(--focus, var(--text));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --control-border: #858585;
+    --control-border-hover: #ccc;
+  }
+}
+:root[data-theme='dark'] {
+  --control-border: #858585;
+  --control-border-hover: #ccc;
+}
+
+/* :is() deliberately matches the specificity of existing page-level rules. */
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
+  :is(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+    textarea,
+    select
+  ),
+.model-select-dialog > input,
+.model-select .model-select-trigger {
+  box-sizing: border-box;
+  min-height: var(--control-height);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--control-padding);
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--control-background);
+  color: var(--text);
+  font-size: var(--control-font-size);
+  line-height: 1.5;
+  box-shadow: none;
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace) textarea {
+  resize: vertical;
+}
+:is(input, textarea)::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
+  :is(input, textarea, select):enabled:hover,
+.model-select .model-select-trigger:enabled:hover {
+  border-color: var(--control-border-hover);
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
+  :is(input, textarea, select):focus-visible,
+.model-select .model-select-trigger:focus-visible {
+  border-color: var(--control-focus);
+  outline: 2px solid var(--control-focus);
+  outline-offset: 2px;
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
+  :is(input, textarea, select):disabled,
+.model-select .model-select-trigger:disabled {
+  border-color: var(--border);
+  background: var(--raised);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace) :is(input, textarea)[readonly] {
+  background: var(--raised);
+  color: var(--text);
+}
+/* Validate on interaction or explicit application error, never on first paint. */
+:is(.settings-page, .settings-dialog, .login-page, .workspace)
+  :is(input, textarea, select):is([aria-invalid='true'], :user-invalid) {
+  border-color: var(--error);
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace)
+  :is(input, textarea, select):is([aria-invalid='true'], :user-invalid):focus-visible {
+  outline-color: var(--error);
+}
+
+:is(.settings-page, .settings-dialog, .login-page, .workspace) label {
+  font-size: 14px;
+  line-height: 1.5;
+  gap: 8px;
+}
+:is(.settings-page, .settings-dialog, .login-page, .workspace)
+  :is(input[type='checkbox'], input[type='radio']) {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--text);
+  vertical-align: middle;
+}
+:is(.settings-page, .settings-dialog) label:has(> input:is([type='checkbox'], [type='radio'])) {
+  flex-direction: row;
+  align-items: center;
+}
+:is(.settings-page, .settings-dialog) :is(.field-help, .settings-footnote, .settings-feedback) {
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* Keep primary/outline/text actions distinct, with the same size and focus rules. */
+:is(.primary-button, .secondary-button, .danger-button),
+:is(.settings-page, .settings-dialog, .login-page, .workspace)
+  :is(.primary-button, .secondary-button, .danger-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: var(--control-padding);
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  font-size: var(--control-font-size);
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: none;
+}
+.settings-page .primary-button.compact {
+  padding: var(--control-padding);
+  font-size: var(--control-font-size);
+}
+:is(.secondary-button, .danger-button),
+:is(.settings-page, .settings-dialog, .workspace) :is(.secondary-button, .danger-button) {
+  border-color: var(--control-border);
+  background: transparent;
+  color: var(--text);
+}
+.primary-button,
+:is(.settings-page, .settings-dialog, .login-page, .workspace) .primary-button {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
+}
+:is(.danger-button, .secondary-button.danger),
+:is(.settings-page, .settings-dialog, .workspace) :is(.danger-button, .secondary-button.danger) {
+  color: var(--error);
+  border-color: var(--error);
+}
+:is(.secondary-button, .danger-button):enabled:hover,
+:is(.settings-page, .settings-dialog, .workspace)
+  :is(.secondary-button, .danger-button):enabled:hover {
+  background: var(--hover);
+  border-color: var(--control-border-hover);
+}
+.primary-button:enabled:hover {
+  background: color-mix(in srgb, var(--primary) 88%, var(--bg));
+}
+:is(.danger-button, .secondary-button.danger):enabled:hover,
+:is(.settings-page, .settings-dialog, .workspace)
+  :is(.danger-button, .secondary-button.danger):enabled:hover {
+  border-color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, var(--bg));
+}
+:is(.primary-button, .secondary-button, .danger-button):focus-visible,
+:is(.text-button, .icon-button, summary):focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: 3px;
+}
+:is(.primary-button, .secondary-button, .danger-button):disabled,
+:is(.settings-page, .settings-dialog, .login-page, .workspace)
+  :is(.primary-button, .secondary-button, .danger-button):disabled {
+  background: var(--raised);
+  color: var(--muted);
+  border-color: var(--border);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* Compound fields own one border/focus ring; inner editors remain borderless. */
+.settings-page .settings-search,
+.session-search-dialog .session-search-input,
+.workspace .composer {
+  border: 1px solid var(--control-border);
+  box-shadow: none;
+}
+.settings-page .settings-search,
+.session-search-dialog .session-search-input {
+  border-radius: var(--control-radius);
+  background: var(--control-background);
+}
+.settings-page .settings-search:focus-within,
+.session-search-dialog .session-search-input:focus-within,
+.workspace .composer:has(textarea:focus-visible) {
+  border-color: var(--control-focus);
+  outline: 2px solid var(--control-focus);
+  outline-offset: 2px;
+}
+.settings-page .settings-search input,
+.session-search-dialog .session-search-input input,
+.workspace .composer textarea {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.settings-page .settings-search input:focus-visible,
+.session-search-dialog .session-search-input input:focus-visible,
+.workspace .composer textarea:focus-visible {
+  outline: none; /* The enclosing compound field shows the focus ring. */
+}
+.workspace .composer textarea {
+  padding: 6px 0;
+  resize: none;
+  font-size: 16px;
+  line-height: 24px;
+}
+/* Avoid clipping keyboard rings inside grouped settings. */
+.settings-group {
+  overflow: visible;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(
+    input,
+    textarea,
+    select,
+    .primary-button,
+    .secondary-button,
+    .danger-button,
+    .model-select-trigger
+  ) {
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease;
+  }
+}
+@media (forced-colors: active) {
+  :root,
+  :root[data-theme] {
+    --control-border: ButtonText;
+    --control-border-hover: Highlight;
+    --control-focus: Highlight;
+  }
+}
