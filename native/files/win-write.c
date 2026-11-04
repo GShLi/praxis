@@ -44,6 +44,11 @@ static const char *write_all(HANDLE file, const unsigned char *data, size_t leng
   }
   return FlushFileBuffers(file) ? NULL : "FILE_NATIVE_FAILED";
 }
+static const char *delete_when_closed(HANDLE file, BOOLEAN enabled) {
+  FILE_DISPOSITION_INFO disposition = { enabled };
+  return SetFileInformationByHandle(file, FileDispositionInfo, &disposition, sizeof(disposition))
+    ? NULL : "FILE_CLEANUP_FAILED";
+}
 const char *px_write(PxRequest *r) {
   const char *error = NULL;
   char *leaf = NULL;
@@ -54,13 +59,17 @@ const char *px_write(PxRequest *r) {
   int published = 0;
   if (!error) temporary = temporary_file(parent, &error);
   if (!error) error = write_all(temporary, r->fields[PX_CONTENT], r->lengths[PX_CONTENT]);
+  /* A Windows parent Job may terminate this helper before EOF cleanup runs.
+     Keep prepared content delete-pending while waiting for explicit commit permission. */
+  if (!error) error = delete_when_closed(temporary, TRUE);
   if (!error) error = px_await_commit();
+  if (!error) error = delete_when_closed(temporary, FALSE);
   if (!error) error = verify_previous(r, parent, leaf);
   if (!error) { error = pxw_rename(temporary, parent, leaf, r->operation == 4); published = !error; }
   if (temporary != INVALID_HANDLE_VALUE) {
     if (!published) {
-      FILE_DISPOSITION_INFO disposition = { TRUE };
-      if (!SetFileInformationByHandle(temporary, FileDispositionInfo, &disposition, sizeof(disposition))) error = "FILE_CLEANUP_FAILED";
+      const char *cleanup = delete_when_closed(temporary, TRUE);
+      if (cleanup) error = cleanup;
     }
     CloseHandle(temporary);
   }

@@ -41,7 +41,8 @@ function databaseTask() {
       closeSync(fd);
       source.prepare('VACUUM INTO ?').run(input.destination);
       chmodSync(input.destination, 0o600);
-      const output = openSync(input.destination, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      // Windows FlushFileBuffers requires write access; keep fsync mandatory without truncation.
+      const output = openSync(input.destination, constants.O_RDWR | (constants.O_NOFOLLOW ?? 0));
       try {
         fsyncSync(output);
       } finally {
