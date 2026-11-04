@@ -60,6 +60,17 @@
 .praxis-dropdown-menu::backdrop {
   background: transparent;
 }
+.praxis-dropdown-menu[data-size='compact'] {
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  border-radius: 14px;
+  padding: 4px;
+}
+.praxis-dropdown-menu[data-size='compact'] .praxis-dropdown-option {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 10px;
+}
 .praxis-dropdown-menu .praxis-dropdown-options:focus-visible {
   outline: none;
 }

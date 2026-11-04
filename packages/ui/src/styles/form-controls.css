@@ -217,8 +217,9 @@
   padding: 0;
   line-height: 24px;
 }
-/* Navigation search is a quiet pill; ordinary form fields retain outlines. */
-.settings-page .settings-search {
+/* Search fields share a quiet pill; ordinary form fields retain outlines. */
+.settings-page .settings-search,
+.settings-page .provider-list-search {
   min-height: 38px;
   padding: 6px 12px;
   border: 1px solid transparent;

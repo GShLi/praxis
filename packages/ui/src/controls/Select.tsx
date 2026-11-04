@@ -19,6 +19,7 @@ export function Select({
   onChange: (value: string) => void;
   disabled?: boolean | undefined;
   'aria-label'?: string;
+  align?: 'start' | 'end';
 }) {
   const options: DropdownOption[] = [];
   Children.forEach(children, (child) => {
@@ -31,5 +32,13 @@ export function Select({
       disabled: child.props.disabled,
     });
   });
-  return <Dropdown {...props} label={label} options={options} searchable={options.length > 8} />;
+  return (
+    <Dropdown
+      {...props}
+      label={label}
+      options={options}
+      searchable={options.length > 8}
+      menuSize="compact"
+    />
+  );
 }

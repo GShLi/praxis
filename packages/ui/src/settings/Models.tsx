@@ -5,6 +5,7 @@ import { ProviderEditor } from './ProviderEditor.tsx';
 import { ProviderList } from './ProviderList.tsx';
 import { ProviderDetails } from './ProviderDetails.tsx';
 import { ProviderDeleteDialog } from './ProviderDeleteDialog.tsx';
+import { settingsScope } from './settings-scope.ts';
 
 export function Models({
   client,
@@ -35,7 +36,7 @@ export function Models({
       <header className="providers-page-heading">
         <div>
           <h2>模型供应商</h2>
-          <p>统一管理连接与模型，供 ChatBot 和 Agent 使用。</p>
+          <p>管理 ChatBot 与 Agent 共用的模型。{settingsScope('models', client.desktop)}</p>
         </div>
         <button
           id="provider-add"

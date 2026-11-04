@@ -19,4 +19,6 @@ export interface DropdownProps {
   placeholder?: string | undefined;
   selectedLabel?: string | undefined;
   emptyText?: string | undefined;
+  menuSize?: 'compact' | 'regular' | undefined;
+  align?: 'start' | 'end' | undefined;
 }

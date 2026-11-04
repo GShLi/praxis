@@ -7,7 +7,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 .providers-page-heading h2 {
   font-size: 22px;
@@ -17,8 +17,8 @@
 }
 .providers-page-heading p {
   color: var(--muted);
-  font-size: 14px;
-  margin: 10px 0 0;
+  font-size: 13px;
+  margin: 6px 0 0;
   line-height: 1.6;
 }
 .providers-workspace {

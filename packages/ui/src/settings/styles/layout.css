@@ -92,13 +92,15 @@
   font-size: 14px;
   line-height: 20px;
   text-align: left;
-  margin-bottom: 0;
+  margin-bottom: 3px;
 }
 .settings-nav nav button:focus-visible {
   outline: 2px solid var(--control-focus);
   outline-offset: -2px;
 }
-.settings-nav nav button:hover,
+.settings-nav nav button:hover {
+  background: color-mix(in srgb, var(--hover) 55%, var(--bg));
+}
 .settings-nav nav button.selected {
   background: var(--hover);
 }

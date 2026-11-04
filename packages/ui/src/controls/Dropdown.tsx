@@ -81,6 +81,8 @@ function DropdownMenu({ props, picker, id }: MenuProps) {
       ref={picker.popup}
       popover="auto"
       className="praxis-dropdown-menu"
+      data-size={props.menuSize ?? 'regular'}
+      data-align={props.align}
       onKeyDown={picker.keyDown}
       onToggle={(event) => picker.setOpen(event.newState === 'open')}
     >

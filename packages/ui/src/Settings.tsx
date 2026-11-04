@@ -103,7 +103,7 @@ export function Settings({
                 <h2>{current.title}</h2>
               </div>
             )}
-            {!['general', 'appearance'].includes(tab) && (
+            {!['general', 'appearance', 'models'].includes(tab) && (
               <p className="settings-scope">{settingsScope(tab, client.desktop)}</p>
             )}
             {tab === 'general' && <General providers={providers} />}

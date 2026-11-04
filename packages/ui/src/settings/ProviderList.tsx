@@ -38,14 +38,7 @@ export function ProviderList({
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="provider-list-filter">
-        <span>{visible.length} 个供应商</span>
-        <Select aria-label="筛选供应商状态" value={filter} onChange={(value) => setFilter(value)}>
-          <option value="all">全部</option>
-          <option value="enabled">已启用</option>
-          <option value="disabled">已停用</option>
-        </Select>
-      </div>
+      <ProviderStatusFilter count={visible.length} value={filter} onChange={setFilter} />
       <div className="provider-list-items">
         {visible.map((p) => (
           <button
@@ -76,5 +69,26 @@ export function ProviderList({
         </p>
       )}
     </aside>
+  );
+}
+
+function ProviderStatusFilter({
+  count,
+  value,
+  onChange,
+}: {
+  count: number;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="provider-list-filter">
+      <span>{count} 个供应商</span>
+      <Select aria-label="筛选供应商状态" align="end" value={value} onChange={onChange}>
+        <option value="all">全部</option>
+        <option value="enabled">已启用</option>
+        <option value="disabled">已停用</option>
+      </Select>
+    </div>
   );
 }

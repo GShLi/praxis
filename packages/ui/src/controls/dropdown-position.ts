@@ -7,15 +7,20 @@ export function trackDropdownPosition(trigger: HTMLElement, popup: HTMLElement) 
     const topEdge = (viewport?.offsetTop ?? 0) + 8;
     const rightEdge = leftEdge + (viewport?.width ?? innerWidth) - 16;
     const bottomEdge = topEdge + (viewport?.height ?? innerHeight) - 16;
-    const width = Math.min(Math.max(rect.width, 240), rightEdge - leftEdge);
-    popup.style.width = `${width}px`;
+    const compact = popup.dataset.size === 'compact';
+    popup.style.minWidth = `${Math.min(rect.width, rightEdge - leftEdge)}px`;
+    if (!compact)
+      popup.style.width = `${Math.min(Math.max(rect.width, 240), rightEdge - leftEdge)}px`;
+    const width = popup.getBoundingClientRect().width;
     const below = bottomEdge - rect.bottom - 8;
     const above = rect.top - topEdge - 8;
     const desired = Math.min(popup.scrollHeight, 360);
     const up = below < desired && above > below;
     popup.style.maxHeight = `${Math.max(0, Math.min(360, up ? above : below))}px`;
     const alignRight =
-      rect.left + width > rightEdge || rect.left > leftEdge + (rightEdge - leftEdge) / 2;
+      popup.dataset.align === 'end' ||
+      (popup.dataset.align !== 'start' &&
+        (rect.left + width > rightEdge || rect.left > leftEdge + (rightEdge - leftEdge) / 2));
     popup.style.left = `${Math.max(leftEdge, Math.min(alignRight ? rect.right - width : rect.left, rightEdge - width))}px`;
     popup.style.top = `${up ? Math.max(topEdge, rect.top - popup.offsetHeight - 8) : Math.max(topEdge, rect.bottom + 8)}px`;
     popup.dataset.side = up ? 'top' : 'bottom';
