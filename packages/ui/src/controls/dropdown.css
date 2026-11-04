@@ -1,0 +1,181 @@
+.praxis-dropdown {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.praxis-dropdown .praxis-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--control-border, var(--border));
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+.praxis-dropdown-trigger:enabled:hover {
+  background: var(--raised);
+}
+.praxis-dropdown-trigger:focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: -2px;
+}
+.praxis-dropdown-trigger:disabled {
+  background: var(--raised);
+  color: var(--muted);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+.praxis-dropdown-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: 240px;
+  max-width: calc(100vw - 16px);
+  max-height: 360px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow:
+    0 8px 28px #00000012,
+    0 1px 4px #00000006;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.praxis-dropdown-menu::backdrop {
+  background: transparent;
+}
+.praxis-dropdown-menu .praxis-dropdown-options:focus-visible {
+  outline: none;
+}
+.praxis-dropdown-menu .praxis-dropdown-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.praxis-dropdown-option + .praxis-dropdown-option {
+  margin-top: 2px;
+}
+.praxis-dropdown-menu .praxis-dropdown-option[aria-selected='true'] {
+  background: var(--raised);
+}
+.praxis-dropdown-menu .praxis-dropdown-option:enabled:hover {
+  background: var(--hover);
+}
+.praxis-dropdown-options:focus-visible .praxis-dropdown-option[data-active='true'],
+.praxis-dropdown-menu:has(input:focus-visible) .praxis-dropdown-option[data-active='true'] {
+  background: var(--hover);
+}
+.praxis-dropdown-menu .praxis-dropdown-option:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.praxis-dropdown-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.praxis-dropdown-label {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.praxis-dropdown-description {
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.praxis-dropdown-menu input.praxis-dropdown-search {
+  width: calc(100% - 8px);
+  min-height: 40px;
+  margin: 4px 4px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+}
+.praxis-dropdown-search:focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: -2px;
+}
+.praxis-dropdown-empty {
+  margin: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+label > .praxis-dropdown {
+  display: block;
+  width: 100%;
+}
+.workspace-bar > .praxis-dropdown {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.provider-list-filter > .praxis-dropdown {
+  flex: none;
+}
+.composer-bottom > .model-select {
+  flex: 0 1 auto;
+  max-width: 260px;
+}
+.praxis-dropdown-group {
+  padding: 10px 12px 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.praxis-dropdown-options > [role='group'] + [role='group'] {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.model-select .praxis-dropdown-option .praxis-dropdown-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composer-bottom .praxis-dropdown-trigger {
+  border-color: transparent;
+  border-radius: 24px;
+  background: var(--raised);
+}
+.composer-bottom .model-select .praxis-dropdown-trigger .praxis-dropdown-description {
+  display: none;
+}
+.composer-bottom .model-select .praxis-dropdown-trigger .praxis-dropdown-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (forced-colors: active) {
+  .praxis-dropdown-option[aria-selected='true'] {
+    outline: 1px solid Highlight;
+    outline-offset: -2px;
+  }
+}

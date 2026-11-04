@@ -4,13 +4,14 @@ Web 与桌面端共用 React UI，应用通过 `PraxisClient` 注入运行环境
 
 ## 表单与控件
 
-`src/styles/form-controls.css` 管理共享控件的视觉规则，最后由 `src/styles.css`
-导入，以覆盖页面历史样式。页面 CSS 继续负责布局、宽度和组合关系。
+`src/styles/form-controls.css` 管理共享控件的视觉规则，由 `src/styles.css`
+在页面样式之后导入。下拉框的专用规则由 `src/controls/dropdown.css` 随后导入。
+页面 CSS 继续负责布局、宽度和组合关系。
 
-- 标准输入框、下拉框、文本域：1px 实线边框、8px 圆角、最小高度 40px、14px 字号。
+- 标准输入框、文本域：1px 实线边框、8px 圆角、最小高度 40px、14px 字号。
 - 主要操作使用 `.primary-button` 实心按钮；次要操作使用 `.secondary-button`
   outline 按钮；危险操作使用 `.danger-button` 或 `.secondary-button.danger`。
-- 键盘聚焦显示 2px 焦点环。错误字段设置 `aria-invalid="true"`，并提供关联错误说明；
+- 表单聚焦显示内收的 2px 焦点线，与原边框重合，避免双圈。错误字段设置 `aria-invalid="true"`，并提供关联错误说明；
   原生校验使用 `:user-invalid`，避免未操作时把必填字段标红。
 - 禁用字段和按钮使用弱化背景与不可操作光标；只读字段仍保留可读文字。
 - 搜索框和对话输入区由外层绘制边框与焦点环，内部编辑器不重复绘制。
@@ -19,6 +20,19 @@ Web 与桌面端共用 React UI，应用通过 `PraxisClient` 注入运行环境
 
 优先调整 `--control-*` 变量，不在新增页面重复定义控件边框和状态。
 使用同一套规则适配浅色、深色、系统高对比度及减少动态效果偏好。
+
+## 下拉选择
+
+普通字段使用 `controls/Select.tsx`，沿用字段旁的 `<option>` 声明，`onChange` 直接接收字符串值。
+带描述或搜索的选项使用 `controls/Dropdown.tsx`；模型通过 `conversation/ModelSelect.tsx` 适配。
+模型选项多于 6 个、普通选项多于 8 个时显示搜索，短列表直接展开。
+模型按供应商分组，供应商名称仅显示在组标题，模型选项使用单行；同名模型的已选按钮补充供应商名称。
+默认模型列表仅展示真实模型；没有有效的已存偏好时显示实际生效的首个启用模型，不提供“首个可用模型”占位选项。
+
+菜单采用圆角、选中底色和右侧勾选标记，通过 Popover 顶层展示，避免被弹窗或滚动容器裁切。
+定位会在空间不足时向上展开，并在右侧控件处对齐右边缘。
+支持方向键、Home/End、Enter、Escape、Tab、字母定位、IME 和禁用字段。
+控件实例管理打开状态、搜索与焦点；定位监听、ResizeObserver 和禁用观察器随关闭或卸载清理。
 
 ## 验证
 

@@ -1,3 +1,4 @@
+import { Select } from '../controls/Select.tsx';
 import type { PraxisClient } from '../client-types.ts';
 import { useMcpPrompts } from './useMcpPrompts.ts';
 export function McpPrompts({
@@ -49,17 +50,17 @@ export function McpPrompts({
           )}
           <label>
             服务器
-            <select
+            <Select
               value={state.serverId}
               disabled={state.busy}
-              onChange={(e) => state.selectServer(e.target.value)}
+              onChange={(value) => state.selectServer(value)}
             >
               {state.servers.map((server) => (
                 <option key={server.id} value={server.id}>
                   {server.displayName}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           {!state.busy && !state.servers.length && (
             <p>请先在设置中配置、检查并启用支持提示词的 MCP 服务器。</p>
@@ -78,17 +79,17 @@ export function McpPrompts({
             <>
               <label>
                 模板
-                <select
+                <Select
                   value={state.name}
                   disabled={state.busy}
-                  onChange={(e) => state.selectName(e.target.value)}
+                  onChange={(value) => state.selectName(value)}
                 >
                   {state.catalog.entries.map((entry) => (
                     <option key={entry.name} value={entry.name}>
                       {entry.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <p>{state.catalog.entries.find((e) => e.name === state.name)?.description}</p>
               <details>

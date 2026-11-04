@@ -21,14 +21,12 @@
 }
 
 /* :is() deliberately matches the specificity of existing page-level rules. */
-:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .praxis-dropdown-menu)
   :is(
     input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
     textarea,
     select
-  ),
-.model-select-dialog > input,
-.model-select .model-select-trigger {
+  ) {
   box-sizing: border-box;
   min-height: var(--control-height);
   min-width: 0;
@@ -49,21 +47,18 @@
   color: var(--muted);
   opacity: 1;
 }
-:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
-  :is(input, textarea, select):enabled:hover,
-.model-select .model-select-trigger:enabled:hover {
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .praxis-dropdown-menu)
+  :is(input, textarea, select):enabled:hover {
   border-color: var(--control-border-hover);
 }
-:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
-  :is(input, textarea, select):focus-visible,
-.model-select .model-select-trigger:focus-visible {
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .praxis-dropdown-menu)
+  :is(input, textarea, select):focus-visible {
   border-color: var(--control-focus);
   outline: 2px solid var(--control-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
-:is(.settings-page, .settings-dialog, .login-page, .workspace, .model-select-dialog)
-  :is(input, textarea, select):disabled,
-.model-select .model-select-trigger:disabled {
+:is(.settings-page, .settings-dialog, .login-page, .workspace, .praxis-dropdown-menu)
+  :is(input, textarea, select):disabled {
   border-color: var(--border);
   background: var(--raised);
   color: var(--muted);
@@ -180,24 +175,28 @@
 
 /* Compound fields own one border/focus ring; inner editors remain borderless. */
 .settings-page .settings-search,
+.settings-page .provider-list-search,
 .session-search-dialog .session-search-input,
 .workspace .composer {
   border: 1px solid var(--control-border);
   box-shadow: none;
 }
 .settings-page .settings-search,
+.settings-page .provider-list-search,
 .session-search-dialog .session-search-input {
   border-radius: var(--control-radius);
   background: var(--control-background);
 }
 .settings-page .settings-search:focus-within,
+.settings-page .provider-list-search:focus-within,
 .session-search-dialog .session-search-input:focus-within,
 .workspace .composer:has(textarea:focus-visible) {
   border-color: var(--control-focus);
   outline: 2px solid var(--control-focus);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 .settings-page .settings-search input,
+.settings-page .provider-list-search input,
 .session-search-dialog .session-search-input input,
 .workspace .composer textarea {
   border: 0;
@@ -206,9 +205,31 @@
   box-shadow: none;
 }
 .settings-page .settings-search input:focus-visible,
+.settings-page .provider-list-search input:focus-visible,
 .session-search-dialog .session-search-input input:focus-visible,
 .workspace .composer textarea:focus-visible {
   outline: none; /* The enclosing compound field shows the focus ring. */
+}
+.settings-page :is(.settings-search, .provider-list-search) {
+  min-height: 42px;
+  padding: 8px 12px;
+}
+.settings-page :is(.settings-search, .provider-list-search) input {
+  min-height: 24px;
+  padding: 0;
+  line-height: 24px;
+}
+.session-search-dialog .session-search-input {
+  margin: 12px 12px 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.session-search-dialog .session-search-input input {
+  min-height: 28px;
+  padding: 0;
+}
+:is(.rail-button, .icon-button, .secondary-button, .danger-button):focus-visible {
+  outline-offset: -2px;
 }
 .workspace .composer textarea {
   padding: 6px 0;
@@ -228,7 +249,7 @@
     .primary-button,
     .secondary-button,
     .danger-button,
-    .model-select-trigger
+    .praxis-dropdown-trigger
   ) {
     transition:
       border-color 120ms ease,

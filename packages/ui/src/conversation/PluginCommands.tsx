@@ -1,3 +1,4 @@
+import { Select } from '../controls/Select.tsx';
 import type { UserCommand } from '@praxis/contracts';
 import type { PraxisClient } from '../client-types.ts';
 import { usePluginCommands } from './usePluginCommands.ts';
@@ -35,7 +36,7 @@ export function PluginCommands({
             <>
               <label>
                 选择命令
-                <select value={state.selected} onChange={(e) => state.setSelected(e.target.value)}>
+                <Select value={state.selected} onChange={(value) => state.setSelected(value)}>
                   {state.items.map((item) => (
                     <option
                       key={`${item.pluginId}/${item.name}`}
@@ -44,7 +45,7 @@ export function PluginCommands({
                       {item.pluginId} / {item.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <label>
                 参数（JSON）

@@ -1,3 +1,4 @@
+import { Select } from '../controls/Select.tsx';
 import { useState } from 'react';
 import { Row } from './controls.tsx';
 
@@ -33,19 +34,19 @@ export function Appearance() {
         <h2>文字</h2>
         <div className="settings-group">
           <Row title="回答字号" description="调整对话内容的文字大小。">
-            <select
+            <Select
               aria-label="回答字号"
               value={font}
-              onChange={(e) => {
-                setFont(e.target.value);
-                localStorage.setItem('praxis-font', e.target.value);
-                document.documentElement.style.setProperty('--message-font', `${e.target.value}px`);
+              onChange={(value) => {
+                setFont(value);
+                localStorage.setItem('praxis-font', value);
+                document.documentElement.style.setProperty('--message-font', `${value}px`);
               }}
             >
               <option value="14">紧凑 · 14</option>
               <option value="16">标准 · 16</option>
               <option value="18">舒适 · 18</option>
-            </select>
+            </Select>
           </Row>
         </div>
         <div className="appearance-preview" aria-label="回答样式预览">

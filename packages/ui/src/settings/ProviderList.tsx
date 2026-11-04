@@ -1,3 +1,4 @@
+import { Select } from '../controls/Select.tsx';
 import { useState } from 'react';
 import { providerModels, parseModelSelection } from '@praxis/model-core/provider-models';
 import type { Provider } from '../client-types.ts';
@@ -39,15 +40,11 @@ export function ProviderList({
       </div>
       <div className="provider-list-filter">
         <span>{visible.length} 个供应商</span>
-        <select
-          aria-label="筛选供应商状态"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
+        <Select aria-label="筛选供应商状态" value={filter} onChange={(value) => setFilter(value)}>
           <option value="all">全部</option>
           <option value="enabled">已启用</option>
           <option value="disabled">已停用</option>
-        </select>
+        </Select>
       </div>
       <div className="provider-list-items">
         {visible.map((p) => (
