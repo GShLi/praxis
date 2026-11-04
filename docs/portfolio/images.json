@@ -1,0 +1,96 @@
+{
+  "bucket": "doublefloat",
+  "prefix": "folio-nest/praxis/",
+  "uploadedWith": "PicGo 3.2.0",
+  "verification": "Every public HTTPS response matched the original PNG bytes.",
+  "images": [
+    {
+      "filename": "praxis-cover.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "f64184d7fd02a1afd6fcc05d8c761c07d30d71cfeda100ec309d02307f061595",
+      "kind": "generated-brand-cover",
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/f64184d7fd02a1afd6fcc05d8c761c07d30d71cfeda100ec309d02307f061595.png"
+    },
+    {
+      "filename": "01-web-chat.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "90f8fc07e00076c62bb010e0399fee34b9ea0758a5444e69f415b338384c8aaf",
+      "theme": "light",
+      "client": "web",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/90f8fc07e00076c62bb010e0399fee34b9ea0758a5444e69f415b338384c8aaf.png"
+    },
+    {
+      "filename": "02-web-code.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "c325b0606ab210c979eec730b98bef19e9c0bf7cb29e91be78b5782f632184a0",
+      "theme": "light",
+      "client": "web",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/c325b0606ab210c979eec730b98bef19e9c0bf7cb29e91be78b5782f632184a0.png"
+    },
+    {
+      "filename": "03-model-providers.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "1cc22a077288610f13075c985f2d4df7580404253bec41f413809ebd054d9b96",
+      "theme": "light",
+      "client": "web",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/1cc22a077288610f13075c985f2d4df7580404253bec41f413809ebd054d9b96.png"
+    },
+    {
+      "filename": "04-desktop-agent.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "7371f834c4a4fb38a7828f648d9006cd428561984b9756245ae629d145b7c6d9",
+      "theme": "light",
+      "client": "desktop",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/7371f834c4a4fb38a7828f648d9006cd428561984b9756245ae629d145b7c6d9.png"
+    },
+    {
+      "filename": "05-desktop-approval.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "76b01d0d13310a36813c6ead27e8c0d8c261853c47d0c8eafaf6aec9aa94197a",
+      "theme": "light",
+      "client": "desktop",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/76b01d0d13310a36813c6ead27e8c0d8c261853c47d0c8eafaf6aec9aa94197a.png"
+    },
+    {
+      "filename": "06-mcp-connections.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "0b47cc6e9a9706dc4b31d274c32eae468c8641717e5874211311d9c31480fa5f",
+      "theme": "light",
+      "client": "desktop",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/0b47cc6e9a9706dc4b31d274c32eae468c8641717e5874211311d9c31480fa5f.png"
+    },
+    {
+      "filename": "07-dark-chat.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "f998ad301053ec2f90fe666318816dacf1dc8cd465af19937208aadde8ea2d51",
+      "theme": "dark",
+      "client": "web",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/f998ad301053ec2f90fe666318816dacf1dc8cd465af19937208aadde8ea2d51.png"
+    },
+    {
+      "filename": "08-file-diff.png",
+      "width": 2880,
+      "height": 1920,
+      "sha256": "87f2086ade777d35e66763d60742116084cdd4a86e33cfa97eb1344deb832845",
+      "theme": "light",
+      "client": "desktop",
+      "demoData": true,
+      "url": "https://cdn.doublefloat.cn/folio-nest/praxis/87f2086ade777d35e66763d60742116084cdd4a86e33cfa97eb1344deb832845.png"
+    }
+  ]
+}
