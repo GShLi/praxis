@@ -1,0 +1,26 @@
+.settings-feedback-error {
+  border-color: var(--danger, #b42318);
+  color: var(--danger, #b42318);
+}
+.settings-feedback-success {
+  border-color: var(--success, #26834a);
+}
+.settings-load-error {
+  margin: 16px 0 24px;
+}
+.settings-row-feedback {
+  grid-column: 2;
+  min-width: 0;
+}
+.settings-dialog .settings-modal-editor {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}
+.settings-save-state {
+  margin-right: auto;
+  align-self: center;
+  color: var(--muted);
+  font-size: 13px;
+}

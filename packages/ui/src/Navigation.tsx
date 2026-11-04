@@ -162,8 +162,7 @@ export function AppRail({
                 setError('');
                 void logout().catch((e: unknown) => {
                   setError(e instanceof Error ? e.message : '退出失败，请重试。');
-                  setBusy(false);
-                });
+                }).finally(() => setBusy(false));
               }}
             >
               <Icon name="logout" />

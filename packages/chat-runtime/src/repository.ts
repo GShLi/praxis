@@ -1,4 +1,4 @@
-import type { Event } from '@praxis/contracts';
+import type { Event, SessionHistoryUpdate } from '@praxis/contracts';
 import { assert } from '@praxis/contracts';
 import type { ServerDatabase, SqlConnection } from '@praxis/storage-server';
 import { randomUUID } from 'node:crypto';
@@ -62,13 +62,27 @@ export class ChatRepository {
     });
     return this.owned(owner, id);
   }
-  async list(owner: string) {
+  async list(owner: string, options: { includeArchived?: boolean } = {}) {
     return (
       await this.database.query<Chat>(
-        'SELECT * FROM chats WHERE owner=$1 AND archived=false ORDER BY created_at DESC LIMIT 100',
-        [owner],
+        'SELECT * FROM chats WHERE owner=$1 AND ($2 OR archived=false) ORDER BY created_at DESC LIMIT 100',
+        [owner, options.includeArchived ?? false],
       )
     ).rows;
+  }
+  async update(owner: string, id: string, patch: SessionHistoryUpdate) {
+    return this.database.transaction(async (sql) => {
+      // Submission locks this same row, so a generation cannot start between the guard and update.
+      const chat = await this.owned(owner, id, sql, true);
+      assert(!chat.active_generation, 'SESSION_BUSY', '请先停止当前回复。');
+      const result = await sql.query<Chat>(
+        'UPDATE chats SET title=$3,archived=$4 WHERE id=$1 AND owner=$2 RETURNING *',
+        [id, owner, patch.title ?? chat.title, patch.archived ?? chat.archived],
+      );
+      const updated = result.rows[0];
+      assert(updated, 'SESSION_NOT_FOUND', '对话不存在。');
+      return updated;
+    });
   }
   async events(owner: string, id: string, after: number) {
     const chat = await this.owned(owner, id);

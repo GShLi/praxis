@@ -1,0 +1,84 @@
+.history-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
+.history-tabs button {
+  font-size: 13px;
+  padding: 6px 10px;
+  color: var(--muted);
+  border-radius: 8px;
+}
+.history-tabs button[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--hover);
+}
+.history-row {
+  display: flex;
+  min-width: 0;
+  border-radius: 10px;
+  margin: 2px 0;
+}
+.history-row.selected,
+.history-row:hover {
+  background: var(--hover);
+}
+.session-list .history-row > .history-session {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  background: transparent;
+}
+.history-session > span {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-session > small {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-session .status-waiting_approval,
+.history-session .status-waiting_input {
+  color: var(--text);
+  font-weight: 600;
+}
+.session-list .history-row > .history-manage {
+  padding: 5px 8px;
+  width: 32px;
+  flex: none;
+  font-size: 18px;
+  justify-content: center;
+}
+.history-attention {
+  margin: 8px 14px;
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.history-attention svg {
+  margin-left: auto;
+  transform: rotate(180deg);
+}
+.session-archive-actions {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.session-archive-actions h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.session-archive-actions p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}

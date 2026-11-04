@@ -46,8 +46,8 @@
   height: 30px;
   border-radius: 50%;
   background: #e8a13a;
-  color: #fff;
-  font-size: 12px;
+  color: #35230d;
+  font-size: 13px;
   flex: none;
 }
 .account-trigger {
@@ -79,7 +79,7 @@
 }
 .account-menu-heading small {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 4px;
 }
 .account-menu > button {
@@ -96,7 +96,7 @@
   background: var(--hover);
 }
 .account-menu > p {
-  font-size: 12px;
+  font-size: 13px;
   padding: 8px 12px;
 }
 .menu-separator {

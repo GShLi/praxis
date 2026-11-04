@@ -1,3 +1,4 @@
+import { messageActions } from './message-actions.ts';
 import { Copy, MarkdownView } from '../MarkdownView.tsx';
 
 import type { AppController } from '../app/useAppController.ts';
@@ -29,6 +30,7 @@ export function MessageList({
   | 'running'
   | 'showChange'
 >) {
+  const actions = messageActions(client, selected, snapshot, question, setQuestion, fail);
   return (
     <div className="messages">
       {snapshot?.messages.map((message) =>
@@ -59,6 +61,7 @@ export function MessageList({
                 {client.regenerate &&
                   selected &&
                   !running &&
+                  !snapshot?.session.archived &&
                   message.id ===
                     snapshot?.messages.filter((m) => m.role === 'assistant').at(-1)?.id && (
                     <button
@@ -88,36 +91,11 @@ export function MessageList({
         <ApprovalCard
           key={snapshot.approval.approvalId}
           approval={snapshot.approval}
-          submit={async (decision) => {
-            const approval = snapshot.approval!;
-            await client.respondApproval!({
-              sessionId: approval.sessionId,
-              turnId: approval.turnId,
-              approvalId: approval.approvalId,
-              requestHash: approval.requestHash,
-              decision,
-            });
-          }}
+          submit={actions.approve}
         />
       )}
       {question && selected && (
-        <QuestionCard
-          key={question.questionId}
-          question={question}
-          submit={async (answers) => {
-            try {
-              await client.answer?.({
-                sessionId: selected,
-                questionId: question.questionId,
-                turnId: question.turnId,
-                answers,
-              });
-              setQuestion(null);
-            } catch (e) {
-              fail(e);
-            }
-          }}
-        />
+        <QuestionCard key={question.questionId} question={question} submit={actions.answer} />
       )}
     </div>
   );

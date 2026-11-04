@@ -21,30 +21,30 @@
   display: flex;
   flex-direction: column;
   padding: 20px 16px 0;
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
   gap: 8px;
 }
 .change-title button {
   align-self: flex-start;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 .panel-note {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--muted);
   padding: 0 16px;
   margin-top: 12px;
 }
 .detail-panel section h3 {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   margin: 18px 16px 8px;
 }
 .detail-panel pre {
   padding: 12px 16px;
   white-space: pre-wrap;
-  font-size: 11px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 .diff-before {
@@ -61,7 +61,7 @@
   flex-direction: column;
   min-height: 280px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 .panel-empty svg {
   width: 26px;

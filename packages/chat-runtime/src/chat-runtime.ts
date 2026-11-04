@@ -64,6 +64,9 @@ export class ChatRuntime extends EventEmitter {
   list(...args: Parameters<ChatRepository['list']>) {
     return this.repository.list(...args);
   }
+  update(...args: Parameters<ChatRepository['update']>) {
+    return this.repository.update(...args);
+  }
   events(...args: Parameters<ChatRepository['events']>) {
     return this.repository.events(...args);
   }

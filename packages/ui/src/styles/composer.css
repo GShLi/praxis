@@ -7,7 +7,7 @@
 }
 .composer {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -18,7 +18,7 @@
     0 6px 24px #00000004;
 }
 .composer:focus-within {
-  border-color: color-mix(in srgb, var(--text) 22%, var(--border));
+  border-color: var(--focus);
 }
 .composer textarea {
   border: 0;
@@ -46,19 +46,19 @@
   gap: 8px;
   min-width: 0;
   min-height: 36px;
+  flex-wrap: wrap;
 }
 .composer-bottom select {
   font-size: 13px;
   background: transparent;
   border: none;
   border-radius: 20px;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
   color: var(--muted);
   padding: 7px 4px;
 }
-.composer-bottom select:hover {
+.composer-bottom select:enabled:hover {
   background: var(--hover);
   color: var(--text);
 }
@@ -99,25 +99,28 @@
 }
 .composer-hint {
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin: 8px 0 0;
 }
 .empty-workspace .composer-hint {
-  position: absolute;
-  bottom: 10px;
-  left: 16px;
-  right: 16px;
+  position: static;
+  margin-top: 16px;
+}
+.conversation-footer {
+  position: relative;
+  flex-shrink: 0;
 }
 .latest {
   position: absolute;
-  bottom: 104px;
+  bottom: calc(100% + 12px);
+  z-index: 2;
   left: 50%;
   transform: translateX(-50%);
   border: 1px solid var(--border);
   border-radius: 20px;
   background: var(--bg);
   padding: 7px 13px;
-  font-size: 12px;
+  font-size: 13px;
   box-shadow: 0 2px 6px #0001;
 }

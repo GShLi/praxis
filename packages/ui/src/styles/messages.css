@@ -49,11 +49,11 @@
   margin-bottom: 0;
 }
 .message-content h1 {
-  font-size: 28px;
+  font-size: 24px;
   margin: 28px 0 16px;
 }
 .message-content h2 {
-  font-size: 22px;
+  font-size: 20px;
   margin: 28px 0 16px;
 }
 .message-content h3 {
@@ -87,7 +87,7 @@
   gap: 12px;
   margin: 14px 0 0 -7px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .copy-button {
   display: inline-flex;
@@ -106,7 +106,7 @@
   overflow: hidden;
 }
 .code-header {
-  font-size: 12px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: space-between;

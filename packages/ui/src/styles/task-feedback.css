@@ -1,0 +1,287 @@
+.task-overview,
+.task-tool,
+.task-approval,
+.task-change-panel {
+  --task-muted: color-mix(in srgb, var(--text) 72%, var(--bg));
+  font-size: 14px;
+  line-height: 1.6;
+}
+.task-overview,
+.task-tool {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0 24px;
+  min-width: 0;
+  background: var(--bg);
+}
+.task-overview {
+  width: calc(100% - 32px);
+  max-width: 768px;
+  max-height: 48vh;
+  overflow: auto;
+  flex-shrink: 0;
+  margin: 12px auto;
+  padding: 12px 16px;
+}
+.task-tool-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.task-overview h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.task-overview h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.task-overview p,
+.task-tool p {
+  margin: 8px 0;
+}
+.task-status {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.task-status[data-status='failed'],
+.task-status[data-status='denied'],
+.task-status[data-status='timed_out'],
+.task-change-error {
+  color: var(--error);
+}
+.task-status[data-status='completed'],
+.task-status[data-status='succeeded'] {
+  color: var(--success);
+}
+.task-status[data-status='waiting_approval'],
+.task-status[data-status='waiting_input'] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.task-facts {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.task-facts > div {
+  display: grid;
+  grid-template-columns: minmax(6em, auto) 1fr;
+  gap: 12px;
+}
+.task-facts dt,
+.task-note,
+.task-tool .task-note,
+.task-overview .task-note {
+  color: var(--task-muted);
+  font-size: 13px;
+}
+.task-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.task-pending,
+.task-results,
+.task-files {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.task-summary-text {
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.task-overview ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.task-overview li {
+  margin: 8px 0;
+}
+.task-files li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.task-file-link {
+  padding: 4px 0;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.task-target {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.task-tool details,
+.task-overview details,
+.task-approval details,
+.task-diff-originals {
+  margin-top: 12px;
+}
+.task-tool summary,
+.task-overview summary,
+.task-approval summary,
+.task-diff-originals summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.task-tool summary:focus-visible,
+.task-overview summary:focus-visible,
+.task-approval summary:focus-visible,
+.task-diff summary:focus-visible,
+.task-diff-scroll:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+.task-tool pre,
+.task-approval pre {
+  margin: 8px 0;
+  max-height: 320px;
+  padding: 12px;
+  font-size: 13px;
+  background: var(--code);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.task-approval .approval-note,
+.task-approval small {
+  font-size: 13px;
+  color: var(--task-muted);
+}
+.task-approval dd {
+  overflow-wrap: anywhere;
+}
+.task-change-panel .panel-note {
+  font-size: 13px;
+  color: var(--task-muted);
+}
+.task-change-panel .change-title {
+  padding-top: 8px;
+  font-size: 14px;
+}
+.task-change-panel > header h2 {
+  font-size: 15px;
+}
+.task-change-panel .panel-empty {
+  font-size: 14px;
+  color: var(--task-muted);
+}
+.task-change-error {
+  padding: 20px 16px;
+  overflow-wrap: anywhere;
+}
+.task-diff {
+  margin: 16px 0;
+}
+.task-diff > p,
+.task-diff-summary,
+.task-diff-originals {
+  margin: 12px 16px;
+}
+.task-diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+}
+.task-diff-add {
+  color: var(--success);
+}
+.task-diff-remove {
+  color: var(--error);
+}
+.task-diff-scroll {
+  overflow: auto;
+  max-height: 65vh;
+  border-block: 1px solid var(--border);
+  background: var(--code);
+}
+.task-diff table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 100%;
+  width: max-content;
+  line-height: 1.65;
+}
+.task-diff th {
+  text-align: left;
+  padding: 6px 8px;
+  background: var(--raised);
+  color: var(--task-muted);
+  position: sticky;
+  top: 0;
+}
+.task-diff td {
+  padding: 2px 8px;
+  vertical-align: top;
+}
+.task-diff .task-line-number {
+  color: var(--task-muted);
+  text-align: right;
+  min-width: 3em;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  border-right: 1px solid var(--border);
+}
+.task-diff-content {
+  white-space: pre;
+  tab-size: 4;
+}
+.task-diff-content code {
+  font-size: 12px;
+}
+.task-diff tr.task-diff-add {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+.task-diff tr.task-diff-remove {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+}
+.task-diff-gap,
+.task-line-note {
+  color: var(--task-muted);
+  font-size: 12px;
+}
+.task-diff-gap td {
+  padding: 8px;
+  background: var(--raised);
+}
+.task-diff-originals > div {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 8px 0;
+}
+@media (max-width: 760px) {
+  .task-overview {
+    margin: 16px;
+  }
+  .task-facts > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+.task-result-details[open] {
+  max-height: min(30vh, 320px);
+  overflow: auto;
+}
+.task-pending-inputs[open] {
+  max-height: 200px;
+  overflow: auto;
+}
+.task-pending-inputs p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

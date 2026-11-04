@@ -1,34 +1,40 @@
 import { useEffect, useState } from 'react';
 import { settingsFromHash, type SettingsTab } from '../navigation-state.ts';
+import { requestNavigation } from './navigation-guard.ts';
 export function useShell(authenticated: boolean) {
   const [settings, setSettings] = useState<SettingsTab | null>(settingsFromHash),
     [searching, setSearching] = useState(false),
     [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
     [panel, setPanel] = useState(false);
-  const openSettings = (tab: SettingsTab) => {
-    if (!window.dispatchEvent(new Event('praxis:before-navigate', { cancelable: true }))) return;
-    location.hash = `settings/${tab}`;
+  const apply = (tab: SettingsTab | null) => {
+    const url = `${location.pathname}${location.search}${tab ? `#settings/${tab}` : ''}`;
+    if (location.hash !== (tab ? `#settings/${tab}` : '')) history.pushState(null, '', url);
     setSettings(tab);
   };
+  const openSettings = (tab: SettingsTab) => {
+    if (settings !== tab) requestNavigation(() => apply(tab));
+  };
   const closeSettings = () => {
-    if (!window.dispatchEvent(new Event('praxis:before-navigate', { cancelable: true }))) return;
-    location.hash = '';
-    setSettings(null);
+    requestNavigation(() => apply(null));
   };
   useEffect(() => {
     const changed = () => {
-      if (!window.dispatchEvent(new Event('praxis:before-navigate', { cancelable: true }))) {
-        history.replaceState(
-          null,
-          '',
-          `${location.pathname}${location.search}${settings ? `#settings/${settings}` : ''}`,
-        );
-        return;
-      }
-      setSettings(settingsFromHash());
+      const next = settingsFromHash();
+      if (settings === next) return;
+      const previous = `${location.pathname}${location.search}${settings ? `#settings/${settings}` : ''}`;
+      const target = `${location.pathname}${location.search}${next ? `#settings/${next}` : ''}`;
+      const accepted = requestNavigation(() => {
+        history.replaceState(null, '', target);
+        setSettings(next);
+      });
+      if (!accepted) history.replaceState(null, '', previous);
     };
     window.addEventListener('hashchange', changed);
-    return () => window.removeEventListener('hashchange', changed);
+    window.addEventListener('popstate', changed);
+    return () => {
+      window.removeEventListener('hashchange', changed);
+      window.removeEventListener('popstate', changed);
+    };
   }, [settings]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -52,5 +58,6 @@ export function useShell(authenticated: boolean) {
     setPanel,
     openSettings,
     closeSettings,
+    resetShell: () => apply(null),
   };
 }

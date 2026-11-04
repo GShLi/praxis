@@ -42,7 +42,7 @@ export function Settings({
       ? 'general'
       : requestedTab;
   const [search, setSearch] = useState('');
-  const { profile, profileError } = useSettingsProfile(client);
+  const { profile, profileError, reloadProfile } = useSettingsProfile(client);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
     main.current?.scrollTo({ top: 0 });
@@ -119,6 +119,7 @@ export function Settings({
                 client={client}
                 profile={profile}
                 profileError={profileError}
+                reloadProfile={reloadProfile}
                 logout={logout}
               />
             )}

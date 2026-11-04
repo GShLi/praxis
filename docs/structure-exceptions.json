@@ -130,24 +130,24 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/app/useAppController.ts#useAppController:1": {
-    "maxLines": 219,
-    "reason": "应用状态协调，MCP 表单调用已提取的通用 Session 提交门闩；新会话默认模型通过共享模型选择器解析，目录、预览及确认状态不在此 Hook。",
-    "validation": "mcp-prompts 新旧协议、取消、错误与去重测试；provider-models 测试与桌面新会话默认模型检查；CLI/HTTP/PostgreSQL 端到端集成、结构/类型检查与应用构建。"
+    "maxLines": 79,
+    "reason": "仅装配身份、会话状态、草稿、提交门闩、订阅与登出；导航和发送命令分别在 conversation-navigation / conversation-commands，视口效果在 useConversationViewport。保留同一挂载树和登出重置接线，不在此实现传输或状态算法。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useConversationSubscription:1": {
-    "maxLines": 85,
-    "reason": "单个会话订阅的快照、游标、事件和关闭共享顺序保护；新增按 question ID 清理及快照恢复。",
-    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+    "maxLines": 70,
+    "reason": "单一所选会话拥有 request/selected 引用及一组 effect；事件内容投影已提取至 conversation-events。快照、游标、listener disposer 与晚到响应保护必须共享订阅作用域。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。"
   },
   "packages/ui/src/app/useConversationSubscription.ts#useEffect callback:1": {
-    "maxLines": 77,
-    "reason": "订阅生命周期内持有游标与 disposer；关闭、快照竞态和人工请求同步保持一起。",
-    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+    "maxLines": 62,
+    "reason": "订阅建立、游标跳跃后的快照刷新、最新请求提交与 detach 共用 stopped/cursor/off；事件内容决策委托 projectConversationEvent。拆开此作用域会外泄订阅内部可变状态。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。"
   },
   "packages/ui/src/app/useIdentity.ts#useIdentity:1": {
-    "maxLines": 71,
-    "reason": "单一登录/列表刷新生命周期，增加多模型选择投影与失效选择回退，保留原有身份清理。",
-    "validation": "provider-models、model-catalog、PostgreSQL 回归；Web/桌面样例检查弹窗保护、失败保留、多模型选择；类型检查与构建。"
+    "maxLines": 83,
+    "reason": "账号绑定与列表快照共享 epoch、请求序号和 boundUser；身份改变时必须一起失效并清空 profile/session/provider。连接检查、定时刷新及模型偏好选择已提取至 identity-refresh；此处保留同一原子发布与失效所有权。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。"
   },
   "packages/ui/src/auth/Login.tsx#Login:1": {
     "maxLines": 98,
@@ -160,9 +160,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/Composer.tsx#Composer:1": {
-    "maxLines": 196,
-    "reason": "连续输入区 JSX；仅将人工交互状态传给提示词面板，异步状态仍在 Hook。",
-    "validation": "control-interaction、mcp-interaction、mcp-questions、mcp-prompt-interaction、permissions 测试；全量结构/类型/测试与应用构建。"
+    "maxLines": 244,
+    "reason": "输入区的连续 JSX 与显式 props 契约；模型/工作区就绪只做同步派生，取消和恢复请求移至 useComposerActions，发送由应用命令接口负责。保留原有可访问标签、快捷键、草稿说明及插件面板顺序。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。"
   },
   "packages/ui/src/conversation/Conversation.tsx#Conversation:1": {
     "maxLines": 90,
@@ -170,14 +170,14 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/conversation/MessageList.tsx#MessageList:1": {
-    "maxLines": 117,
-    "reason": "会话消息、工具卡片和版本操作连续 JSX；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
+    "maxLines": 94,
+    "reason": "消息流、工具卡片和人工交互面板的连续 JSX；批准/回答协议转换及失败处理已移到 message-actions，重新生成按钮只调用客户端能力并交还错误。不持有订阅或异步状态。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。 tests/ui-conversation-actions.test.ts 验证批准标识与回答失败保留。"
   },
   "packages/ui/src/conversation/Sidebar.tsx#Sidebar:1": {
-    "maxLines": 61,
-    "reason": "同一会话侧栏列表 JSX；保留 JSX 连续性避免仅按行数切割。",
-    "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
+    "maxLines": 155,
+    "reason": "会话列表、状态分组及管理弹窗的连续 JSX；只拥有归档筛选/当前弹窗这两个局部视图状态。列表请求和保存归上层接口，分组算法在 session-groups，未将订阅放入视图。",
+    "validation": "pnpm structure；pnpm typecheck；tests/ui-controller-browser.test.ts（PRAXIS_UI_BROWSER_TESTS=1）验证在途草稿、模式恢复、过期快照与退出隔离；conversation-drafts、task-presentation、settings-ux 回归。 history-management-local.test.ts。"
   },
   "packages/ui/src/conversation/TopBar.tsx#TopBar:1": {
     "maxLines": 90,
@@ -195,9 +195,9 @@
     "validation": "TS、UI 浏览器样例、Web/Desktop 构建"
   },
   "packages/ui/src/settings/McpEditor.tsx#McpEditor:1": {
-    "maxLines": 133,
-    "reason": "同一远程连接表单支持新建/编辑和协议/能力字段，连续 JSX；保存委托给客户端 Hook，不含网络业务。",
-    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
+    "maxLines": 147,
+    "reason": "同一 MCP 连接表单的连续 JSX；草稿/配置转换由 useMcpEditor 拥有，保存和重试委托父级，返回成功后仅关闭表单。字段、能力选项与错误反馈保持一个 form 的语义。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
   },
   "packages/ui/src/settings/McpSettings.tsx#McpSettings:1": {
     "maxLines": 94,
@@ -400,9 +400,9 @@
     "validation": "mcp-secrets、mcp-credentials、mcp-bearer、macOS Keychain 实测、真实 CLI/HTTP/PostgreSQL 集成、全量结构/类型/测试和应用构建。"
   },
   "packages/ui/src/settings/McpCredential.tsx#McpCredential:1": {
-    "maxLines": 92,
-    "reason": "原有凭据表单仅增加独立样式类，秘密仍仅存在于局部输入状态。",
-    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
+    "maxLines": 73,
+    "reason": "单服务器凭据表单的连续 JSX；秘密输入、服务切换代数、晚到结果失效和提交/清除生命周期已移至 useMcpCredential。视图只展示存储状态和绑定动作。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。 mcp-config-credentials.test.ts。"
   },
   "tests/integration/mcp-auth.test.ts#test(CLI consumes a one-time Bearer input, reports memory fallback, and enables it for a foreground run):1": {
     "maxLines": 131,
@@ -425,9 +425,9 @@
     "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
   },
   "packages/ui/src/settings/useMcpOAuth.ts#useMcpOAuth:1": {
-    "maxLines": 76,
-    "reason": "单一视图授权生命周期：当前身份代数、未返回 start 的取消、活动流程与卸载清理共享状态；轮询算法已独立。",
-    "validation": "OAuth 核心测试覆盖 PKCE、绑定、取消、错误范围和持久刷新状态；真实 CLI/HTTP/PostgreSQL 流程，结构/类型检查与应用构建。"
+    "maxLines": 101,
+    "reason": "单次 OAuth 编辑器生命周期：启动门闩、身份代数、活动 flow、轮询 AbortController 和关闭取消共享归属。结果刷新后才发布成功反馈；轮询协议已在 clients/mcp-oauth-poll。拆开 start/cancel/cleanup 会分散同一授权事务。",
+    "validation": "mcp-oauth.test.ts、mcp-oauth-failures.test.ts、mcp-oauth-runtime.test.ts；结构与类型检查。未新增 OAuth Hook 的浏览器端到端覆盖。"
   },
   "tests/fixtures/oauth-profile.ts#oauthProfile:1": {
     "maxLines": 77,
@@ -455,9 +455,9 @@
     "validation": "mcp-oauth-runtime 测试检查旧操作取消、配置版本保持和 Session 不含 Token；全量结构/类型/测试。"
   },
   "packages/ui/src/settings/McpServerRow.tsx#McpServerRow:1": {
-    "maxLines": 111,
-    "reason": "从设置页提取单个连接视图，集中显示凭据、授权和操作按钮，删除确认仅是局部视图状态。",
-    "validation": "mcp-config-credentials 测试覆盖地址更改、清理失败重试和 OAuth 取消；真实 CLI 删除集成，结构/类型检查和应用构建。"
+    "maxLines": 118,
+    "reason": "一个连接的状态/操作/删除确认 JSX；只有删除确认开关是局部状态。OAuth、凭据和持久化操作分别由子 Hook/父 actions 拥有，新增行级反馈与同一服务器关联。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。 mcp-config-credentials.test.ts。"
   },
   "tests/integration/local-backup.test.ts#test(offline CLI backup verifies identity and writer lease, requires exact confirmation and restores a closed profile):1": {
     "maxLines": 81,
@@ -465,14 +465,14 @@
     "validation": "真实 PostgreSQL/HTTP/CLI 集成：活动 Host 只读导出、退出后工具元数据、私有文件权限及 Key/路径/正文排除；全量 check 与应用构建。"
   },
   "packages/ui/src/settings/Personalization.tsx#Personalization:1": {
-    "maxLines": 65,
-    "reason": "单一指令表单的连续 JSX，控制项与字节计数对应同一草稿；异步加载、CAS 保存及卸载保护在独立 Hook。",
-    "validation": "用户指令核心行为、真实 PostgreSQL/HTTP/CLI 集成、结构/类型检查及应用构建；桌面视觉检查尚不可用。"
+    "maxLines": 82,
+    "reason": "用户指令表单的连续 JSX、字节计数和未保存保护装配；加载、CAS 保存及取消失效在 useUserInstructions，导航保护在 useUnsavedForm。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。 user-instructions.test.ts。"
   },
   "packages/ui/src/settings/useUserInstructions.ts#useUserInstructions:1": {
-    "maxLines": 62,
-    "reason": "同一设置编辑器拥有已保存版本、草稿和请求范围；加载与保存共享并发门闩、客户端失效检查及错误显示，拆开会传递相同可变范围。",
-    "validation": "用户指令核心行为、真实 PostgreSQL/HTTP/CLI 集成、结构/类型检查及应用构建；桌面视觉检查尚不可用。"
+    "maxLines": 94,
+    "reason": "单个指令草稿与已保存 revision 共同拥有加载/保存门闩；CAS 输入、成功替换草稿、错误保留及客户端变化失效必须针对同一编辑器范围。load/save 的反馈与 operation 状态属于该生命周期，不混入表单 JSX。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。 user-instructions.test.ts、user-instructions-config.test.ts。"
   },
   "tests/user-instructions.test.ts#test(user instructions are pinned for a turn, change next turn, and remain replayable after disabling):1": {
     "maxLines": 70,
@@ -548,5 +548,55 @@
     "maxLines": 80,
     "reason": "弹窗表单的纯 JSX 装配，连接字段、模型集合、状态与生命周期分别拆分；错误提示滚动与表单所有权保持在同一组件。",
     "validation": "真实桌面样例验证未保存保护、失败重试和模型保留，类型检查及构建。"
+  },
+  "apps/desktop/src/bridge.ts#installBridge:1": {
+    "maxLines": 62,
+    "reason": "一个窗口的 IPC 安装/释放边界：受信发送者检查、固定方法白名单、目录选择、Host 事件转发及移除 handler 共用同一窗口和 Host。导航监听随该窗口的 webContents 销毁；不混入会话业务或协议实现。",
+    "validation": "desktop-close-controller、desktop-close-guard、desktop-close-inspection 回归；结构与类型检查。未执行真实 Electron IPC 安全端到端测试。"
+  },
+  "packages/ui/src/conversation/SessionManagement.tsx#SessionManagement:1": {
+    "maxLines": 80,
+    "reason": "管理会话弹窗的连续 JSX；标题草稿、busy/error 及保存后刷新/关闭由 useSessionManagement 统一拥有。此函数仅绑定表单动作和归档可用状态。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。 history-management-local.test.ts。"
+  },
+  "packages/ui/src/conversation/SessionManagement.tsx#callback:1": {
+    "maxLines": 63,
+    "reason": "SettingsDialog 的 requestClose render-prop，只返回名称字段、按钮和归档说明 JSX；异步保存生命周期归 useSessionManagement，关闭仍经过弹窗未保存保护。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
+  },
+  "packages/ui/src/settings/McpEditor.tsx#callback:1": {
+    "maxLines": 118,
+    "reason": "SettingsDialog 的连续 form JSX render-prop，requestClose 绑定取消入口以保留未保存保护；不拥有网络、轮询或持久化状态。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
+  },
+  "packages/ui/src/settings/PluginEditor.tsx#PluginEditor:1": {
+    "maxLines": 114,
+    "reason": "插件目录、检查结果和信任确认的连续 JSX；来源草稿、检查/安装门闩及异步结果失效全部归 usePluginEditor。保持检查结果与安装按钮在同一弹窗内。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
+  },
+  "packages/ui/src/settings/PluginEditor.tsx#callback:1": {
+    "maxLines": 89,
+    "reason": "SettingsDialog 的 form JSX render-prop，统一承载目录、manifest 展示、重试与 footer；异步行为仅调用 form 接口，不持有请求状态。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
+  },
+  "packages/ui/src/settings/usePluginEditor.ts#usePluginEditor:1": {
+    "maxLines": 80,
+    "reason": "同一插件编辑器拥有 source/review 与 busy/active 范围；来源更改使摘要失效，目录选择/检查/安装共用 run 门闩和卸载保护，安装只有成功才关闭。无独立后台服务或可分离的轮询。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
+  },
+  "tests/settings-ux-fixture-client.ts#settingsFixtureClient:1": {
+    "maxLines": 141,
+    "reason": "仅浏览器内的设置样例客户端：一次挂载的指令/MCP/插件/Key 虚构数据与首次失败计数共用闭包；返回对象是受类型约束的客户端方法表，不连接 Host、真实磁盘或模型。保留既有样例行为，本次不修改 fixture。",
+    "validation": "tests/settings-ux-render.test.ts、settings-ux-resource.test.ts、settings-ux-unsaved.test.ts；PRAXIS_UI_BROWSER_TESTS=1 的 ux-visual.test.ts；pnpm structure 与 pnpm typecheck。"
+  },
+  "tests/ux-visual-focus.tsx#compactComposer:1": {
+    "maxLines": 63,
+    "reason": "一个 compact composer 浏览器样例的连续 JSX、聚焦/菜单几何断言与同一 root 的 finally 卸载；共用同一 DOM 状态，不能拆成独立测试资源。",
+    "validation": "PRAXIS_UI_BROWSER_TESTS=1 node --import tsx --test tests/ux-visual.test.ts；类型与结构检查。"
+  },
+  "tests/ux-visual.test.ts#test(login and shared readability in a real browser):1": {
+    "maxLines": 63,
+    "reason": "一个 Electron 隔离 profile 的构建、双视口运行、下拉框截图/点击与 finally 临时目录清理；长段为内嵌 runner 脚本，资源由同一测试拥有，不修改测试行为。",
+    "validation": "PRAXIS_UI_BROWSER_TESTS=1 node --import tsx --test tests/ux-visual.test.ts；类型与结构检查。"
   }
 }

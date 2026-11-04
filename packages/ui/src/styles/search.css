@@ -30,8 +30,8 @@
   background: transparent;
   font-size: 16px;
 }
-.session-search-input input:focus {
-  outline: none;
+.session-search-input input:focus-visible {
+  outline: 2px solid var(--focus);
 }
 .search-results {
   padding: 0 10px 16px;
@@ -39,7 +39,7 @@
 }
 .search-results .sidebar-label {
   padding: 18px 12px 8px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .search-results button {
   display: flex;

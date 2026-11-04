@@ -1,62 +1,79 @@
 import { McpServerRow } from './McpServerRow.tsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PraxisClient, McpState } from '../client-types.ts';
 import { Empty, SettingsIcon, Status } from './controls.tsx';
 import { McpEditor } from './McpEditor.tsx';
 import { useMcpSettings } from './useMcpSettings.ts';
+import { SettingsLoadState } from './SettingsLoadState.tsx';
 
 export function McpSettings({ client }: { client: PraxisClient }) {
   const [editing, setEditing] = useState<McpState['value'][number] | 'new' | null>(null);
   const settings = useMcpSettings(client);
-  const { state, message, busy, checked } = settings;
+  useEffect(() => setEditing(null), [client]);
+  const { state, feedback, busy, checked, status, error } = settings;
+  const visibleFeedback =
+    !editing &&
+    (status !== 'ready' || !state?.value.some((server) => server.id === feedback.target));
   return (
     <>
       <div className="settings-section-toolbar">
-        <span>{state ? `${state.value.length} 个服务器` : '正在读取连接配置…'}</span>
+        <span>{status === 'ready' && state ? `${state.value.length} 个服务器` : 'MCP 服务器'}</span>
         <button
           className="primary-button compact"
-          disabled={busy || !client.saveMcp || !state}
-          onClick={() => setEditing('new')}
+          disabled={busy || !client.saveMcp || status !== 'ready'}
+          onClick={() => {
+            settings.clearFeedback();
+            setEditing('new');
+          }}
         >
           <SettingsIcon name="plus" />
           添加连接
         </button>
       </div>
-      {state?.value.length === 0 && !editing && (
+      <SettingsLoadState status={status} error={error} retry={settings.refresh} label="MCP 连接" />
+      {visibleFeedback && <Status {...feedback} />}
+      {status === 'ready' && state?.value.length === 0 && (
         <Empty icon="connect" title="还没有 MCP 连接">
           添加服务器，为 Agent 提供外部工具。
         </Empty>
       )}
-      {state?.value.map((server) => (
-        <McpServerRow
-          key={server.id}
-          server={server}
-          client={client}
-          busy={busy}
-          checked={checked[server.id] === server.revision}
-          storeRevision={state.revision}
-          edit={() => setEditing(server)}
-          actions={{
-            setBearer: (token) => settings.setBearer(server.id, server.revision, token),
-            clearCredential: () => settings.clearCredential(server.id, server.revision),
-            check: () => settings.check(server.id, server.revision),
-            disable: () => settings.disable(server.id),
-            enable: () => settings.enable(server.id, server.revision),
-            remove: () => settings.remove(server.id, server.revision),
-            refresh: settings.refresh,
-          }}
-        />
-      ))}
+      {status === 'ready' &&
+        state?.value.map((server) => (
+          <McpServerRow
+            key={server.id}
+            server={server}
+            client={client}
+            busy={busy}
+            checked={checked[server.id] === server.revision}
+            storeRevision={state.revision}
+            feedback={feedback.target === server.id ? feedback : undefined}
+            edit={() => {
+              settings.clearFeedback();
+              setEditing(server);
+            }}
+            actions={{
+              setBearer: (token) => settings.setBearer(server.id, server.revision, token),
+              clearCredential: () => settings.clearCredential(server.id, server.revision),
+              check: () => settings.check(server.id, server.revision),
+              disable: () => settings.disable(server.id),
+              enable: () => settings.enable(server.id, server.revision),
+              remove: () => settings.remove(server.id, server.revision),
+              refresh: settings.refresh,
+            }}
+          />
+        ))}
       {editing && (
         <McpEditor
           key={editing === 'new' ? 'new' : editing.id}
           busy={busy}
+          feedback={feedback.target === 'editor' ? feedback : undefined}
+          canSave={status === 'ready'}
+          retry={settings.refresh}
           {...(editing === 'new' ? {} : { initial: editing })}
           save={(config) => settings.save(config, editing === 'new' ? null : editing.revision)}
           cancel={() => setEditing(null)}
         />
       )}
-      <Status message={message} />
       <div className="settings-info-note">
         <SettingsIcon name="info" />
         <p>

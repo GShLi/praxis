@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { McpState, PraxisClient } from '../client-types.ts';
-import { SettingsIcon } from './controls.tsx';
+import { SettingsIcon, Status } from './controls.tsx';
+import type { SettingsFeedback } from './settings-resource.ts';
 import { McpCredential } from './McpCredential.tsx';
 import { McpOAuth } from './McpOAuth.tsx';
 interface Actions {
@@ -20,6 +21,7 @@ export function McpServerRow({
   storeRevision,
   edit,
   actions,
+  feedback,
 }: {
   server: McpState['value'][number];
   client: PraxisClient;
@@ -28,6 +30,7 @@ export function McpServerRow({
   storeRevision: number;
   edit(): void;
   actions: Actions;
+  feedback?: SettingsFeedback | undefined;
 }) {
   const [deleting, setDeleting] = useState(false);
   return (
@@ -103,6 +106,11 @@ export function McpServerRow({
           删除
         </button>
       </div>
+      {feedback && (
+        <div className="settings-row-feedback">
+          <Status {...feedback} />
+        </div>
+      )}
       {deleting && (
         <div className="mcp-delete-confirmation" role="group" aria-label="确认删除 MCP 连接">
           <p>

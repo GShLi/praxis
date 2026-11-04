@@ -19,7 +19,7 @@
 .approval-heading small,
 .approval-note {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 .approval-card h3 {
   font-size: 15px;
@@ -30,7 +30,7 @@
   line-height: 1.6;
 }
 .approval-card dl {
-  font-size: 12px;
+  font-size: 13px;
 }
 .approval-card dl > div {
   display: flex;
@@ -47,7 +47,7 @@
 }
 .approval-card summary {
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
 }
 .approval-card pre {
   white-space: pre-wrap;
@@ -56,7 +56,7 @@
   overflow: auto;
   padding: 12px;
   background: var(--code);
-  font-size: 12px;
+  font-size: 13px;
 }
 .approval-actions {
   justify-content: flex-end;

@@ -100,11 +100,14 @@ export class SessionStore extends EventEmitter {
     assert(row && (!owner || row.owner === owner), 'SESSION_NOT_FOUND', '会话不存在。');
     return JSON.parse(String(row.document)) as Session;
   }
-  list(owner: string, limit = 100): Session[] {
+  // Keep storage callers' existing all-history default; RPC callers select active-only explicitly.
+  list(owner: string, limit = 100, options: { includeArchived?: boolean } = {}): Session[] {
     return (
       this.db
-        .prepare('SELECT document FROM sessions WHERE owner=? ORDER BY rowid DESC LIMIT ?')
-        .all(owner, Math.min(limit, 500)) as Row[]
+        .prepare(
+          "SELECT document FROM sessions WHERE owner=? AND (? OR coalesce(json_extract(document,'$.archived'),0)=0) ORDER BY rowid DESC LIMIT ?",
+        )
+        .all(owner, Number(options.includeArchived ?? true), Math.min(limit, 500)) as Row[]
     ).map((r) => JSON.parse(String(r.document)) as Session);
   }
   update(

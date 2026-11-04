@@ -1,4 +1,13 @@
-import type { ToolResult } from '@praxis/contracts';
+import {
+  parseToolResult,
+  textField,
+  toolAction,
+  toolOutcome,
+  toolSummary,
+  toolTarget,
+  toolVisualStatus,
+} from './tool-presentation.ts';
+import '../styles/task-feedback.css';
 
 export function ToolCard({
   content,
@@ -7,43 +16,47 @@ export function ToolCard({
   content: string;
   showChange: (id: string) => void;
 }) {
-  let result: ToolResult;
-  try {
-    result = JSON.parse(content) as ToolResult;
-  } catch {
+  const result = parseToolResult(content);
+  if (!result)
     return (
-      <details className="tool">
-        <summary>工具结果</summary>
+      <section className="task-tool">
+        <p>工具记录 · 无法识别结果格式</p>
+        <details>
+          <summary>查看原始记录</summary>
+          <pre>{content}</pre>
+        </details>
+      </section>
+    );
+  const target = toolTarget(result.data);
+  const artifactId = textField(result.data, 'diffArtifactId');
+  return (
+    <section
+      className="task-tool"
+      aria-label={`${toolAction(result.toolId, result.data)} · ${toolOutcome(result)}`}
+    >
+      <div className="task-tool-heading">
+        <strong>{toolAction(result.toolId, result.data)}</strong>
+        <span className="task-status" data-status={toolVisualStatus(result)}>
+          {toolOutcome(result)}
+        </span>
+      </div>
+      {target && <p className="task-target">{target}</p>}
+      <p>{toolSummary(result)}</p>
+      {artifactId && (
+        <button type="button" className="task-file-link" onClick={() => showChange(artifactId)}>
+          查看文件变更
+        </button>
+      )}
+      {result.truncated && (
+        <p className="task-note">工具返回内容已截断，完整内容以对应产物为准。</p>
+      )}
+      <details>
+        <summary>查看工具记录与原始结果</summary>
+        <p className="task-note">
+          工具：{result.toolId} · 调用耗时：{result.durationMs} 毫秒
+        </p>
         <pre>{content}</pre>
       </details>
-    );
-  }
-  const data = result.data as
-    | { path?: string; diffArtifactId?: string; processState?: string; preview?: string }
-    | undefined;
-  return (
-    <details
-      className={`tool ${result.status === 'failed' || result.status === 'denied' ? 'tool-error' : ''}`}
-    >
-      <summary>
-        <span className="tool-dot" />
-        <span>{result.toolId ?? '工具'}</span>
-        <span className="tool-target">{data?.path?.split(/[\\/]/).at(-1) ?? ''}</span>
-        <span className="tool-status">{data?.processState ?? result.status}</span>
-      </summary>
-      <div className="tool-body">
-        {result.error && (
-          <p>
-            {result.error.code} · {result.error.message}
-          </p>
-        )}
-        <pre>{JSON.stringify(result.data, null, 2)}</pre>
-        {data?.diffArtifactId && (
-          <button className="text-button" onClick={() => showChange(data.diffArtifactId!)}>
-            查看文件变更
-          </button>
-        )}
-      </div>
-    </details>
+    </section>
   );
 }

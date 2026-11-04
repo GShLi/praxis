@@ -54,6 +54,6 @@
 }
 .mcp-prompt-endpoint {
   overflow-wrap: anywhere;
-  font-size: 12px;
-  opacity: 0.7;
+  font-size: 13px;
+  color: var(--muted);
 }

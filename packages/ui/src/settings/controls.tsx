@@ -82,9 +82,18 @@ export function Empty({
   );
 }
 
-export function Status({ message }: { message: string }) {
+export function Status({
+  message,
+  variant = 'info',
+}: {
+  message: string;
+  variant?: 'info' | 'success' | 'error';
+}) {
   return message ? (
-    <p className="settings-feedback" role="status">
+    <p
+      className={`settings-feedback settings-feedback-${variant}`}
+      role={variant === 'error' ? 'alert' : 'status'}
+    >
       {message}
     </p>
   ) : null;

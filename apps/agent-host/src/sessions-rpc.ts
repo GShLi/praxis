@@ -1,5 +1,6 @@
 import { assert, idSchema, permissionSchema } from '@praxis/contracts';
 import { sessionReadRoutes } from './session-read-rpc.ts';
+import { sessionHistoryRoutes } from './session-history-rpc.ts';
 import { approvalResponseSchema } from '@praxis/permissions';
 import { hash } from '@praxis/storage-local';
 import { realpath, stat } from 'node:fs/promises';
@@ -13,6 +14,7 @@ export function sessionsRoutes(
 ): RpcRoutes {
   return {
     ...sessionReadRoutes(identity),
+    ...sessionHistoryRoutes(identity),
     'workspace/open': async (params: unknown) => {
       identity.require();
       const input = z.strictObject({ path: z.string().min(1).max(4096) }).parse(params);
@@ -125,13 +127,6 @@ export function sessionsRoutes(
     'approval/respond': async (params: unknown) => {
       const { runtime, owner } = identity.require();
       return runtime.approvals.respond(owner, approvalResponseSchema.parse(params));
-    },
-    'session/archive': async (params: unknown) => {
-      const { store, runtime, owner } = identity.require();
-      const input = sessionArg.parse(params);
-      store.get(input.sessionId, owner);
-      assert(!runtime.getTurn(input.sessionId), 'SESSION_BUSY', '请先停止当前任务。');
-      return store.update(input.sessionId, { archived: true });
     },
     'session/delete': async (params: unknown) => {
       const { store, runtime, owner } = identity.require();

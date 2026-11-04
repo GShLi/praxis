@@ -3,13 +3,10 @@ import type { ChatRuntime } from '@praxis/chat-runtime';
 import { idSchema, textSchema } from '@praxis/contracts';
 import { z } from 'zod';
 import type { HttpApp } from './http-types.ts';
+import { registerChatHistory } from './chat-history-routes.ts';
 
 export function registerChat(app: HttpApp, auth: AuthService, chat: ChatRuntime) {
-  app.get('/v1/chats', async (c) => {
-    const user = c.get('identity');
-    auth.require(user, 'chats:read');
-    return c.json(await chat.list(user.userId));
-  });
+  registerChatHistory(app, auth, chat);
   app.post('/v1/chats', async (c) => {
     const user = c.get('identity');
     auth.require(user, 'chats:write');

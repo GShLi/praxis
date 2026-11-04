@@ -121,7 +121,7 @@ export function McpOAuth({
               </button>
             </>
           )}
-          <Status message={auth.message} />
+          <Status message={auth.message} variant={auth.variant} />
         </form>
       )}
     </div>

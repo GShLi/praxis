@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMcpCredential } from './useMcpCredential.ts';
 import type { McpState } from '../client-types.ts';
 
 export function McpCredential({
@@ -12,8 +12,11 @@ export function McpCredential({
   save(token: string): Promise<boolean>;
   clear(): Promise<boolean>;
 }) {
-  const [open, setOpen] = useState(false),
-    [token, setToken] = useState('');
+  const { open, setOpen, token, setToken, submit, remove, cancel } = useMcpCredential(
+    server.id,
+    save,
+    clear,
+  );
   const label =
     server.credential?.storage === 'os'
       ? '系统凭据存储'
@@ -39,11 +42,7 @@ export function McpCredential({
           className="settings-editor mcp-credential-form"
           onSubmit={(event) => {
             event.preventDefault();
-            void save(token)
-              .then((saved) => {
-                if (saved) setOpen(false);
-              })
-              .finally(() => setToken(''));
+            submit();
           }}
         >
           <label>
@@ -62,29 +61,11 @@ export function McpCredential({
           <button type="submit" className="secondary-button" disabled={busy || !token}>
             保存凭据
           </button>
-          <button
-            type="button"
-            className="text-button"
-            disabled={busy}
-            onClick={() => {
-              setToken('');
-              setOpen(false);
-            }}
-          >
+          <button type="button" className="text-button" disabled={busy} onClick={cancel}>
             取消
           </button>
           {server.credential?.type !== 'none' && server.credential && (
-            <button
-              type="button"
-              className="text-button"
-              disabled={busy}
-              onClick={() => {
-                setToken('');
-                void clear().then((done) => {
-                  if (done) setOpen(false);
-                });
-              }}
-            >
+            <button type="button" className="text-button" disabled={busy} onClick={remove}>
               清除本地凭据
             </button>
           )}

@@ -2,6 +2,7 @@ export interface Chat {
   id: string;
   owner: string;
   title: string;
+  created_at: Date;
   latest_seq: number;
   active_generation: string | null;
   archived: boolean;

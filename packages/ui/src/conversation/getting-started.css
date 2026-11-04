@@ -1,0 +1,45 @@
+.getting-started {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  text-align: left;
+}
+.getting-started > div {
+  flex: 1;
+  min-width: 180px;
+}
+.getting-started p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 6px 0;
+  color: var(--muted);
+}
+.getting-started ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.getting-started li[data-ready='true'] {
+  color: var(--text);
+}
+.getting-started small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.draft-note,
+.input-mode-note {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 8px 12px;
+}

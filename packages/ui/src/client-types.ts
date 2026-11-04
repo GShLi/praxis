@@ -32,6 +32,8 @@ export interface ViewSession {
   title: string;
   kind: 'chat' | 'agent';
   status: string;
+  createdAt?: string;
+  archived?: boolean;
   workspace?: string;
   permissionRevision?: number;
   permissionMode?: 'read-only' | 'workspace-write';
@@ -51,6 +53,8 @@ export interface PendingQuestion {
 }
 
 export interface Snapshot {
+  events?: Event[];
+  pendingInputs?: Array<{ id: string; text: string; mode: 'queue' | 'steer' }>;
   approval?: ApprovalRequest | null;
   question?: PendingQuestion | null;
   session: ViewSession;
@@ -104,6 +108,7 @@ export type HostMethod =
   | 'session/unsubscribe'
   | 'session/set-permissions'
   | 'session/archive'
+  | 'session/rename'
   | 'session/delete'
   | 'question/respond'
   | 'approval/respond'
@@ -113,6 +118,7 @@ export interface DesktopBridge {
   call<T = unknown>(method: HostMethod, params?: unknown): Promise<T>;
   subscribe(listener: (method: string, payload: unknown) => void): () => void;
   selectWorkspace(): Promise<string | null>;
+  selectPluginDirectory?(): Promise<string | null>;
 }
 
 declare global {
@@ -201,6 +207,7 @@ export interface PraxisClient {
     decision: 'approve-once' | 'deny';
   }): Promise<void>;
   desktop: boolean;
+  draftNamespace?: string;
   login(input: {
     username: string;
     password: string;
@@ -218,6 +225,8 @@ export interface PraxisClient {
     expectedRevision?: number;
   }): Promise<void>;
   list(): Promise<ViewSession[]>;
+  renameSession?(id: string, title: string): Promise<void>;
+  archiveSession?(id: string, archived: boolean): Promise<void>;
   create(kind: 'chat' | 'agent', workspace?: string): Promise<ViewSession>;
   read(id: string): Promise<Snapshot>;
   send(
@@ -237,6 +246,7 @@ export interface PraxisClient {
   ): () => void;
   regenerate?(id: string, providerId: string): Promise<void>;
   selectWorkspace?(): Promise<string | null>;
+  selectPluginDirectory?(): Promise<string | null>;
   answer?(input: unknown): Promise<void>;
   readArtifact?(id: string, artifactId: string): Promise<{ kind: string; content: string }>;
   setPermissions?(

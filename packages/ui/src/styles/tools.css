@@ -2,7 +2,7 @@
   border: 1px solid var(--border);
   border-radius: 9px;
   margin: 12px 0 22px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .tool summary {
   display: flex;
@@ -26,7 +26,7 @@
 }
 .tool-status {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--muted);
 }
 .tool-body {

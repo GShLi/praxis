@@ -36,7 +36,11 @@ export function TopBar({
           <button className="icon-button" aria-label="打开侧栏" onClick={() => setSidebar(true)}>
             <Icon name="menu" />
           </button>
-          <button className="icon-button" aria-label="新聊天" onClick={newSession}>
+          <button
+            className="icon-button"
+            aria-label={kind === 'agent' ? '新任务' : '新聊天'}
+            onClick={newSession}
+          >
             <Icon name="write" />
           </button>
         </div>
@@ -46,10 +50,7 @@ export function TopBar({
           <button
             className={kind === 'chat' ? 'selected' : ''}
             aria-pressed={kind === 'chat'}
-            onClick={() => {
-              setKind('chat');
-              newSession();
-            }}
+            onClick={() => setKind('chat')}
           >
             <Icon name="chat" />
             聊天
@@ -57,10 +58,7 @@ export function TopBar({
           <button
             className={kind === 'agent' ? 'selected' : ''}
             aria-pressed={kind === 'agent'}
-            onClick={() => {
-              setKind('agent');
-              newSession();
-            }}
+            onClick={() => setKind('agent')}
           >
             <Icon name="code" />
             Agent
@@ -75,8 +73,8 @@ export function TopBar({
         )
       )}
       <div className="top-actions">
-        {snapshot && running && (
-          <span className="run-status is-active" role="status">
+        {snapshot && (
+          <span className={`run-status ${running ? 'is-active' : ''}`} role="status">
             {statusText[snapshot.session.status] ?? snapshot.session.status}
           </span>
         )}

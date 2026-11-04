@@ -1,34 +1,59 @@
 import { Copy } from '../MarkdownView.tsx';
 import { Icon } from '../Navigation.tsx';
+import { DiffViewer } from './DiffViewer.tsx';
+import type { FileChange } from './file-change.ts';
+import '../styles/task-feedback.css';
 
-import type { AppController } from '../app/useAppController.ts';
+export interface ChangePanelProps {
+  setPanel: (open: boolean) => void;
+  change: FileChange | null;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+}
 
-export function ChangePanel({ setPanel, change }: Pick<AppController, 'setPanel' | 'change'>) {
+export function ChangePanel({
+  setPanel,
+  change,
+  loading = false,
+  error,
+  onRetry,
+}: ChangePanelProps) {
   return (
-    <aside className="detail-panel">
+    <aside className="detail-panel task-change-panel" aria-label="文件变更" aria-busy={loading}>
       <header>
         <h2>文件变更</h2>
-        <button className="icon-button" aria-label="关闭变更面板" onClick={() => setPanel(false)}>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="关闭变更面板"
+          onClick={() => setPanel(false)}
+        >
           <Icon name="close" />
         </button>
       </header>
-      {change ? (
+      <p className="panel-note">只读历史快照 · 来自本次工具记录，不代表当前磁盘内容。</p>
+      {loading ? (
+        <div className="panel-empty" role="status">
+          正在读取文件变更…
+        </div>
+      ) : error ? (
+        <div className="task-change-error" role="alert">
+          <p>无法加载文件变更</p>
+          <p>{error}</p>
+          {onRetry && (
+            <button type="button" className="secondary-button" onClick={onRetry}>
+              重试加载
+            </button>
+          )}
+        </div>
+      ) : change ? (
         <>
           <div className="change-title">
             {change.path}
             <Copy text={change.path} />
           </div>
-          <p className="panel-note">本次工具记录的历史快照</p>
-          {change.before !== null && (
-            <section>
-              <h3>修改前</h3>
-              <pre className="diff-before">{change.before}</pre>
-            </section>
-          )}
-          <section>
-            <h3>{change.before === null ? '创建内容' : '修改后'}</h3>
-            <pre className="diff-after">{change.after}</pre>
-          </section>
+          <DiffViewer change={change} />
         </>
       ) : (
         <div className="panel-empty">

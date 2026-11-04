@@ -15,6 +15,9 @@ const bridge: DesktopBridge = {
   selectWorkspace(): Promise<string | null> {
     return invoke<string | null>('praxis:select-workspace');
   },
+  selectPluginDirectory(): Promise<string | null> {
+    return invoke<string | null>('praxis:select-plugin-directory');
+  },
 };
 contextBridge.exposeInMainWorld('praxis', Object.freeze(bridge));
 

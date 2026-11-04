@@ -1,66 +1,80 @@
-import { useEffect, useState } from 'react';
-import { providerModelChoices } from '@praxis/model-core/provider-models';
+import { useEffect, useRef, useState } from 'react';
+import { preferredProvider } from './identity-refresh.ts';
+import { useIdentityConnection, useSessionListPolling } from './identity-refresh.ts';
 import type { PraxisClient, Profile, Provider, ViewSession } from '../client-types.ts';
-export function useIdentity(client: PraxisClient, fail: (error: unknown) => void) {
-  const [authenticated, setAuthenticated] = useState(false),
-    [checking, setChecking] = useState(true);
+
+export function useIdentity(client: PraxisClient) {
+  const [authenticated, authenticate] = useState(false),
+    [checking, setChecking] = useState(true),
+    [connectionError, setConnectionError] = useState(''),
+    [listError, setListError] = useState(''),
+    [attempt, setAttempt] = useState(0);
   const [sessions, setSessions] = useState<ViewSession[]>([]),
     [providers, setProviders] = useState<Provider[]>([]),
-    [providerId, setProviderId] = useState('');
-  const [profile, setProfile] = useState<Profile | null>(null);
+    [providerId, setProviderId] = useState(''),
+    [profile, setProfile] = useState<Profile | null>(null);
+  const scope = useRef({ active: true, epoch: 0, request: 0 });
+  const boundUser = useRef<string | null>(null);
   useEffect(() => {
-    if (!authenticated) return;
-    let cancelled = false;
-    void client
-      .profile?.()
-      .then((value) => {
-        if (!cancelled) setProfile(value);
-      })
-      .catch((error) => {
-        if (!cancelled) fail(error);
-      });
+    scope.current.active = true;
     return () => {
-      cancelled = true;
+      scope.current.active = false;
+      scope.current.epoch++;
     };
-  }, [authenticated, client]);
+  }, []);
+  const setAuthenticated = (value: boolean) => {
+    if (!value) {
+      scope.current.epoch++;
+      boundUser.current = null;
+    }
+    authenticate(value);
+  };
+  const checkIdentity = (identity: Profile | undefined) => {
+    if (identity && boundUser.current && boundUser.current !== identity.id) {
+      setAuthenticated(false);
+      setProfile(null);
+      setSessions([]);
+      setProviders([]);
+      setProviderId('');
+      setConnectionError('登录账号已在其他窗口改变。请重新连接；原账号的草稿仍单独保留。');
+      return false;
+    }
+    if (identity) boundUser.current = identity.id;
+    return true;
+  };
   const reloadLists = async () => {
-    const [all, models] = await Promise.all([client.list(), client.providers()]);
+    const epoch = scope.current.epoch,
+      order = ++scope.current.request;
+    const [all, models, identity] = await Promise.all([
+      client.list(),
+      client.providers(),
+      client.profile?.(),
+    ]);
+    if (!scope.current.active || scope.current.epoch !== epoch || order !== scope.current.request)
+      return;
+    if (!checkIdentity(identity)) return;
     setSessions(all);
     setProviders(models);
-    const choices = providerModelChoices(models);
-    setProviderId((previous) =>
-      choices.some((p) => p.id === previous && p.enabled)
-        ? previous
-        : (choices.find(
-            (p) => p.enabled && p.id === localStorage.getItem('praxis-default-provider'),
-          )?.id ??
-          choices.find((p) => p.enabled)?.id ??
-          ''),
-    );
+    setListError('');
+    if (identity) setProfile(identity);
+    setProviderId((previous) => preferredProvider(models, previous));
   };
-  useEffect(() => {
-    let cancelled = false;
-    void client
-      .current()
-      .then(async (ok) => {
-        if (cancelled) return;
-        setAuthenticated(ok);
-        if (ok) await reloadLists();
-      })
-      .catch((error) => {
-        if (!cancelled) fail(error);
-      })
-      .finally(() => {
-        if (!cancelled) setChecking(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [client]);
+  useIdentityConnection({
+    client,
+    attempt,
+    reloadLists,
+    setAuthenticated,
+    setChecking,
+    setConnectionError,
+  });
+  useSessionListPolling({ client, authenticated, scope, checkIdentity, setSessions, setListError });
   return {
     authenticated,
     setAuthenticated,
     checking,
+    connectionError,
+    listError,
+    retryConnection: () => setAttempt((value) => value + 1),
     sessions,
     setSessions,
     providers,

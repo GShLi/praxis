@@ -1,4 +1,5 @@
 import type { Event } from '@praxis/contracts';
+import { HttpError } from './http-error.ts';
 import type { AvailableModel, ModelDiscoveryInput } from '@praxis/model-core/provider';
 import type {
   ApiKeyInfo,
@@ -54,7 +55,8 @@ export class WebClient implements PraxisClient {
       return this.request<T>(path, method, body, false);
     }
     const result = (await response.json()) as T & { safeMessage?: string };
-    if (!response.ok) throw new Error(result.safeMessage ?? `请求失败（${response.status}）`);
+    if (!response.ok)
+      throw new HttpError(result.safeMessage ?? `请求失败（${response.status}）`, response.status);
     return result;
   }
   async current() {
@@ -62,8 +64,9 @@ export class WebClient implements PraxisClient {
       const me = await this.request<{ csrfToken: string }>('/v1/me');
       this.csrf = me.csrfToken;
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 401) return false;
+      throw error;
     }
   }
   async login(input: { username: string; password: string }) {
@@ -102,16 +105,29 @@ export class WebClient implements PraxisClient {
     );
   }
   async list() {
-    const rows =
-      await this.request<Array<{ id: string; title: string; active_generation: string | null }>>(
-        '/v1/chats',
-      );
+    const rows = await this.request<
+      Array<{
+        id: string;
+        title: string;
+        active_generation: string | null;
+        created_at: string;
+        archived: boolean;
+      }>
+    >('/v1/chats?includeArchived=true');
     return rows.map((row) => ({
       id: row.id,
       title: row.title,
+      createdAt: row.created_at,
+      archived: row.archived,
       kind: 'chat' as const,
       status: row.active_generation ? 'running' : 'idle',
     }));
+  }
+  async renameSession(id: string, title: string) {
+    await this.request(`/v1/chats/${encodeURIComponent(id)}`, 'PATCH', { title });
+  }
+  async archiveSession(id: string, archived: boolean) {
+    await this.request(`/v1/chats/${encodeURIComponent(id)}`, 'PATCH', { archived });
   }
   async create() {
     const row = await this.request<{ id: string; title: string }>('/v1/chats', 'POST', {});
@@ -119,7 +135,13 @@ export class WebClient implements PraxisClient {
   }
   async read(id: string): Promise<Snapshot> {
     const result = await this.request<{
-      chat: { id: string; title: string; active_generation: string | null };
+      chat: {
+        id: string;
+        title: string;
+        active_generation: string | null;
+        created_at: string;
+        archived: boolean;
+      };
       inputs: Array<{ id: string; content: string; selected_generation: string | null }>;
       generations: Array<{ id: string; input_id: string; status: string; content: string }>;
       throughSeq: number;
@@ -142,6 +164,8 @@ export class WebClient implements PraxisClient {
       session: {
         id,
         title: result.chat.title,
+        createdAt: result.chat.created_at,
+        archived: result.chat.archived,
         kind: 'chat',
         status: result.chat.active_generation ? 'running' : 'idle',
       },

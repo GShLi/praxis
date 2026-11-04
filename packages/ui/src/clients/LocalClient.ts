@@ -27,6 +27,7 @@ import type {
 
 export class LocalClient implements PraxisClient {
   desktop = true;
+  draftNamespace = 'desktop';
   constructor(private bridge: DesktopBridge) {}
   async current() {
     return false;
@@ -37,6 +38,7 @@ export class LocalClient implements PraxisClient {
       praxisApiKey: input.apiKey,
       interactive: true,
     });
+    this.draftNamespace = `desktop:${new URL(input.serverUrl).origin}`;
   }
   async logout() {
     await this.bridge.call('auth/clear');
@@ -51,13 +53,19 @@ export class LocalClient implements PraxisClient {
     await this.bridge.call('provider/save', input);
   }
   async list() {
-    return (await this.bridge.call<Session[]>('session/list'))
-      .filter((s) => !s.archived)
-      .map((s) => ({
+    return (await this.bridge.call<Session[]>('session/list', { includeArchived: true })).map(
+      (s) => ({
         ...s,
         permissionRevision: s.permission.revision,
         permissionMode: s.permission.mode,
-      }));
+      }),
+    );
+  }
+  async renameSession(id: string, title: string) {
+    await this.bridge.call('session/rename', { sessionId: id, title });
+  }
+  async archiveSession(id: string, archived: boolean) {
+    await this.bridge.call('session/archive', { sessionId: id, archived });
   }
   async create(kind: 'chat' | 'agent', workspace?: string) {
     const opened = workspace
@@ -268,6 +276,9 @@ export class LocalClient implements PraxisClient {
   }
   selectWorkspace() {
     return this.bridge.selectWorkspace();
+  }
+  selectPluginDirectory() {
+    return this.bridge.selectPluginDirectory?.() ?? Promise.resolve(null);
   }
   async answer(input: unknown) {
     await this.bridge.call('question/respond', input);

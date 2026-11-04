@@ -15,19 +15,27 @@ button {
 }
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 1;
+  color: var(--muted);
+  background: var(--raised);
 }
 button,
 input,
 textarea,
-select {
+select,
+a,
+summary,
+[tabindex] {
   outline-offset: 3px;
 }
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid #627e72;
+select:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus);
 }
 button {
   border: 0;
@@ -76,4 +84,19 @@ label {
 }
 small {
   color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+input:disabled,
+textarea:disabled,
+select:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  background: var(--raised);
+  opacity: 1;
 }

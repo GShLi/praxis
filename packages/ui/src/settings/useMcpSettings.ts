@@ -1,106 +1,84 @@
-import { useEffect, useRef, useState } from 'react';
-import type { McpState, PraxisClient } from '../client-types.ts';
-import { errorText } from './controls.tsx';
+import { useEffect, useState } from 'react';
+import type { PraxisClient } from '../client-types.ts';
+import { useSettingsResource } from './useSettingsResource.ts';
 
 export function useMcpSettings(client: PraxisClient) {
-  const [state, setState] = useState<McpState | null>(null);
-  const [message, setMessage] = useState(''),
-    [busy, setBusy] = useState(false);
+  const resource = useSettingsResource(
+    client,
+    client.mcpServers ? () => client.mcpServers!() : undefined,
+  );
   const [checked, setChecked] = useState<Record<string, number>>({});
-  const generation = useRef(0);
-  useEffect(() => {
-    const current = ++generation.current;
-    setState(null);
-    setChecked({});
-    setBusy(false);
-    setMessage('');
-    void client
-      .mcpServers?.()
-      .then((value) => {
-        if (current === generation.current) setState(value);
-      })
-      .catch((e) => {
-        if (current === generation.current) setMessage(errorText(e));
-      });
-    return () => {
-      generation.current++;
-    };
-  }, [client]);
-  const run = async (operation: () => Promise<string>, refresh = false) => {
-    const current = generation.current;
-    setBusy(true);
-    setMessage('');
-    try {
-      const message = await operation();
-      const next = refresh ? await client.mcpServers?.() : undefined;
-      if (current === generation.current) {
-        if (next) setState(next);
-        setMessage(message);
-      }
-      return current === generation.current;
-    } catch (error) {
-      if (current === generation.current) setMessage(errorText(error));
-      if (refresh) {
-        try {
-          const next = await client.mcpServers?.();
-          if (next && current === generation.current) setState(next);
-        } catch {
-          // Keep the original failure; reconnecting/reopening settings reloads the authoritative state.
-        }
-      }
-      return false;
-    } finally {
-      if (current === generation.current) setBusy(false);
-    }
+  useEffect(() => setChecked({}), [client]);
+  const revision = () => {
+    if (!resource.data) throw new Error('请先读取连接配置。');
+    return resource.data.revision;
   };
+  const mutate = (id: string, operation: () => Promise<string>) =>
+    resource.run(async () => {
+      setChecked({});
+      return operation();
+    }, id);
   return {
-    refresh: () => run(async () => '', true),
-    state,
-    message,
-    busy,
+    ...resource,
+    state: resource.data,
     checked,
-    check: (id: string, revision: number) => {
-      const current = generation.current;
+    refresh: async () => {
+      setChecked({});
+      return resource.reload();
+    },
+    check: async (id: string, configRevision: number) => {
       setChecked((values) => {
         const next = { ...values };
         delete next[id];
         return next;
       });
-      return run(async () => {
-        const result = await client.testMcp!(id, revision);
-        if (current === generation.current) setChecked((values) => ({ ...values, [id]: revision }));
-        return `连接成功 · 协议 ${result.protocol} · ${result.toolCount} 个兼容工具 · ${result.rejectedTools} 个不兼容工具。可以启用 Agent 工具。`;
-      });
+      const done = await resource.run(
+        async () => {
+          if (!client.testMcp) throw new Error('此客户端不支持检查连接。');
+          const result = await client.testMcp(id, configRevision);
+          return `连接成功 · 协议 ${result.protocol} · ${result.toolCount} 个兼容工具 · ${result.rejectedTools} 个不兼容工具。可以启用 Agent 工具。`;
+        },
+        id,
+        false,
+      );
+      if (done) setChecked((values) => ({ ...values, [id]: configRevision }));
+      return done;
     },
-    enable: (id: string, revision: number) =>
-      run(async () => {
-        await client.enableMcp!(id, state!.revision, revision);
+    enable: (id: string, configRevision: number) =>
+      mutate(id, async () => {
+        if (!client.enableMcp) throw new Error('此客户端不支持启用连接。');
+        await client.enableMcp(id, revision(), configRevision);
         return '已启用。Agent 可发现工具，业务调用每次需要你确认发送的参数。';
-      }, true),
+      }),
     disable: (id: string) =>
-      run(async () => {
-        await client.disableMcp!(id, state!.revision);
+      mutate(id, async () => {
+        if (!client.disableMcp) throw new Error('此客户端不支持停用连接。');
+        await client.disableMcp(id, revision());
         return '已停用，相关操作已取消。';
-      }, true),
-    setBearer: (id: string, revision: number, token: string) =>
-      run(async () => {
-        await client.setMcpBearer!(id, state!.revision, revision, token);
+      }),
+    setBearer: (id: string, configRevision: number, token: string) =>
+      mutate(id, async () => {
+        if (!client.setMcpBearer) throw new Error('此客户端不支持保存凭据。');
+        await client.setMcpBearer(id, revision(), configRevision, token);
         return '凭据已保存。请重新检查连接，再启用服务器。';
-      }, true),
-    clearCredential: (id: string, revision: number) =>
-      run(async () => {
-        await client.clearMcpCredential!(id, state!.revision, revision);
+      }),
+    clearCredential: (id: string, configRevision: number) =>
+      mutate(id, async () => {
+        if (!client.clearMcpCredential) throw new Error('此客户端不支持清除凭据。');
+        await client.clearMcpCredential(id, revision(), configRevision);
         return '本地凭据已清除，连接已停用。远端 Token 未撤销。';
-      }, true),
-    remove: (id: string, revision: number) =>
-      run(async () => {
-        await client.deleteMcp!(id, state!.revision, revision);
+      }),
+    remove: (id: string, configRevision: number) =>
+      mutate(id, async () => {
+        if (!client.deleteMcp) throw new Error('此客户端不支持删除连接。');
+        await client.deleteMcp(id, revision(), configRevision);
         return '连接和本地凭据已删除。远端授权未撤销。';
-      }, true),
-    save: (config: unknown, revision: number | null = null) =>
-      run(async () => {
-        await client.saveMcp!(config, state!.revision, revision);
+      }),
+    save: (config: unknown, configRevision: number | null = null) =>
+      mutate('editor', async () => {
+        if (!client.saveMcp) throw new Error('此客户端不支持保存连接。');
+        await client.saveMcp(config, revision(), configRevision);
         return '连接已保存，请先检查连接。';
-      }, true),
+      }),
   };
 }

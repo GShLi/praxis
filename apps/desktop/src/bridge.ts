@@ -47,6 +47,7 @@ const allowed = new Set([
   'session/unsubscribe',
   'session/set-permissions',
   'session/archive',
+  'session/rename',
   'session/delete',
   'question/respond',
   'approval/respond',
@@ -83,6 +84,16 @@ export function installBridge(window: BrowserWindow, host: Awaited<ReturnType<ty
       return result.canceled ? null : (result.filePaths[0] ?? null);
     }),
   );
+  ipcMain.handle('praxis:select-plugin-directory', (event) =>
+    desktopReply(async () => {
+      trusted(event);
+      const result = await dialog.showOpenDialog(window, {
+        title: '选择已构建的 Praxis 插件目录',
+        properties: ['openDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    }),
+  );
   const notification = (method: string, payload: unknown) => {
     if (!window?.isDestroyed() && ['session/event', 'session/delta'].includes(method))
       window?.webContents.send('praxis:event', method, payload);
@@ -101,6 +112,7 @@ export function installBridge(window: BrowserWindow, host: Awaited<ReturnType<ty
   return () => {
     ipcMain.removeHandler('praxis:call');
     ipcMain.removeHandler('praxis:select-workspace');
+    ipcMain.removeHandler('praxis:select-plugin-directory');
     host.rpc.off('notification', notification);
   };
 }
