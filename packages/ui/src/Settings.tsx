@@ -15,6 +15,7 @@ import { Models } from './settings/Models.tsx';
 import { PluginSettings } from './settings/PluginSettings.tsx';
 import { Personalization } from './settings/Personalization.tsx';
 import { useSettingsProfile } from './settings/useSettingsProfile.ts';
+import { settingsScope } from './settings/settings-scope.ts';
 import './settings/styles/personalization.css';
 
 export function Settings({
@@ -77,7 +78,7 @@ export function Settings({
               if (!items.length) return null;
               return (
                 <section key={group}>
-                  <h2>{group}</h2>
+                  {visible.some((item) => item.group !== group) && <h2>{group}</h2>}
                   {items.map((item) => (
                     <button
                       key={item.id}
@@ -101,6 +102,9 @@ export function Settings({
               <div className="settings-page-heading">
                 <h2>{current.title}</h2>
               </div>
+            )}
+            {!['general', 'appearance'].includes(tab) && (
+              <p className="settings-scope">{settingsScope(tab, client.desktop)}</p>
             )}
             {tab === 'general' && <General providers={providers} />}
             {tab === 'personalization' && <Personalization client={client} />}

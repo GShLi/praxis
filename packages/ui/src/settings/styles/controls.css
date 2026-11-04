@@ -1,12 +1,12 @@
 .settings-section {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 .settings-section > h2,
 .settings-section-toolbar h2 {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   color: var(--text);
-  margin: 0 0 16px;
+  margin: 0 0 14px;
 }
 .settings-group {
   border: 1px solid var(--border);
@@ -19,9 +19,9 @@
   align-items: center;
   gap: 24px;
   justify-content: space-between;
-  padding: 18px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border);
-  min-height: 72px;
+  min-height: 64px;
 }
 .settings-group .setting-row:last-child {
   border-bottom: 0;
@@ -30,15 +30,16 @@
   min-width: 0;
 }
 .setting-row-label h3 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 400;
+  line-height: 1.5;
   margin: 0;
 }
 .setting-row-label p {
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 3px 0 0;
   max-width: 46ch;
   overflow-wrap: anywhere;
 }

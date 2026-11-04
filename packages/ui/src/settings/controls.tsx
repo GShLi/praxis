@@ -3,6 +3,9 @@ import { useState } from 'react';
 
 export function SettingsIcon({ name }: { name: string }) {
   const paths: Record<string, string> = {
+    settings:
+      'M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3Zm7 9a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+    shield: 'M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6l-8-3Zm-3 9 2 2 4-4',
     sliders: 'M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4 4v6',
     model: 'm12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 9 8-4.5M12 12 4 7.5M12 12v9',
     terminal: 'M4 5h16v14H4zM7 9l3 3-3 3m6 0h4',

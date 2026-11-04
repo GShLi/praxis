@@ -10,18 +10,23 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  min-height: 40px;
-  padding: 9px 12px;
-  border: 1px solid var(--control-border, var(--border));
-  border-radius: 12px;
-  background: var(--bg);
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--raised);
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
   text-align: left;
 }
 .praxis-dropdown-trigger:enabled:hover {
-  background: var(--raised);
+  background: var(--hover);
+}
+.praxis-dropdown-trigger > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
 }
 .praxis-dropdown-trigger:focus-visible {
   outline: 2px solid var(--control-focus);
@@ -71,7 +76,7 @@
   background: transparent;
   color: var(--text);
   text-align: left;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .praxis-dropdown-option + .praxis-dropdown-option {

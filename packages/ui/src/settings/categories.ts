@@ -4,14 +4,14 @@ export const categories = [
     title: '常规',
     description: '调整语言、默认模型与对话习惯。',
     group: '个人',
-    icon: 'sliders',
+    icon: 'settings',
   },
   {
     id: 'personalization',
     title: '个性化',
     description: '设置回答与执行任务时遵循的个人指令。',
     group: '个人',
-    icon: 'person',
+    icon: 'sliders',
   },
   {
     id: 'appearance',
@@ -60,7 +60,7 @@ export const categories = [
     title: '账户与安全',
     description: '查看登录身份，管理客户端访问。',
     group: '个人',
-    icon: 'person',
+    icon: 'shield',
   },
   {
     id: 'about',

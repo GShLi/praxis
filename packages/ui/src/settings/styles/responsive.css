@@ -20,8 +20,11 @@
   .settings-nav-heading {
     margin-bottom: 8px;
   }
+  .settings-nav-heading button {
+    display: inline-flex;
+  }
   .settings-search {
-    margin: 0 4px 10px;
+    margin: 0 0 6px;
   }
   .settings-nav nav h2 {
     display: none;
@@ -55,7 +58,7 @@
     margin-bottom: 28px;
   }
   .settings-page-heading > h2 {
-    font-size: 24px;
+    font-size: 22px;
   }
   .setting-row {
     flex-wrap: wrap;
