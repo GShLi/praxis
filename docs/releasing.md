@@ -145,8 +145,24 @@ macOS can use `shasum -a 256 --check SHA256SUMS`. Repeat attestation verificatio
 
 ## Current acceptance status
 
-As of 2026-11-04, the private `GShLi/praxis` repository has been created. The implementing agent reported these local results: macOS final DMG installation/copy-and-launch smoke passed; all four release regressions passed; structure and type checks passed; PostgreSQL tests passed (37); core tests passed (320, with five skipped). The workflow syntax also passed actionlint and both delivery files passed Prettier checks. These results are local evidence, not a completed remote matrix.
+On 2026-11-04, [Release run 41800812844](https://github.com/GShLi/praxis/actions/runs/41800812844) completed successfully and published [UNSIGNED v0.1.0-candidate.4](https://github.com/GShLi/praxis/releases/tag/v0.1.0-candidate.4) in the private repository. The tested source is `3e58e42fdbf23dd85be97df73df762ba3ea44178`. The release is not a draft, is a prerelease, and contains 26 assets: 12 application distributions plus acceptance records, dependency inventories, manifests and checksums.
 
-**An actual successful GitHub release run and signed publication remain pending.** No local macOS production signing identity or complete production signing credential set has been confirmed. The local results do not establish that macOS notarization, Windows signing, Windows/Linux installer acceptance, private-repository attestations or GitHub publication have succeeded.
+After publication, all 26 asset digests reported by GitHub were checked against the published checksum inventory. The eight downloaded checksum/manifest/acceptance files were also hashed locally; all three installation records matched the published distribution bytes and exact source commit. This is integrity verification, not a trusted code signature.
 
-Record the run URL, source commit, generated tag, platform acceptance records and attestation results after remote validation. Preserve limitations rather than marking unexecuted platform or signing gates as complete. The implementation plan and broader acceptance scope are in the [release plan](superpowers/plans/2026-11-04-release-pipeline.md) and [delivery spec](superpowers/specs/2026-11-02-praxis-sandbox-delivery-design.md).
+| Gate                                 | Actual result                                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Structure, TypeScript and core tests | All six jobs passed: Node 22.15.0 and 24 on macOS, Linux and Windows                                               |
+| PostgreSQL                           | Integration gate passed against PostgreSQL 18                                                                      |
+| macOS ARM64                          | Build, DMG/ZIP packaging, DMG mount/copy, installed renderer/preload/Host launch passed                            |
+| Linux x64                            | Build, AppImage/tar.gz packaging, AppImage extraction and installed launch passed on Ubuntu 22.04                  |
+| Windows x64                          | Build, NSIS/ZIP packaging, silent installation, installed launch and uninstall passed on the hosted Windows runner |
+| CLI and server                       | Relocated archive extraction, CLI help/Host handshake and server runtime loading passed on all three platforms     |
+| Publication                          | Combined checksums and manifests verified; complete asset set uploaded before draft publication                    |
+| Trusted signing                      | **Not performed:** this is an unsigned candidate; macOS notarization and Windows trusted signing remain unverified |
+| GitHub provenance                    | **Skipped:** private-repository candidate attestation was not enabled; checksums are not signatures                |
+
+The separate [Windows native compatibility run](https://github.com/GShLi/praxis/actions/runs/41800803282) passed on both supported Node versions. It compares real temporary-directory identities with `GetFileInformationByHandle`. Release testing fixed an older libuv path-stat ABI defect by using handle-stat, and replaced Git Bash tar with Windows System32 tar for drive-letter archive paths. Backup flush access, native aborted-write cleanup and deterministic Electron installation were also corrected without disabling their safety checks.
+
+The final local `pnpm check` passed structure/type checks and 334 tests, with six platform-dependent skips. Remote Windows acceptance uses a hosted Windows Server runner; it is not a claim of interactive testing on the user's Windows 11 machine. Installer smoke does not replace real-model feature testing or a production server deployment. No Apple Developer ID/notarization credentials or Windows signing certificate were supplied, so the signed release gates remain mandatory and unexecuted.
+
+Configure the signing secrets and an attestation-capable repository plan before publishing a trusted production version. The implementation plan and broader acceptance scope are in the [release plan](superpowers/plans/2026-11-04-release-pipeline.md) and [delivery spec](superpowers/specs/2026-11-02-praxis-sandbox-delivery-design.md).
