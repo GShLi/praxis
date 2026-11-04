@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./files": "./src/files.ts",
+    "./files/root-identity": "./src/files/root-identity.ts",
     "./processes": "./src/processes/index.ts"
   },
   "dependencies": {

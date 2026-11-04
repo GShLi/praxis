@@ -1,5 +1,7 @@
 # 知行 Praxis
 
+发行流程和安装说明见 [releasing.md](docs/releasing.md)。GitHub 的 `Release` 工作流按平台执行检查、构建、打包、安装验收、签名校验与发布；未配置签名证书时，只能发布明确标记的未签名候选版本。产物包括 Web/服务端压缩包、CLI 压缩包及 macOS、Windows、Linux 桌面发行包。
+
 使用 TypeScript 开发的 ChatBot 与本地 Agent 应用。
 
 - Web：纯对话 ChatBot。

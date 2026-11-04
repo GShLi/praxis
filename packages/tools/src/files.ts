@@ -5,6 +5,7 @@ import { FileContent } from './files/content.ts';
 import { isInside, WorkspacePathPolicy } from './files/policy.ts';
 import { FileSearch } from './files/search.ts';
 import { FileWriter } from './files/writer.ts';
+import { nativeRootIdentity } from './files/root-identity.ts';
 export { isInside } from './files/policy.ts';
 /** One workspace owns observations, pagination and the permission callback used at publication. */
 export class WorkspaceFiles {
@@ -52,7 +53,7 @@ export class WorkspaceFiles {
       artifact,
       protectedRoots,
       beforeWrite,
-      `${stat.dev}:${stat.ino}`,
+      nativeRootIdentity(stat),
     );
   }
   async readText(input: string, maxBytes: number): Promise<string> {

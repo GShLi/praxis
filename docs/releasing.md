@@ -1,6 +1,6 @@
 # Releasing Praxis
 
-The [release workflow](../.github/workflows/release.yml) builds the reviewed source on three native runners, tests installed distributions, and publishes only after every platform job and the separate PostgreSQL gate succeeds. The repository is [GShLi/praxis](https://github.com/GShLi/praxis), currently private.
+The [release workflow](../.github/workflows/release.yml) builds the reviewed source on three native runners, tests installed distributions, and publishes only after every packaging job and the reusable [Check workflow](../.github/workflows/check.yml) succeeds. Check gates release publication on its full Node 22.15.0/24 cross-platform matrix and PostgreSQL tests. The repository is [GShLi/praxis](https://github.com/GShLi/praxis), currently private.
 
 ## Release channels
 
@@ -21,9 +21,9 @@ Candidate filenames and their internal application version still use the package
 | `windows-latest` | x64               | Windows NSIS installer and ZIP |
 | `ubuntu-22.04`   | x64               | Linux AppImage and tar.gz      |
 
-Every job uses Node 24 and pnpm **11.9.0**, with a frozen lockfile. Packaging asserts `process.platform` and `process.arch` against the matrix before compilation. No other CPU/OS combination is claimed as accepted. Windows initializes the MSVC x64 environment. Linux installs build tools, Xvfb/Xauth, D-Bus, libsecret tools, GNOME Keyring, Electron libraries and libfuse2. Electron checks and smoke runs use `xvfb-run -a -- ...`.
+Release packaging uses Node 24 and pnpm **11.9.0**, with a frozen lockfile; the reusable Check workflow additionally tests Node 22.15.0. Packaging asserts `process.platform` and `process.arch` against the matrix before compilation. No other distribution CPU/OS combination is claimed as accepted. Windows initializes the MSVC x64 environment. Linux installs build tools, Xvfb/Xauth, D-Bus, libsecret tools, GNOME Keyring, Electron libraries and libfuse2. Electron checks and smoke runs use `xvfb-run -a -- ...`.
 
-Each platform runs `pnpm native:build`, `pnpm check` (structure, type and core/native behavior tests), and `pnpm build`. A separate Ubuntu job runs `pnpm test:postgres` against a dedicated PostgreSQL 18 service with disposable test data. Packaging may run alongside this gate, but publishing cannot run until both succeed.
+Each packaging platform runs `pnpm native:build`, `pnpm check` (structure, type and core/native behavior tests), and `pnpm build`. After metadata validation, the release's `checks` job calls Check from the same source revision. Its core matrix runs Node 22.15.0 and 24 on Ubuntu, macOS and Windows; its separate Ubuntu PostgreSQL job runs `pnpm test:postgres` against a dedicated PostgreSQL 18 service with disposable test data. Packaging may run alongside these checks, but publication requires successful completion of the entire reusable workflow and all packaging jobs. Check retains its independent push and pull-request triggers; those separate runs do not substitute for the release's own `checks` dependency. Both workflows retain `contents: read` as their default token permission; signing and publication privileges remain scoped to the release jobs that need them.
 
 The release commands then run in this order:
 
@@ -98,7 +98,7 @@ gh run list --repo GShLi/praxis --workflow release.yml
 gh run watch RUN_ID --repo GShLi/praxis --exit-status
 ```
 
-All three package jobs and PostgreSQL must be green. Download either the Actions artifacts or the resulting **UNSIGNED** prerelease. An optional attestation failure is explicitly reported; it is not presented as a signed candidate. The workflow refuses an existing candidate tag rather than attaching unreviewed bytes to it. Use a fresh dispatch for a new run number; inspect any failed draft before removing it manually. Do not push candidate tags as if they were version tags or dispatch a signed run against them.
+All three package jobs and the complete reusable Check workflow (both Node versions on all three OSes, plus PostgreSQL) must be green. Download either the Actions artifacts or the resulting **UNSIGNED** prerelease. An optional attestation failure is explicitly reported; it is not presented as a signed candidate. The workflow refuses an existing candidate tag rather than attaching unreviewed bytes to it. Use a fresh dispatch for a new run number; inspect any failed draft before removing it manually. Do not push candidate tags as if they were version tags or dispatch a signed run against them.
 
 For a local unsigned run on a supported platform, use Node 24, pnpm 11.9.0 and that platform's compiler/desktop dependencies:
 
@@ -130,7 +130,7 @@ First complete the candidate run, confirm trusted credentials and an attestation
 gh workflow run release.yml --repo GShLi/praxis --ref v0.1.0 -f signed=true
 ```
 
-The workflow rechecks the remote tag's commit immediately before publishing. It does not replace an existing release or reuse an unsigned candidate tag. A failed job, failed signature, failed installer smoke, missing acceptance, missing attestation or failed PostgreSQL gate prevents publication. Investigate a failed draft before retrying; a fresh release must retain a clear source-to-bytes relationship.
+The workflow rechecks the remote tag's commit immediately before publishing. It does not replace an existing release or reuse an unsigned candidate tag. A failed job, failed signature, failed installer smoke, missing acceptance, missing attestation or any failed reusable Check job (including Node 22.15.0 and PostgreSQL) prevents publication. Investigate a failed draft before retrying; a fresh release must retain a clear source-to-bytes relationship.
 
 After downloading assets into one directory, verify their integrity and, where available, provenance:
 
