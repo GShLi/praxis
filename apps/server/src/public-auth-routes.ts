@@ -42,9 +42,14 @@ export function registerPublicAuth(
     const webToken = getCookie(c, 'praxis_refresh');
     const body = webToken
       ? undefined
-      : z.strictObject({ refreshToken: z.string().min(20).max(1024) }).parse(await c.req.json());
+      : z
+          .strictObject({ refreshToken: z.string().min(20).max(1024).optional() })
+          .parse(await c.req.json());
+    // A fresh browser sends {} without an HttpOnly refresh cookie: it needs login.
+    const token = webToken ?? body?.refreshToken;
+    assert(token, 'UNAUTHENTICATED', '请登录 Praxis。');
     if (webToken) checkOrigin(c.req.header('origin'));
-    const result = await auth.refresh(webToken ?? body!.refreshToken, Boolean(webToken));
+    const result = await auth.refresh(token, Boolean(webToken));
     if (webToken) {
       cookies(c, result);
       return c.json({ expiresAt: result.expiresAt, csrfToken: result.csrfToken });
