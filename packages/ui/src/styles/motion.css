@@ -17,14 +17,10 @@
   }
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
+  display: block;
+  flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border: 1px solid currentColor;
-  border-radius: 9px;
-  font-family: serif;
-  font-size: 21px;
-  font-weight: 400;
-  line-height: 1;
+  object-fit: contain;
+  border: 0;
 }

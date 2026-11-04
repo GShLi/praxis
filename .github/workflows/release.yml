@@ -350,6 +350,10 @@ jobs:
             `GitHub artifact attestation: ${process.env.ATTESTATION_OUTCOME}.`,
             'SHA256SUMS checks integrity; it is not a code signature.',
             `Workflow: https://github.com/${process.env.GH_REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`];
+          if (!signed) lines.push(
+            'macOS UNSIGNED means no Apple Developer ID signature or Apple notarization. Candidates require a valid ad-hoc signature for complete bundle and native-helper integrity; this does not establish publisher identity or Gatekeeper trust.',
+            'On first launch, macOS may require System Settings → Privacy & Security → Open Anyway. Apple guidance: https://support.apple.com/en-gb/102445',
+          );
           writeFileSync('out/release/notes.md', lines.join('\n\n') + '\n');
           NODE
           cat out/release/notes.md >> "$GITHUB_STEP_SUMMARY"

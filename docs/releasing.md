@@ -13,6 +13,8 @@ The [release workflow](../.github/workflows/release.yml) builds the reviewed sou
 
 Candidate filenames and their internal application version still use the package version; their release title, prerelease flag, manifest policy and acceptance records identify the candidate channel. A successful unsigned candidate does not establish trusted platform signing or authorize a stable release.
 
+For macOS, **UNSIGNED** means no Apple Developer ID signature and no Apple notarization. Candidates use an ad-hoc signature (`identity: '-'`) to seal the complete app bundle and nested code, including native helpers. They must pass strict bundle-integrity verification; a missing or incomplete signature is a packaging defect, not an acceptable consequence of the candidate label. Ad-hoc integrity does not establish publisher identity or Gatekeeper trust.
+
 ## Build and acceptance contract
 
 | Runner           | Node architecture | Distribution target            |
@@ -41,11 +43,13 @@ pnpm release:manifest
 2. `release:desktop -- --dir` builds an unsigned desktop directory for an early smoke test, without production credentials. The wrapper recognizes the forwarded `--dir` argument.
 3. The first `release:smoke` extracts the CLI/server archives outside the source tree, checks the relocated CLI/Host and server runtime, and launches the packaged desktop. It is an early check, not final installer acceptance.
 4. The final `release:desktop` builds the matrix targets. For signed macOS/Windows runs, only this step receives the platform credentials and `PRAXIS_RELEASE_SIGNED=1`.
-5. `release:verify` verifies required platform signatures, copies the verified desktop native helpers into the CLI stage, and **rebuilds the archives**. This changes release bytes, so it must precede the final smoke and manifest.
+5. `release:verify` verifies required platform signatures, copies the verified desktop native helpers into the CLI stage, and **rebuilds the archives**. On macOS, strict bundle and native-helper integrity checks apply to both ad-hoc candidates and signed releases; the signed release additionally requires its existing Developer ID/notarization gates. This changes release bytes, so verification must precede the final smoke and manifest.
 6. The final `release:smoke` accepts those rebuilt archives and the actual desktop installer: mounts the macOS DMG and copies/launches the app in a temporary location; silently installs Windows NSIS into a temporary directory and uninstalls it; extracts and launches the Linux AppImage. Desktop acceptance exercises renderer, preload and Host using isolated test data, including installation paths containing spaces. Windows acceptance requires a disposable account and no existing registered Praxis installation; the workflow opts in with `PRAXIS_RELEASE_DISPOSABLE_WINDOWS=1` only on Windows smoke steps. Temporary installation resources are cleaned up.
 7. `release:manifest` requires successful acceptance with `installerTested: true`, a matching version and unchanged accepted artifact bytes. The early directory-only smoke cannot satisfy this gate.
 
 The automated installer checks do not replace interactive installer UI review, real-model feature acceptance or the remaining platform sandbox acceptance described in the [delivery spec](superpowers/specs/2026-11-02-praxis-sandbox-delivery-design.md). Rebuilding, re-signing or editing an accepted artifact requires repeating verification, final smoke and manifest generation.
+
+macOS installer acceptance must also strictly verify the app copied from the DMG before launching it. A successful renderer/preload/Host startup alone does not prove that the bundle's sealed resources are valid. The strengthened checks are required for the replacement candidate; its actual acceptance is still pending as recorded below.
 
 ## Artifacts and provenance
 
@@ -100,6 +104,8 @@ gh run watch RUN_ID --repo GShLi/praxis --exit-status
 
 All three package jobs and the complete reusable Check workflow (both Node versions on all three OSes, plus PostgreSQL) must be green. Download either the Actions artifacts or the resulting **UNSIGNED** prerelease. An optional attestation failure is explicitly reported; it is not presented as a signed candidate. The workflow refuses an existing candidate tag rather than attaching unreviewed bytes to it. Use a fresh dispatch for a new run number; inspect any failed draft before removing it manually. Do not push candidate tags as if they were version tags or dispatch a signed run against them.
 
+A macOS candidate with valid ad-hoc bundle integrity can still be blocked because its developer is unidentified and it is not notarized. If you trust that specific candidate and choose to run it, macOS may offer **System Settings → Privacy & Security → Open Anyway** after an attempted launch. This is a per-app exception, not Gatekeeper approval or a repair for broken signatures; see [Apple's guidance](https://support.apple.com/en-gb/102445). Do not disable Gatekeeper globally. Do not use an override to work around candidate.4's known incomplete signature; wait for a corrected, verified candidate.
+
 For a local unsigned run on a supported platform, use Node 24, pnpm 11.9.0 and that platform's compiler/desktop dependencies:
 
 ```sh
@@ -145,21 +151,23 @@ macOS can use `shasum -a 256 --check SHA256SUMS`. Repeat attestation verificatio
 
 ## Current acceptance status
 
-On 2026-11-04, [Release run 41800812844](https://github.com/GShLi/praxis/actions/runs/41800812844) completed successfully and published [UNSIGNED v0.1.0-candidate.4](https://github.com/GShLi/praxis/releases/tag/v0.1.0-candidate.4) in the private repository. The tested source is `3e58e42fdbf23dd85be97df73df762ba3ea44178`. The release is not a draft, is a prerelease, and contains 26 assets: 12 application distributions plus acceptance records, dependency inventories, manifests and checksums.
+**Known bad macOS bundle: v0.1.0-candidate.4.** A user reported the downloaded app as damaged. Strict `codesign` verification of the installed app failed with an incomplete bundle signature, while the downloaded DMG hash matched the published digest. The prior startup smoke missed strict sealed-resource verification. Do not treat this macOS artifact as accepted or try to repair it with a security override. A corrected candidate using complete ad-hoc signing and unconditional strict bundle/helper checks is being prepared; its rebuilt, downloaded and installed artifact acceptance remains **pending** until the implementing agent records actual results.
+
+On 2026-11-04, [Release run 41800812844](https://github.com/GShLi/praxis/actions/runs/41800812844) reported success under the earlier checks and published [UNSIGNED v0.1.0-candidate.4](https://github.com/GShLi/praxis/releases/tag/v0.1.0-candidate.4) in the private repository. The tested source is `3e58e42fdbf23dd85be97df73df762ba3ea44178`. The release is not a draft, is a prerelease, and contains 26 assets: 12 application distributions plus acceptance records, dependency inventories, manifests and checksums. That historical green run does not supersede the subsequently confirmed macOS signing defect.
 
 After publication, all 26 asset digests reported by GitHub were checked against the published checksum inventory. The eight downloaded checksum/manifest/acceptance files were also hashed locally; all three installation records matched the published distribution bytes and exact source commit. This is integrity verification, not a trusted code signature.
 
-| Gate                                 | Actual result                                                                                                      |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Structure, TypeScript and core tests | All six jobs passed: Node 22.15.0 and 24 on macOS, Linux and Windows                                               |
-| PostgreSQL                           | Integration gate passed against PostgreSQL 18                                                                      |
-| macOS ARM64                          | Build, DMG/ZIP packaging, DMG mount/copy, installed renderer/preload/Host launch passed                            |
-| Linux x64                            | Build, AppImage/tar.gz packaging, AppImage extraction and installed launch passed on Ubuntu 22.04                  |
-| Windows x64                          | Build, NSIS/ZIP packaging, silent installation, installed launch and uninstall passed on the hosted Windows runner |
-| CLI and server                       | Relocated archive extraction, CLI help/Host handshake and server runtime loading passed on all three platforms     |
-| Publication                          | Combined checksums and manifests verified; complete asset set uploaded before draft publication                    |
-| Trusted signing                      | **Not performed:** this is an unsigned candidate; macOS notarization and Windows trusted signing remain unverified |
-| GitHub provenance                    | **Skipped:** private-repository candidate attestation was not enabled; checksums are not signatures                |
+| Gate                                 | Actual result                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure, TypeScript and core tests | All six jobs passed: Node 22.15.0 and 24 on macOS, Linux and Windows                                                                                    |
+| PostgreSQL                           | Integration gate passed against PostgreSQL 18                                                                                                           |
+| macOS ARM64                          | Earlier packaging and startup smoke passed, but the downloaded candidate.4 app failed strict bundle-signature verification; corrected candidate pending |
+| Linux x64                            | Build, AppImage/tar.gz packaging, AppImage extraction and installed launch passed on Ubuntu 22.04                                                       |
+| Windows x64                          | Build, NSIS/ZIP packaging, silent installation, installed launch and uninstall passed on the hosted Windows runner                                      |
+| CLI and server                       | Relocated archive extraction, CLI help/Host handshake and server runtime loading passed on all three platforms                                          |
+| Publication                          | Combined checksums and manifests verified; complete asset set uploaded before draft publication                                                         |
+| Trusted signing                      | **Not performed:** this is an unsigned candidate; macOS notarization and Windows trusted signing remain unverified                                      |
+| GitHub provenance                    | **Skipped:** private-repository candidate attestation was not enabled; checksums are not signatures                                                     |
 
 The separate [Windows native compatibility run](https://github.com/GShLi/praxis/actions/runs/41800803282) passed on both supported Node versions. It compares real temporary-directory identities with `GetFileInformationByHandle`. Release testing fixed an older libuv path-stat ABI defect by using handle-stat, and replaced Git Bash tar with Windows System32 tar for drive-letter archive paths. Backup flush access, native aborted-write cleanup and deterministic Electron installation were also corrected without disabling their safety checks.
 

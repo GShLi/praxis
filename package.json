@@ -19,6 +19,7 @@
     "server:create-user": "node --import tsx --env-file-if-exists=.env apps/server/src/main.ts create-user",
     "server:keygen": "node --import tsx apps/server/src/main.ts keygen",
     "native:build": "node --import tsx scripts/build-native.ts",
+    "icons:build": "node --import tsx scripts/build-icons.ts",
     "build": "pnpm native:build && node --import tsx scripts/build.ts",
     "web": "vite --config apps/web/vite.config.ts",
     "desktop": "electron dist/desktop/main.mjs",

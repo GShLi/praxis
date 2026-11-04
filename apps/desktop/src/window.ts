@@ -7,6 +7,7 @@ export function createWindow(directory: string) {
     minWidth: 720,
     minHeight: 540,
     title: '知行 Praxis',
+    icon: path.resolve(directory, '../web/praxis-icon-512.png'),
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     webPreferences: {

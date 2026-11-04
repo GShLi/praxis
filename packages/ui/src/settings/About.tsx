@@ -1,3 +1,4 @@
+import { BrandMark } from '../BrandMark.tsx';
 import type { PraxisClient } from '../client-types.ts';
 import { Row } from './controls.tsx';
 import { DiagnosticSettings } from './DiagnosticSettings.tsx';
@@ -6,7 +7,7 @@ export function About({ client }: { client: PraxisClient }) {
   return (
     <>
       <div className="settings-about">
-        <span className="brand-mark">知</span>
+        <BrandMark />
         <h3>知行 Praxis</h3>
         <p>From thought to action.</p>
       </div>

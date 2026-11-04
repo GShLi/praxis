@@ -26,22 +26,33 @@ const configuration: Configuration = {
   artifactName: 'praxis-desktop-${version}-${os}-${arch}.${ext}',
   publish: null,
   mac: {
+    icon: path.resolve('assets/branding/praxis.icns'),
     target: ['dmg', 'zip'],
     category: 'public.app-category.productivity',
     hardenedRuntime: signed,
     notarize: signed,
-    ...(signed ? {} : { identity: null }),
+    ...(signed ? {} : { identity: '-' }),
     entitlements: path.resolve('scripts/release/entitlements.mac.plist'),
     entitlementsInherit: path.resolve('scripts/release/entitlements.mac.plist'),
   },
-  win: { target: ['nsis', 'zip'], executableName: 'Praxis', signExts: ['.exe'] },
+  win: {
+    target: ['nsis', 'zip'],
+    executableName: 'Praxis',
+    icon: path.resolve('assets/branding/praxis.ico'),
+    signExts: ['.exe'],
+  },
   nsis: {
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
     deleteAppDataOnUninstall: false,
   },
-  linux: { target: ['AppImage', 'tar.gz'], category: 'Development', executableName: 'praxis' },
+  linux: {
+    target: ['AppImage', 'tar.gz'],
+    category: 'Development',
+    executableName: 'praxis',
+    icon: path.resolve('assets/branding/praxis-icon.png'),
+  },
 };
 const target =
   process.platform === 'darwin'

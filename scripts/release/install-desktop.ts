@@ -2,6 +2,7 @@ import { cp, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { artifacts, desktopExecutable } from './layout.ts';
 import { run } from './process.ts';
+import { verifyMacCode } from './mac-integrity.ts';
 
 /** Install into an isolated destination; do not overwrite a user's application or data. */
 export async function installDesktop(temporary: string) {
@@ -38,6 +39,7 @@ async function installMac(file: string, destination: string) {
   } finally {
     await run('hdiutil', ['detach', mount]);
   }
+  await verifyMacCode(path.join(destination, 'Praxis.app'));
   return {
     executable: path.join(destination, 'Praxis.app/Contents/MacOS/Praxis'),
     installer: true,

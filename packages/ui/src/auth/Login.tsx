@@ -1,3 +1,4 @@
+import { BrandMark } from '../BrandMark.tsx';
 import { DesktopLoginFields, WebLoginFields } from './LoginFields.tsx';
 import { useLoginForm, type LoginSubmit } from './useLoginForm.ts';
 
@@ -15,7 +16,8 @@ export function Login({
   return (
     <main className="login-page">
       <div className="login-brand">
-        <span className="brand-mark">知</span>Praxis
+        <BrandMark />
+        Praxis
       </div>
       <form className="login-form" onSubmit={(e) => void form.submit(e)} aria-busy={form.busy}>
         <h1>{desktop ? '连接 Praxis' : '欢迎使用知行'}</h1>

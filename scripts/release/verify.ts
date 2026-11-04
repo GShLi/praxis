@@ -13,6 +13,7 @@ import {
 } from './layout.ts';
 import { archiveApplications } from './stage.ts';
 import { run } from './process.ts';
+import { verifyMacCode } from './mac-integrity.ts';
 
 const signed = process.env.PRAXIS_RELEASE_SIGNED === '1';
 async function verifyWindows(file: string) {
@@ -27,8 +28,8 @@ async function verifyWindows(file: string) {
     { env: { ...process.env, PRAXIS_VERIFY_FILE: file } },
   );
 }
+if (process.platform === 'darwin') await verifyMacCode(desktopAppRoot());
 if (signed && process.platform === 'darwin') {
-  await run('codesign', ['--verify', '--deep', '--strict', desktopAppRoot()]);
   await run('spctl', ['--assess', '--type', 'execute', desktopAppRoot()]);
   await run('xcrun', ['stapler', 'validate', desktopAppRoot()]);
 }
@@ -40,8 +41,7 @@ if (signed && process.platform === 'win32') {
 // CLI archives receive the exact helper bytes from the signed desktop payload.
 for (const file of nativeNames()) {
   const source = path.join(desktopResources(), 'build/native', file);
-  if (signed && process.platform === 'darwin')
-    await run('codesign', ['--verify', '--strict', source]);
+  if (process.platform === 'darwin') await verifyMacCode(source);
   if (signed && process.platform === 'win32') await verifyWindows(source);
   await copyFile(source, path.join(stage, 'cli/build/native', file));
 }

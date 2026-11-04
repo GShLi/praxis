@@ -73,6 +73,7 @@ try {
           'extracted-cli-host-handshake',
           'extracted-server-load',
           'packaged-desktop-renderer-preload-host',
+          ...(process.platform === 'darwin' ? ['macos-bundle-resource-seal'] : []),
         ],
         limitation:
           'Does not replace interactive installer wizard or real-model feature acceptance.',

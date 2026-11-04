@@ -1,3 +1,4 @@
+import { BrandMark } from '../BrandMark.tsx';
 import './connection-state.css';
 
 /** Initial connection and recoverable startup errors share one stable layout. */
@@ -13,7 +14,8 @@ export function ConnectionState({
   return (
     <main className="connection-page">
       <header className="connection-brand">
-        <span className="brand-mark">知</span>Praxis
+        <BrandMark />
+        Praxis
       </header>
       <div className="connection-content">
         <section className="connection-card" aria-labelledby="connection-title" aria-busy={busy}>
