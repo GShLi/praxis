@@ -1,0 +1,400 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: 'Require production signatures and publish the exact version tag'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  metadata:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      signed: ${{ steps.version.outputs.signed }}
+      channel: ${{ steps.version.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate version and release intent
+        id: version
+        env:
+          SIGNED_REQUEST: ${{ github.event_name == 'push' || inputs.signed == true }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const number = '(0|[1-9][0-9]*)';
+          const identifier = '(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)';
+          const semver = new RegExp(`^${number}\\.${number}\\.${number}(?:-${identifier}(?:\\.${identifier})*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`);
+          if (typeof version !== 'string' || !semver.test(version)) throw new Error('Invalid package.json version');
+          const signed = process.env.SIGNED_REQUEST === 'true';
+          const versionTag = `v${version}`;
+          if (process.env.GITHUB_REF_TYPE === 'tag' && process.env.GITHUB_REF_NAME !== versionTag) {
+            throw new Error('Tag must exactly match v + package.json version');
+          }
+          if (signed && process.env.GITHUB_REF_TYPE !== 'tag') throw new Error('Signed releases require a version tag');
+          const baseVersion = version.split('+')[0];
+          const candidateTag = `v${baseVersion}${baseVersion.includes('-') ? '.' : '-'}candidate.${process.env.GITHUB_RUN_NUMBER}`;
+          const tag = signed ? versionTag : candidateTag;
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${tag}\nsigned=${signed ? '1' : '0'}\nchannel=${signed ? 'signed' : 'candidate'}\n`);
+          NODE
+
+  postgres:
+    needs: metadata
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: praxis_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm native:build
+      - run: pnpm test:postgres
+        env:
+          PRAXIS_TEST_DATABASE_URL: postgresql://postgres:praxis_test@127.0.0.1:5432/postgres
+
+  package:
+    needs: metadata
+    name: Package (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    environment: ${{ needs.metadata.outputs.signed == '1' && 'release-signing' || 'release-candidate' }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: darwin
+            arch: arm64
+            target: darwin-arm64
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            target: win32-x64
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+            target: linux-x64
+    env:
+      PRAXIS_RELEASE_SIGNED: '0'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.arch }}
+          cache: pnpm
+      - name: Check native runner architecture
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: node -e "if (process.platform !== process.env.EXPECTED_PLATFORM || process.arch !== process.env.EXPECTED_ARCH) process.exit(1)"
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential xvfb xauth dbus-x11 libsecret-tools gnome-keyring \
+            libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libfuse2
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm native:build
+      - name: Check core and native behavior (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -- pnpm check
+      - name: Check core and native behavior (macOS / Windows)
+        if: runner.os != 'Linux'
+        run: pnpm check
+      - run: pnpm build
+      - name: Stage applications and archive CLI / server
+        run: pnpm release:package
+      - name: Package unsigned desktop for acceptance
+        run: pnpm release:desktop -- --dir
+      - name: Accept archived installs and packaged desktop (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -- pnpm release:smoke
+      - name: Accept archived installs and packaged desktop (macOS / Windows)
+        if: runner.os != 'Linux'
+        env:
+          PRAXIS_RELEASE_DISPOSABLE_WINDOWS: ${{ runner.os == 'Windows' && '1' || '0' }}
+        run: pnpm release:smoke
+      - name: Package candidate installers or Linux release
+        if: needs.metadata.outputs.signed != '1' || runner.os == 'Linux'
+        env:
+          PRAXIS_RELEASE_SIGNED: ${{ needs.metadata.outputs.signed }}
+        run: pnpm release:desktop
+      - name: Sign and notarize macOS distribution
+        if: needs.metadata.outputs.signed == '1' && runner.os == 'macOS'
+        env:
+          PRAXIS_RELEASE_SIGNED: '1'
+          CSC_IDENTITY_AUTO_DISCOVERY: 'true'
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_BASE64 APPLE_API_KEY_ID APPLE_API_ISSUER; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required signing secret: $name"
+              exit 1
+            fi
+          done
+          export APPLE_API_KEY="$RUNNER_TEMP/praxis-notarization.p8"
+          trap 'rm -f "$APPLE_API_KEY"' EXIT
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const key = Buffer.from(process.env.APPLE_API_KEY_BASE64, 'base64');
+          if (!key.toString('utf8').includes('-----BEGIN PRIVATE KEY-----')) throw new Error('Invalid API key encoding');
+          writeFileSync(process.env.APPLE_API_KEY, key, { mode: 0o600 });
+          NODE
+          unset APPLE_API_KEY_BASE64
+          pnpm release:desktop
+      - name: Sign Windows distribution
+        if: needs.metadata.outputs.signed == '1' && runner.os == 'Windows'
+        env:
+          PRAXIS_RELEASE_SIGNED: '1'
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          for name in WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required signing secret: $name"
+              exit 1
+            fi
+          done
+          pnpm release:desktop
+      # Verification copies signed desktop helpers into the CLI and rebuilds its archive.
+      # The final smoke and manifest must consume those rebuilt bytes.
+      - name: Verify signatures and rebuild archives from verified helpers
+        env:
+          PRAXIS_RELEASE_SIGNED: ${{ needs.metadata.outputs.signed }}
+        run: pnpm release:verify
+      - name: Accept final packaged bytes (Linux)
+        if: runner.os == 'Linux'
+        env:
+          PRAXIS_RELEASE_SIGNED: ${{ needs.metadata.outputs.signed }}
+        run: xvfb-run -a -- pnpm release:smoke
+      - name: Accept final packaged bytes (macOS / Windows)
+        if: runner.os != 'Linux'
+        env:
+          PRAXIS_RELEASE_SIGNED: ${{ needs.metadata.outputs.signed }}
+          PRAXIS_RELEASE_DISPOSABLE_WINDOWS: ${{ runner.os == 'Windows' && '1' || '0' }}
+        run: pnpm release:smoke
+      - name: Inventory final bytes
+        env:
+          PRAXIS_RELEASE_SIGNED: ${{ needs.metadata.outputs.signed }}
+        run: pnpm release:manifest
+      - name: Attest every final platform file
+        id: attest
+        if: needs.metadata.outputs.signed == '1' || github.event.repository.private == false || vars.PRAXIS_CANDIDATE_ATTESTATIONS == '1'
+        continue-on-error: ${{ needs.metadata.outputs.signed != '1' }}
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: out/release/artifacts/*
+      - name: Report candidate attestation status
+        if: needs.metadata.outputs.signed != '1'
+        env:
+          ATTESTATION_OUTCOME: ${{ steps.attest.outcome }}
+        run: |
+          echo "UNSIGNED candidate; platform attestation: $ATTESTATION_OUTCOME." >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$ATTESTATION_OUTCOME" != success ]]; then
+            echo '::warning::Candidate has no verified GitHub provenance from this job; private repository attestations require an eligible plan.'
+          fi
+      - name: Upload verified platform files
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ needs.metadata.outputs.channel }}-${{ matrix.target }}
+          path: out/release/artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish:
+    needs: [metadata, postgres, package]
+    if: >-
+      needs.metadata.result == 'success' && needs.postgres.result == 'success' &&
+      needs.package.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (needs.metadata.outputs.signed == '1' && startsWith(github.ref, 'refs/tags/v')))
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    environment: release-publish
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
+      RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+      RELEASE_CHANNEL: ${{ needs.metadata.outputs.channel }}
+      RELEASE_SIGNED: ${{ needs.metadata.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-${{ needs.metadata.outputs.channel }}-*
+          path: out/release/downloads
+          merge-multiple: false
+      - name: Verify downloaded checksums and provenance
+        run: |
+          for target in darwin-arm64 win32-x64 linux-x64; do
+            directory="out/release/downloads/release-$RELEASE_CHANNEL-$target"
+            (cd "$directory" && sha256sum --check --strict "SHA256SUMS-$target.txt")
+            if [[ "$RELEASE_SIGNED" == 1 ]]; then
+              for file in "$directory"/*; do
+                gh attestation verify "$file" --repo "$GH_REPO" \
+                  --signer-workflow "$GH_REPO/.github/workflows/release.yml" \
+                  --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA"
+              done
+            fi
+          done
+      - name: Assemble collision-free release assets and combined inventory
+        run: |
+          node --input-type=module <<'NODE'
+          import { createReadStream } from 'node:fs';
+          import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+          import { createHash } from 'node:crypto';
+          import path from 'node:path';
+          const output = 'out/release/publish';
+          await mkdir(output, { recursive: true });
+          const names = new Set(['SHA256SUMS', 'release-manifest.json']);
+          const platforms = {};
+          for (const target of ['darwin-arm64', 'win32-x64', 'linux-x64']) {
+            const input = `out/release/downloads/release-${process.env.RELEASE_CHANNEL}-${target}`;
+            const manifest = JSON.parse(await readFile(path.join(input, `release-manifest-${target}.json`), 'utf8'));
+            if (manifest.version !== process.env.RELEASE_VERSION || manifest.platform !== target || manifest.revision !== process.env.GITHUB_SHA) {
+              throw new Error(`Mismatched platform manifest: ${target}`);
+            }
+            const expectedSignature = process.env.RELEASE_SIGNED !== '1' ? 'unsigned-candidate'
+              : target === 'linux-x64' ? 'github-attestation-required' : 'platform-verified';
+            if (manifest.signature !== expectedSignature) throw new Error(`Unexpected signature policy: ${target}`);
+            platforms[target] = manifest;
+            for (const entry of await readdir(input, { withFileTypes: true })) {
+              if (!entry.isFile() || !/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(entry.name)) throw new Error('Unexpected artifact entry');
+              const name = entry.name;
+              if (names.has(name)) throw new Error(`Duplicate release asset: ${name}`);
+              names.add(name);
+              await copyFile(path.join(input, entry.name), path.join(output, name));
+            }
+          }
+          await writeFile(path.join(output, 'release-manifest.json'), JSON.stringify({
+            schemaVersion: 1, version: process.env.RELEASE_VERSION, tag: process.env.RELEASE_TAG,
+            commit: process.env.GITHUB_SHA, channel: process.env.RELEASE_CHANNEL,
+            platformSignaturesRequired: process.env.RELEASE_SIGNED === '1', platforms,
+          }, null, 2) + '\n');
+          const checksums = [];
+          for (const name of [...names].filter(name => name !== 'SHA256SUMS').sort()) {
+            const hash = createHash('sha256');
+            for await (const chunk of createReadStream(path.join(output, name))) hash.update(chunk);
+            checksums.push(`${hash.digest('hex')}  ${name}`);
+          }
+          await writeFile(path.join(output, 'SHA256SUMS'), checksums.join('\n') + '\n');
+          NODE
+      - name: Attest every public release asset including combined metadata
+        id: attest
+        if: needs.metadata.outputs.signed == '1' || github.event.repository.private == false || vars.PRAXIS_CANDIDATE_ATTESTATIONS == '1'
+        continue-on-error: ${{ needs.metadata.outputs.signed != '1' }}
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: out/release/publish/*
+      - name: Create release notes
+        env:
+          ATTESTATION_OUTCOME: ${{ steps.attest.outcome }}
+        run: |
+          if [[ "$RELEASE_SIGNED" == 1 && "$ATTESTATION_OUTCOME" != success ]]; then
+            echo '::error::Signed release requires successful provenance attestation'
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const signed = process.env.RELEASE_SIGNED === '1';
+          const lines = [signed ? 'Signed Praxis release.' : 'UNSIGNED CANDIDATE — testing only; not a stable release.',
+            `Source: ${process.env.GITHUB_SHA}`, `Package version: ${process.env.RELEASE_VERSION}`,
+            `GitHub artifact attestation: ${process.env.ATTESTATION_OUTCOME}.`,
+            'SHA256SUMS checks integrity; it is not a code signature.',
+            `Workflow: https://github.com/${process.env.GH_REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`];
+          writeFileSync('out/release/notes.md', lines.join('\n\n') + '\n');
+          NODE
+          cat out/release/notes.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish only the complete, verified asset set
+        run: |
+          args=(--draft --title "Praxis $RELEASE_TAG" --notes-file out/release/notes.md)
+          if [[ "$RELEASE_SIGNED" == 1 ]]; then
+            [[ "$GITHUB_REF" == "refs/tags/v$RELEASE_VERSION" ]]
+            [[ "$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')" == "$GITHUB_SHA" ]]
+            args+=(--verify-tag)
+            if [[ "${RELEASE_VERSION%%+*}" == *-* ]]; then args+=(--prerelease --latest=false); fi
+          else
+            [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
+            [[ "$(gh api "repos/$GH_REPO/git/matching-refs/tags/$RELEASE_TAG" --jq "map(select(.ref == \"refs/tags/$RELEASE_TAG\")) | length")" == 0 ]]
+            args+=(--target "$GITHUB_SHA" --prerelease --latest=false --title "UNSIGNED Praxis $RELEASE_TAG")
+          fi
+          gh release create "$RELEASE_TAG" out/release/publish/* "${args[@]}"
+          # Upload failure leaves a draft. No partially uploaded release becomes public.
+          gh release edit "$RELEASE_TAG" --draft=false
