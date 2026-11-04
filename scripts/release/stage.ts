@@ -1,6 +1,7 @@
 import { writeDistributionMetadata } from './metadata.ts';
 import { copyFile, cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { tarExecutable } from './archive.ts';
 import { copyDependencies } from './dependencies.ts';
 import { artifacts, nativeNames, platform, projectManifest, stage } from './layout.ts';
 import { run } from './process.ts';
@@ -33,7 +34,7 @@ export async function archiveApplications() {
   const { version } = await projectManifest();
   for (const kind of ['cli', 'server']) {
     const filename = `praxis-${kind}-${version}-${platform}.tar.gz`;
-    await run('tar', ['-czf', path.join(artifacts, filename), '-C', stage, kind], {
+    await run(tarExecutable(), ['-czf', path.join(artifacts, filename), '-C', stage, kind], {
       timeout: 300000,
     });
   }

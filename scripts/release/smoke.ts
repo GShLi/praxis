@@ -4,6 +4,7 @@ import { installDesktop } from './install-desktop.ts';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { tarExecutable } from './archive.ts';
 import { artifacts, platform, projectManifest, releaseRoot } from './layout.ts';
 import { run } from './process.ts';
 
@@ -21,7 +22,7 @@ try {
   const installed = path.join(temporary, 'installed');
   await mkdir(installed);
   for (const kind of ['cli', 'server'])
-    await run('tar', [
+    await run(tarExecutable(), [
       '-xzf',
       path.join(artifacts, `praxis-${kind}-${version}-${platform}.tar.gz`),
       '-C',

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtemp, realpath, rm, stat } from 'node:fs/promises';
+import { mkdtemp, open, realpath, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { windowsDirectoryIdentity } from './fixtures/native-root-identity.ts';
-import { nativeRootIdentity } from '@praxis/tools/files/root-identity';
+import { nativeRootIdentity, readWorkspaceRootStat } from '@praxis/tools/files/root-identity';
 
 test('Windows root identity matches the native DWORD serial across libuv versions', () => {
   const ino = 0x20000000000001n;
@@ -40,12 +40,21 @@ test(
     try {
       const directory = await realpath(temporary);
       const info = await stat(directory, { bigint: true });
-      const native = await windowsDirectoryIdentity(directory);
-      assert.equal(
-        nativeRootIdentity(info),
-        native,
-        `fs.stat bigint dev:ino = ${info.dev}:${info.ino}`,
-      );
+      const handle = await open(directory, 'r');
+      try {
+        const handleInfo = await handle.stat({ bigint: true });
+        const native = await windowsDirectoryIdentity(directory);
+        const workspaceInfo = await readWorkspaceRootStat(directory);
+        const diagnostic =
+          `path stat bigint dev:ino = ${info.dev}:${info.ino}; ` +
+          `handle stat bigint dev:ino = ${handleInfo.dev}:${handleInfo.ino}; ` +
+          `Win32 oracle = ${native}`;
+        assert.equal(nativeRootIdentity(handleInfo), native, diagnostic);
+        // Path stat is diagnostic only: affected libuv versions may return incorrect IDs.
+        assert.equal(nativeRootIdentity(workspaceInfo), native, diagnostic);
+      } finally {
+        await handle.close();
+      }
     } finally {
       await rm(temporary, { recursive: true, force: true });
     }

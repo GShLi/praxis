@@ -5,7 +5,7 @@ import { FileContent } from './files/content.ts';
 import { isInside, WorkspacePathPolicy } from './files/policy.ts';
 import { FileSearch } from './files/search.ts';
 import { FileWriter } from './files/writer.ts';
-import { nativeRootIdentity } from './files/root-identity.ts';
+import { nativeRootIdentity, readWorkspaceRootStat } from './files/root-identity.ts';
 export { isInside } from './files/policy.ts';
 /** One workspace owns observations, pagination and the permission callback used at publication. */
 export class WorkspaceFiles {
@@ -32,7 +32,7 @@ export class WorkspaceFiles {
     beforeWrite: () => void = () => {},
   ) {
     const canonical = await fs.realpath(root);
-    const stat = await fs.stat(canonical, { bigint: true });
+    const stat = await readWorkspaceRootStat(canonical);
     assert(stat.isDirectory(), 'INVALID_WORKSPACE', '工作区必须是目录。');
     const protectedRoots = await Promise.all(
       protectedPaths.map(async (p) => {
