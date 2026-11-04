@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { mkdtemp, realpath, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { windowsDirectoryIdentity } from './fixtures/native-root-identity.ts';
 import { nativeRootIdentity } from '@praxis/tools/files/root-identity';
 
 test('Windows root identity matches the native DWORD serial across libuv versions', () => {
@@ -24,3 +28,26 @@ test('POSIX root identity retains the entire device and inode values', () => {
     assert.equal(nativeRootIdentity(stat, platform), `${stat.dev}:${stat.ino}`);
   }
 });
+
+test(
+  'Windows temporary directory identity matches GetFileInformationByHandle',
+  {
+    skip: process.platform !== 'win32',
+    timeout: 45_000,
+  },
+  async () => {
+    const temporary = await mkdtemp(path.join(tmpdir(), 'praxis-root-identity-'));
+    try {
+      const directory = await realpath(temporary);
+      const info = await stat(directory, { bigint: true });
+      const native = await windowsDirectoryIdentity(directory);
+      assert.equal(
+        nativeRootIdentity(info),
+        native,
+        `fs.stat bigint dev:ino = ${info.dev}:${info.ino}`,
+      );
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+    }
+  },
+);

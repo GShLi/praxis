@@ -1,0 +1,25 @@
+name: Native compatibility
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-files:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22.15.0, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm native:build
+      - run: node --import tsx --test tests/native-root-identity.test.ts tests/native-files.test.ts
