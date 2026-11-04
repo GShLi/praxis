@@ -9,7 +9,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "pnpm electron:install && node --import tsx --test tests/*.test.ts",
     "check": "pnpm structure && pnpm typecheck && pnpm test",
     "cli": "node --import tsx apps/cli/src/main.ts",
     "host": "node --import tsx apps/agent-host/src/main.ts",
@@ -34,7 +34,8 @@
     "release:desktop": "node --import tsx scripts/release/desktop.ts",
     "release:smoke": "node --import tsx scripts/release/smoke.ts",
     "release:verify": "node --import tsx scripts/release/verify.ts",
-    "release:manifest": "node --import tsx scripts/release/manifest.ts"
+    "release:manifest": "node --import tsx scripts/release/manifest.ts",
+    "electron:install": "node node_modules/electron/install.js"
   },
   "dependencies": {
     "@hono/node-server": "1.19.17",

@@ -27,7 +27,10 @@ try {
       '-C',
       installed,
     ]);
-  const env = isolatedEnvironment(path.join(temporary, 'data'));
+  const env = {
+    ...isolatedEnvironment(path.join(temporary, 'data')),
+    PRAXIS_RELEASE_SMOKE_ROOT: temporary,
+  };
   const cli = path.join(installed, 'cli/bin/praxis.cjs');
   assert.match(await run(process.execPath, [cli, '--help'], { cwd: temporary, env }), /Praxis/);
   const diagnostics = JSON.parse(

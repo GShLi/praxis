@@ -1,14 +1,16 @@
 import { startHost } from '@praxis/client-host';
 import { app } from 'electron';
-import { mkdtemp, rm } from 'node:fs/promises';
-import os from 'node:os';
+import { mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { createWindow, clearSessionHandlers } from './window.ts';
 import { installBridge } from './bridge.ts';
 
 /** Explicit acceptance mode uses fresh data, the real renderer/preload and packaged Host. */
 export async function releaseSmoke(directory: string) {
-  const data = await mkdtemp(path.join(os.tmpdir(), 'praxis-desktop-acceptance-'));
+  const root = process.env.PRAXIS_RELEASE_SMOKE_ROOT;
+  if (!root || !path.isAbsolute(root))
+    throw new Error('Acceptance requires an isolated parent-owned directory');
+  const data = await mkdtemp(path.join(root, 'praxis-desktop-acceptance-'));
   app.setPath('userData', data);
   let host: Awaited<ReturnType<typeof startHost>> | undefined;
   let dispose: (() => void) | undefined;
@@ -43,7 +45,7 @@ export async function releaseSmoke(directory: string) {
     if (app.isReady()) clearSessionHandlers();
     await host?.close();
     clearTimeout(deadline);
-    await rm(data, { recursive: true, force: true });
+    // Chromium releases userData locks on exit; the parent removes its temporary root.
     app.exit(passed ? 0 : 1);
   }
 }

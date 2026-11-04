@@ -2,20 +2,22 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { owner, type Package } from './project.ts';
 import type { Import } from './source.ts';
+import { structurePath } from './paths.ts';
 export function dependencies(
   file: string,
   imports: Import[],
   workspace: Package[],
   errors: string[],
 ) {
+  file = structurePath(file);
   const edges: string[] = [],
     runtime: string[] = [];
   const current = owner(file, workspace);
   for (const specifier of imports) {
-    const name = specifier.name;
+    const name = structurePath(specifier.name);
     let target: string | undefined;
     if (name.startsWith('.')) {
-      target = path.normalize(path.join(path.dirname(file), name));
+      target = path.posix.join(path.posix.dirname(file), name);
       if (owner(target, workspace) !== current) errors.push(`${file}: 跨包相对导入 ${name}`);
       if (name.endsWith('/index.ts') && owner(target, workspace) === current)
         errors.push(`${file}: 内部反向导入入口 ${name}`);
@@ -33,7 +35,7 @@ export function dependencies(
         const exported = dependency.manifest.exports?.[subpath];
         if (!exported) errors.push(`${file}: 非公开导出 ${name}`);
         else {
-          target = path.join(dependency.directory, exported);
+          target = path.posix.join(structurePath(dependency.directory), structurePath(exported));
           if (!existsSync(target)) errors.push(`${file}: 导出目标不存在 ${name}`);
         }
       }
@@ -52,6 +54,11 @@ export function dependencies(
   return { edges, runtime };
 }
 export function cycles(graph: Map<string, string[]>, errors: string[]) {
+  const normalized = new Map<string, string[]>();
+  for (const [file, targets] of graph) {
+    const key = structurePath(file);
+    normalized.set(key, [...(normalized.get(key) ?? []), ...targets.map(structurePath)]);
+  }
   const done = new Set<string>(),
     active = new Set<string>(),
     route: string[] = [];
@@ -63,10 +70,10 @@ export function cycles(graph: Map<string, string[]>, errors: string[]) {
     if (done.has(file)) return;
     active.add(file);
     route.push(file);
-    for (const target of graph.get(file) ?? []) visit(target);
+    for (const target of normalized.get(file) ?? []) visit(target);
     route.pop();
     active.delete(file);
     done.add(file);
   }
-  for (const file of graph.keys()) visit(file);
+  for (const file of normalized.keys()) visit(file);
 }

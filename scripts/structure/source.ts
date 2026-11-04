@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import { structurePath } from './paths.ts';
 export interface Import {
   name: string;
   typeOnly: boolean;
@@ -9,6 +10,7 @@ export interface SizeFinding {
   limit: number;
 }
 export function inspect(file: string, text: string) {
+  file = structurePath(file);
   const lines = text.trimEnd().split('\n').length;
   const sizes: SizeFinding[] = [];
   const fileLimit = file.endsWith('/index.ts') ? 100 : 300;
